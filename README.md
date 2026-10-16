@@ -11,3 +11,6 @@ https://tinytapeout.com/
 
 Siliwiz:
 https://app.siliwiz.com/
+
+Tinytapout library:
+https://tinytapeout.github.io/tinytapeout-sky-26c/datasheet.pdf
