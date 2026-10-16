@@ -14,3 +14,7 @@ https://app.siliwiz.com/
 
 Tinytapout library:
 https://tinytapeout.github.io/tinytapeout-sky-26c/datasheet.pdf
+
+
+# The project
+https://wokwi.com/projects/354858054593504257
