@@ -42,7 +42,8 @@ all four settings, and CI runs it. The simulation assertions fire if `L_MUL` is 
 | `coeff_q` | in | 12 | Captured coefficient, from `io_in_capture` |
 | `valid_q` | in | 1 | Captured valid |
 | `sof_q` | in | 1 | High only when valid and sof were both high |
-| `op_q` | in | 2 | Captured op. Read only when `sof_q` is high |
+| `op_q` | in | 2 | Captured op. Read only when `sof_q` is high, and as the pass on a `blk_q` clock |
+| `blk_q` | in | 1 | Block-mode header this clock (valid, coefficient bits 11:8 = 0xE; `coeff_q[3:0]` = block index). The shell masks it out of `valid_q` and `sof_q` (docs/block_mode.md) |
 | `r0` | out | 12 | First result of a pair |
 | `r1` | out | 12 | Second result of a pair |
 | `pair_valid` | out | 1 | High for one clock when `r0` and `r1` are valid. At least 3 clocks apart. Never high in a `flush` clock |

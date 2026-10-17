@@ -34,6 +34,14 @@ order.
 Each result pair (r0, r1) leaves as three bytes on consecutive clocks (ByteEncode12):
 `r0[7:0]`, `{r1[3:0], r0[11:8]}`, `r1[11:4]`. Between results `uo_out` is 0x00.
 
+**Block mode (NTT cache).** A faster way to run an NTT: the chip keeps 16 coefficients for 3
+or 4 layers, so a forward or inverse NTT is 2 passes of 16 blocks and takes about 1,010
+clocks instead of 2,751. A block is a header word (valid, coefficient bits 11:8 = 0xE, bits
+3:0 = block index, op = pass: 00 forward len 128..16, 01 forward len 8..2, 10 inverse len
+2..8, 11 inverse len 16..128) and 16 coefficients on the next 16 clocks. Each block returns
+24 bytes (8 pairs) starting 48 clocks (passes 00, 11) or 40 clocks (01, 10) after its header;
+headers may follow every 32 or 24 clocks. See `docs/block_mode.md` in the repository.
+
 Next to the NTT core sits a Keccak-f[1600] sponge (`keccak_ring`) for SHA-3 and SHAKE. Its
 1600-bit state lives in clock-gated shift rings and it processes 8 slices per clock: one
 permutation takes 368 clocks. A captured word with valid high and coefficient bits 11:8 =
@@ -60,7 +68,7 @@ hash jobs can share the pins as long as their output bytes don't fall on the sam
 | --- | --- | --- |
 | `ui[7:0]` | in | Coefficient bits 7:0 |
 | `uio[3:0]` | in | Coefficient bits 11:8 |
-| `uio[4]` | in | valid: the data pins hold a coefficient (or, with bits 11:8 = 0xF, a hash command) this clock |
+| `uio[4]` | in | valid: the data pins hold a coefficient (or, with bits 11:8 = 0xF, a hash command; with 0xE, a block header) this clock |
 | `uio[5]` | in | sof: with valid, the first coefficient of a job |
 | `uio[7:6]` | in | op: 00 forward NTT, 01 inverse NTT, 10 basemul, 11 scale (read on the sof clock) |
 | `uo[7:0]` | out | Result bytes at a fixed delay, 0x00 otherwise |

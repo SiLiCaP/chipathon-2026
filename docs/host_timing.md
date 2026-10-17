@@ -79,3 +79,20 @@ The pin-level test `test_full_flow` measures these counts.
 
 Any unpacked result ≥ 3329 is a hardware fault. Abort with a new sof, or reset
 (`rst_n` low for several clocks).
+
+## Block mode (NTT cache)
+
+From `test/timing.py` and `test/blk_order.py`; see `docs/block_mode.md`.
+
+| Constant | Meaning | Value |
+| --- | --- | --- |
+| `BLK_N` | Multiplier clocks per block = minimum header spacing after it | 32 (FA, IB), 24 (FB, IA) |
+| `blk_delay` | Header → first result byte | N + 16: 48 (FA, IB), 40 (FB, IA) |
+| `BLK_WORDS` | Header + entries, consecutive clocks | 17 |
+| `BLK_PAIRS` | Result pairs per block, 3 clocks apart (24 bytes, no gaps) | 8 |
+
+| Job | Clocks at the minimum spacing |
+| --- | --- |
+| One pass | 15 × N + D + 24: 552 (FA, IB), 424 (FB, IA) |
+| Forward or inverse NTT | 976 + the host turnaround between the passes (1,010 in `test_blk.py`) |
+| Demo (2 forward + basemul + inverse + scale) | 4,079 in `test_blk_full_flow` (streaming: 9,316) |

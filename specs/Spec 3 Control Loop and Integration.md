@@ -37,7 +37,8 @@ Inside `ntt_core` you build: the op latch and job FSM, the counters, `zeta_rom` 
 | `coeff_q` | in | 12 | Captured coefficient, from `io_in_capture` |
 | `valid_q` | in | 1 | Captured valid. The shell masks hash words (coefficient bits 11:8 = 0xF, Spec 5) out of it and out of `sof_q` |
 | `sof_q` | in | 1 | High only when valid and sof were both high |
-| `op_q` | in | 2 | Captured op. Read only when `sof_q` is high |
+| `op_q` | in | 2 | Captured op. Read only when `sof_q` is high, and as the pass on a `blk_q` clock |
+| `blk_q` | in | 1 | Block-mode header (Oct 18 change, see Block mode). `coeff_q[3:0]` = block index |
 | `r0` | out | 12 | First result of a pair |
 | `r1` | out | 12 | Second result of a pair |
 | `pair_valid` | out | 1 | High for one clock when `r0` and `r1` are valid |
@@ -229,6 +230,18 @@ Measured on the full chip (LibreLane, post-PnR, slow corner, worst setup slack a
 
 With all four rules the worst path is the registered operand select through the 12 × 12 multiply. The multiplier block itself doesn't change. Re-check the slack in the gds run after any change to Control.
 
+## Block mode (Oct 18 change: NTT cache)
+
+Streaming mode re-sends every layer over the pins (2,751 clocks per NTT). Block mode keeps 16 coefficients on chip for 3 or 4 layers, so an NTT is 2 passes of 16 blocks: **1,010 clocks per forward or inverse NTT** (measured), with the multiplier busy every clock. The full description is `docs/block_mode.md`; this is the contract.
+
+- **Module.** `ntt_blk`, inside `ntt_core`. It owns a load buffer L (15 × 12), a working set C (16 × 12, 2 reads and 2 writes per clock) and a result buffer F (8 × 24). It shares `modq_mul`, `zeta_rom`, the bypass line and the Post ± adder; its operand registers and their select (`blk_go`) are flip-flops, so the timing-closure rules above still hold.
+- **Header.** `blk_q` with `op_q` = pass (00 forward A: len 128..16 on f[j + 16e]; 01 forward B: len 8..2 on f[16j + e]; 10 inverse A: len 2..8 on f[16j + e]; 11 inverse B: len 16..128 on f[j + 16e]) and `coeff_q[3:0]` = block j. The 16 entries follow on the next 16 clocks with `valid_q`.
+- **Schedule.** Butterfly q of the block reads C at core offset 17 + q, starts the multiplier at 18 + q and writes back at 21 + q; the per-layer butterfly order (`test/blk_order.py`) never reads an entry before it is written back. The last layer goes to F; pairs leave 3 clocks apart from core offset N + 14 (N = 8 × layers), so D = N + 16 at the pins.
+- **Spacing.** The next header may come N clocks after this one, for any pass. Then C, F, the multiplier and the pins are each used by one block at a time.
+- **Results.** Plain FIPS 203 values like the streaming NTT modes (the scaled ζ′ cancels the K-RED factor); the inverse still needs the streaming scale.
+- **Exclusive with streaming jobs.** Block mode doesn't cancel a streaming job or the other way round; the host doesn't overlap them.
+- **Area.** +30.4k µm² for `ntt_core` in plain synthesis (21.7k → 52.0k). The parameters `HAS_L` / `HAS_F` give smaller, slower variants (`docs/block_mode.md`). Whether it fits next to the Keccak core in 4x2 is in `docs/ntt_cache_study.md`.
+
 ## Reset, cancel and flush
 
 - **Reset.** `rst_n` low clears the counters, the operand register, the delay lines and the op latch. The chip is then idle and ready for a start of frame.
@@ -268,7 +281,7 @@ With all four rules the worst path is the registered operand select through the 
 - **Multiplier latency changes.** The basemul schedule depends on L\_mult = 3 (m2 starts on the clock m1 arrives). Any change to the multiplier's latency means a new schedule and new host constants.
 - **Output delay differs from the handoff.** D of 5 and 7 are assumptions. Send the real numbers to the Pi owner early.
 - **Area.** The ROM is 128 × 12 bits. If it does not fit, use the γ symmetry to store only 64 entries for basemul and derive the rest.
-- **Layer-by-layer round trips.** The host re-sends data for every NTT layer because the chip stores nothing. Check the host counts against the timing table.
+- **Layer-by-layer round trips.** In streaming mode the host re-sends data for every NTT layer because the chip stores nothing. Block mode (above) cuts an NTT to 2 passes.
 
 ## Shared rules for all five specs
 

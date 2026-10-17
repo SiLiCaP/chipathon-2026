@@ -106,3 +106,10 @@ The NTT modes add the host's waits between layers (see `host_timing.md`).
 - A sof while idle starts a job without a flush.
 - `rst_n` low clears the counters, operand registers, delay lines, accumulators and the
   op latch.
+
+## Block mode (NTT cache)
+
+Header at offset 0 (valid, bits 11:8 = 0xE, op = pass, bits 3:0 = block), entries 0..15
+at offsets 1..16. Butterfly q reads C at core offset 17 + q, the multiplier starts at 18 + q,
+the result is written back at 21 + q; one butterfly per clock in the order of
+`test/blk_order.py`. Pairs at core offsets N + 14 + 3m. Full table: `docs/block_mode.md`.
