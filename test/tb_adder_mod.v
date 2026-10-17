@@ -130,4 +130,11 @@ module tb_adder_mod ();
     $finish;
   end
 
+  // watchdog: fail instead of hanging
+  initial begin
+    #10_000_000;
+    $display("RESULT: FAIL (timeout)");
+    $finish;
+  end
+
 endmodule
