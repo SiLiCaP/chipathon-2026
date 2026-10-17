@@ -44,3 +44,33 @@ D_F = L_CAP + PV_F + L_PACK
 D_I = L_CAP + PV_I + L_PACK
 D_B = L_CAP + PV_B + L_PACK
 D_S = L_CAP + PV_S + L_PACK
+
+
+# Block mode (NTT cache, src/ntt_blk.v, docs/block_mode.md). A block is a header word
+# and 16 coefficients on the next 16 clocks; N multiplier clocks per block (8 per layer).
+# NTT_BLK selects the RTL variant for the area study (default LF, the one on the chip):
+#   LF  L (load buffer) and F (result buffer)   C  neither   L / F  only that one
+import os  # noqa: E402
+
+BLK_VARIANT = os.environ.get("NTT_BLK", "LF")
+BLK_HAS_L = "L" in BLK_VARIANT
+BLK_HAS_F = "F" in BLK_VARIANT
+BLK_N = {0: 32, 1: 24, 2: 24, 3: 32}     # forward A, forward B, inverse A, inverse B
+BLK_WORDS = 17                           # header + 16 entries
+BLK_PAIRS = 8                            # result pairs per block, 3 clocks apart
+
+
+def blk_spacing(p):
+    """Minimum clocks from this block's header to the next header (any pass)."""
+    extra = {(True, True): 0, (True, False): 14, (False, True): 16, (False, False): 30}
+    return BLK_N[p] + extra[(BLK_HAS_L, BLK_HAS_F)]
+
+
+def blk_pv(p):
+    """Core offset (from the header on coeff_q) of the block's first pair_valid."""
+    return BLK_N[p] + (14 if BLK_HAS_F else 13)
+
+
+def blk_delay(p):
+    """Header pin clock -> first result byte."""
+    return L_CAP + blk_pv(p) + L_PACK

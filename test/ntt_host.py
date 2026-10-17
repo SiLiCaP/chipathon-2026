@@ -10,6 +10,7 @@ and turns what comes back into result pairs:
     chip.pairs(op, starts, samples)  -> [(r0, r1), ...], checks the timing
 """
 
+import blk_order as B
 import ntt_ref as ref
 import timing as T
 
@@ -99,3 +100,68 @@ async def basemul_job(chip, f, g):
 async def scale_job(chip, f):
     pairs = await run_units(chip, OP_SC, scale_units(f), sof=True)
     return [c for p in pairs for c in p]
+
+
+# ---- Block mode (NTT cache) ------------------------------------------------------
+
+
+
+def blk_words(p, j, f):
+    """Pin words of one block: the header (bits 11:8 = 0xE, op = pass, bits 3:0 = j), then 16 entries."""
+    return [(0xE00 | j, 1, 0, p)] + [(f[i], 1, 0, 0) for i in B.entries(p, j)]
+
+
+def blk_stream(blocks, gaps=None):
+    """Words for a list of blocks (p, j, f), each header T.blk_spacing clocks after the one before
+    (plus gaps[k] extra idle clocks before block k). Returns (words, header indices)."""
+    words, heads = [], []
+    for k, (p, j, f) in enumerate(blocks):
+        start = len(words) + (gaps[k] if gaps else 0)
+        if heads:
+            start = max(start, heads[-1] + T.blk_spacing(blocks[k - 1][0]))
+        words += [IDLE] * (start - len(words))
+        heads.append(len(words))
+        words += blk_words(p, j, f)
+    return words, heads
+
+
+def blk_tail(p):
+    return T.blk_delay(p) + 3 * T.BLK_PAIRS
+
+
+def blk_results(blocks, heads, samples, used=None):
+    """{poly index: value} per block, read at the fixed delays."""
+    out = []
+    for (p, j, _), h in zip(blocks, heads):
+        res = {}
+        d = h + T.blk_delay(p)
+        for m, (i0, i1) in enumerate(B.out_pairs(p, j)):
+            b = samples[d + 3 * m:d + 3 * m + 3]
+            if used is not None:
+                used.update(range(d + 3 * m, d + 3 * m + 3))
+            r0, r1 = ref.unpack_pair(*b)
+            assert r0 < ref.Q and r1 < ref.Q, f"hardware fault: result {r0}, {r1} >= 3329"
+            res[i0], res[i1] = r0, r1
+        out.append(res)
+    return out
+
+
+async def blk_pass(chip, p, f, order=range(16)):
+    """One pass (16 blocks) of polynomial f; returns the new polynomial."""
+    blocks = [(p, j, f) for j in order]
+    words, heads = blk_stream(blocks)
+    samples = await chip.run(words, tail=blk_tail(p))
+    used = set()
+    g = list(f)
+    for res in blk_results(blocks, heads, samples, used):
+        for i, v in res.items():
+            g[i] = v
+    stray = [(k, v) for k, v in enumerate(samples) if v and k not in used]
+    assert not stray, f"{B.PASS_NAMES[p]}: bytes outside the block results: {stray[:8]}"
+    return g
+
+
+async def blk_ntt(chip, f, inverse=False):
+    """Forward (or inverse, before the scale) NTT in block mode: 2 passes of 16 blocks."""
+    p1, p2 = (B.IA, B.IB) if inverse else (B.FA, B.FB)
+    return await blk_pass(chip, p2, await blk_pass(chip, p1, f))
