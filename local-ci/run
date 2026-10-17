@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+# Run the Tiny Tapeout GitHub workflows locally and browse the results.
+#
+#   local-ci/run                 run every workflow (test, docs, gds) and serve the results
+#   local-ci/run test            run only the given workflows (test, docs, gds)
+#   local-ci/run serve           only serve the results of earlier runs
+#
+# Options:
+#   --port N       port for the results page (default 8765)
+#   --no-serve     don't start the web server; exit with the run's status
+#   --rebuild      rebuild the runner image even if nothing changed
+#   --keep N       number of runs to keep (default 10)
+#
+# Needs Docker. Everything else (Python, iverilog, LibreLane, PDKs, ...) lives in
+# a container image and a cache directory, so nothing is installed on the host.
+
+set -euo pipefail
+
+# Inside a Flatpak (e.g. the VSCodium terminal) Docker isn't reachable; hop to the host.
+if [ -f /.flatpak-info ] && command -v flatpak-spawn >/dev/null; then
+    exec flatpak-spawn --host --watch-bus --env=TERM="${TERM:-xterm}" "$(realpath "$0")" "$@"
+fi
+
+LOCAL_CI_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
+REPO="$(cd "$LOCAL_CI_DIR/.." && pwd)"
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/tt-local-ci"
+OUT="$REPO/.ci-local"
+PORT=8765
+SERVE=1
+REBUILD=0
+KEEP=10
+WORKFLOWS=()
+SERVE_ONLY=0
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --port) PORT="$2"; shift ;;
+        --no-serve) SERVE=0 ;;
+        --rebuild) REBUILD=1 ;;
+        --keep) KEEP="$2"; shift ;;
+        serve) SERVE_ONLY=1 ;;
+        test|docs|gds) WORKFLOWS+=("$1") ;;
+        fpga) echo "The fpga workflow is disabled on push in .github/workflows/fpga.yaml and isn't supported locally." >&2; exit 2 ;;
+        -h|--help) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        *) echo "Unknown argument: $1 (see --help)" >&2; exit 2 ;;
+    esac
+    shift
+done
+[ ${#WORKFLOWS[@]} -eq 0 ] && WORKFLOWS=(test docs gds)
+case "$KEEP" in
+    ''|*[!0-9]*|0) echo "--keep needs a whole number of at least 1 (got '$KEEP')" >&2; exit 2 ;;
+esac
+
+log() { printf '\033[1;35m[local-ci]\033[0m %s\n' "$*"; }
+
+command -v docker >/dev/null || { echo "Docker is required." >&2; exit 1; }
+mkdir -p "$OUT/runs" "$CACHE/home" "$CACHE/pdk" "$CACHE/pdk-precheck"
+[ -f "$OUT/.gitignore" ] || echo '*' > "$OUT/.gitignore"
+
+SERVER_PID=""
+start_server() {
+    local p
+    for p in $(seq "$PORT" $((PORT + 20))); do
+        python3 "$LOCAL_CI_DIR/serve.py" "$OUT" "$p" >"$CACHE/server.log" 2>&1 &
+        SERVER_PID=$!
+        sleep 0.5
+        if kill -0 "$SERVER_PID" 2>/dev/null; then
+            PORT=$p
+            log "Results: http://localhost:$PORT/"
+            return
+        fi
+    done
+    echo "Could not start the web server (ports $PORT-$((PORT + 20)) busy?)" >&2
+    exit 1
+}
+trap '[ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null || true' EXIT
+
+if [ "$SERVE_ONLY" = 1 ]; then
+    start_server
+    wait "$SERVER_PID"
+    exit 0
+fi
+
+# --- tt-support-tools: CI always uses the latest main ------------------------
+if [ ! -d "$REPO/tt/.git" ]; then
+    log "Cloning tt-support-tools into tt/"
+    git clone -q https://github.com/TinyTapeout/tt-support-tools "$REPO/tt"
+else
+    git -C "$REPO/tt" pull -q --ff-only 2>/dev/null || log "Could not update tt/ (offline or local changes); using it as is"
+fi
+
+# --- Runner image -------------------------------------------------------------
+CTX="$CACHE/build-context"
+rm -rf "$CTX" && mkdir -p "$CTX"
+cp "$LOCAL_CI_DIR/Dockerfile" "$CTX/"
+cp "$REPO/tt/requirements.txt" "$CTX/tt-requirements.txt"
+cp "$REPO/tt/precheck/requirements.txt" "$CTX/precheck-requirements.txt"
+cp "$REPO/tt/precheck/default.nix" "$CTX/precheck-default.nix"
+cp "$REPO/test/requirements.txt" "$CTX/test-requirements.txt"
+IMAGE="tt-local-ci:$(cat "$CTX"/* | sha256sum | cut -c1-12)"
+if [ "$REBUILD" = 1 ] || ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+    log "Building runner image $IMAGE (the first build takes a while)"
+    docker build -t "$IMAGE" "$CTX"
+fi
+
+# --- Run ----------------------------------------------------------------------
+SHA="$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+DIRTY=false
+[ -n "$(git -C "$REPO" status --porcelain --untracked-files=no -- . ':!tt' 2>/dev/null)" ] && DIRTY=true
+RUN_ID="$(date +%Y%m%d-%H%M%S)-$SHA"
+RUN_DIR="$OUT/runs/$RUN_ID"
+mkdir -p "$RUN_DIR"
+cat >"$RUN_DIR/meta.json" <<EOF
+{
+  "id": "$RUN_ID",
+  "commit": "$SHA",
+  "branch": "$(git -C "$REPO" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)",
+  "message": $(git -C "$REPO" log -1 --format=%s 2>/dev/null | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))'),
+  "dirty": $DIRTY,
+  "workflows": $(printf '%s\n' "${WORKFLOWS[@]}" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().split()))'),
+  "started": "$(date -Iseconds)"
+}
+EOF
+
+# Keep only the newest runs (the one starting now counts as one of them)
+ls -1d "$OUT"/runs/*/ 2>/dev/null | { grep -v "/$RUN_ID/\$" || true; } | sort -r | tail -n +"$KEEP" | xargs -r rm -rf
+
+[ "$SERVE" = 1 ] && start_server
+
+DOCKER_TTY=()
+[ -t 1 ] && DOCKER_TTY=(-t)
+
+set +e
+trap '' INT  # let Ctrl-C reach the container, then clean up below
+docker run --rm -i "${DOCKER_TTY[@]}" --init \
+    --user "$(id -u):$(id -g)" \
+    --group-add "$(stat -c %g /var/run/docker.sock)" \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "$REPO:$REPO" -v "$CACHE:$CACHE" -w "$REPO" \
+    -e HOME="$CACHE/home" \
+    -e PDK_ROOT="$CACHE/pdk" \
+    -e PRECHECK_PDK_ROOT="$CACHE/pdk-precheck" \
+    -e RUN_DIR="$RUN_DIR" \
+    -e OUT="$OUT" \
+    -e CI=true \
+    "$IMAGE" "$LOCAL_CI_DIR/pipeline.sh" "${WORKFLOWS[@]}"
+STATUS=$?
+trap - INT
+set -e
+
+if [ ! -f "$RUN_DIR/finished" ]; then
+    # Interrupted: mark unfinished jobs as cancelled and refresh the page
+    for f in "$RUN_DIR"/jobs/*/status; do
+        grep -qE 'running|queued' "$f" && echo cancelled >"$f"
+    done
+    rm -f "$RUN_DIR"/jobs/*/current
+    date -Iseconds >"$RUN_DIR/finished"
+    docker run --rm --user "$(id -u):$(id -g)" -v "$REPO:$REPO" "$IMAGE" \
+        /opt/venv-tt/bin/python "$LOCAL_CI_DIR/report.py" build "$OUT" >/dev/null 2>&1 || true
+    STATUS=130
+fi
+
+if [ "$STATUS" = 0 ]; then log "All jobs passed"; else log "Some jobs failed"; fi
+
+if [ "$SERVE" = 1 ]; then
+    log "Results: http://localhost:$PORT/runs/$RUN_ID/  (Ctrl-C to stop the server)"
+    wait "$SERVER_PID"
+fi
+exit "$STATUS"

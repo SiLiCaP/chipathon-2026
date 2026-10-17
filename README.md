@@ -7,6 +7,17 @@ https://excalidraw.com/#room=9bb0e0ad1c767a1439b4,RBkJs53ucnfbLAz1NOyxAQ
 Notion notes keeping:
 https://app.notion.com/p/Chipathon-3fbd208154f880f8a0e9ce96027a0aee?source=copy_link
 
+# Specs and tools
+Specs for the five parts of the chip (the source of truth for every port and timing):
+- [Spec 1: Pi harness and demo](specs/Spec%201%20Pi%20Harness%20and%20Demo.md)
+- [Spec 2: Multiplier](specs/Spec%202%20Multiplier.md)
+- [Spec 3: Control loop and integration](specs/Spec%203%20Control%20Loop%20and%20Integration.md)
+- [Spec 4: Adders](specs/Spec%204%20Adders.md)
+- [Spec 5: I/O](specs/Spec%205%20I%20O.md)
+
+[Local CI](local-ci/README.md): `local-ci/run` runs the GitHub workflows (test, docs, gds,
+precheck, gate-level test) on your machine with Docker and shows the results on a local page.
+
 # Chipathon links
 Tasks:
 https://tinytapeout.com/
