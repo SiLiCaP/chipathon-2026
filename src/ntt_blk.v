@@ -20,7 +20,7 @@
  * layer's pairs waiting for the pins).
  *
  * Core clocks from the header on coeff_q (c = 0); N = 8 x layers:
- *   c = 1..16         entries 0..15 shift into L; at c = 16, C <- {coeff_q, L}
+ *   c = 1..16         entries 0..14 shift into L; at c = 16, C <- {coeff_q, L}
  *   c = 17 + q        butterfly q (layer q / 8, position q % 8) reads C:
  *                     S1 <- (a, b) forward or (a + b, b - a) inverse, zeta'
  *   c = 18 + q        multiplier start: S1.y x zeta'; S1.x into the bypass line
@@ -90,11 +90,10 @@ module ntt_blk #(
   reg  [3:0] ld_cnt;
   reg  [1:0] ld_pass;
   reg  [3:0] ld_j;
-  reg  [11:0] L [1:15];
+  wire [15*12-1:0] Lw;                // L: entry e at Lw[e*12 +: 12], e = 0..14
   wire       ld_take = ld_act & valid_q;
   wire       xfer    = ld_take & (ld_cnt == 4'd15);   // 16th entry: C <- {coeff_q, L}
 
-  integer i;
   always @(posedge clk) begin
     if (!rst_n) begin
       ld_act <= 1'b0; ld_cnt <= 4'd0; ld_pass <= 2'd0; ld_j <= 4'd0;
@@ -106,14 +105,16 @@ module ntt_blk #(
     end
   end
 
+  genvar ge;
   generate
     if (HAS_L) begin : g_l
+      reg [15*12-1:0] lr;
       always @(posedge clk) begin
-        if (ld_take) begin
-          for (i = 1; i < 15; i = i + 1) L[i] <= L[i + 1];
-          L[15] <= coeff_q;
-        end
+        if (ld_take) lr <= {coeff_q, lr[15*12-1:12]};
       end
+      assign Lw = lr;
+    end else begin : g_nol
+      assign Lw = {(15*12){1'b0}};
     end
   endgenerate
 
@@ -291,9 +292,9 @@ module ntt_blk #(
   assign rom_use  = cp_act;
 
   // working set C: 2 reads, 2 writes per clock, or the load from L
-  reg  [11:0] C [0:15];
-  wire [11:0] a = C[lo];
-  wire [11:0] b = C[hi];
+  reg  [16*12-1:0] Cv;                // C entry e at Cv[e*12 +: 12]
+  wire [11:0] a = Cv[lo*12 +: 12];
+  wire [11:0] b = Cv[hi*12 +: 12];
 
   wire [11:0] pre_sum, pre_diff;      // a + b, b - a
   modq_addsub #(.REG_OUT(0)) u_pre (
@@ -343,18 +344,20 @@ module ntt_blk #(
   wire [11:0] w1 = t_inv ? p_out   : post_diff;   // new f[hi]
   wire        wb = t_v & ~t_last;
 
-  always @(posedge clk) begin
-    for (i = 0; i < 16; i = i + 1) begin
-      if (HAS_L && xfer)
-        C[i] <= (i == 15) ? coeff_q : L[i + 1];
-      else if (!HAS_L && ld_take && ld_cnt == i[3:0])
-        C[i] <= coeff_q;
-      else if (wb && t_lo == i[3:0])
-        C[i] <= w0;
-      else if (wb && t_hi == i[3:0])
-        C[i] <= w1;
+  generate
+    for (ge = 0; ge < 16; ge = ge + 1) begin : g_c
+      always @(posedge clk) begin
+        if (HAS_L && xfer)
+          Cv[ge*12 +: 12] <= (ge == 15) ? coeff_q : Lw[((ge == 15) ? 0 : ge)*12 +: 12];
+        else if (!HAS_L && ld_take && ld_cnt == ge)
+          Cv[ge*12 +: 12] <= coeff_q;
+        else if (wb && t_lo == ge)
+          Cv[ge*12 +: 12] <= w0;
+        else if (wb && t_hi == ge)
+          Cv[ge*12 +: 12] <= w1;
+      end
     end
-  end
+  endgenerate
 
   // ---------------------------------------------- F and the drain to the pins
   generate
@@ -394,6 +397,6 @@ module ntt_blk #(
     end
   endgenerate
 
-  wire _unused = &{tag_q[1:0], xk[8:7], 1'b0};
+  wire _unused = &{tag_q[1:0], xk[8:7], t_pos, Lw, 1'b0};
 
 endmodule
