@@ -3,7 +3,7 @@ project:
   title:        "NTT Core"      # Project title
   author:       "Nikita"      # Your name
   discord:      ""      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  "NTT butterfly core: loads a and b, sends a' and b' out as 3 bytes"      # One line description of what your project does
+  description:  "ML-KEM NTT, inverse NTT, basemul and scale mod 3329, streamed by a host"      # One line description of what your project does
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
   clock_hz:     0       # Clock frequency in Hz (or 0 if not applicable)
 
@@ -17,42 +17,44 @@ project:
   # Source files must be in ./src and you must list each source file separately, one per line.
   # Don't forget to also update `PROJECT_SOURCES` in test/Makefile.
   source_files:
-    - "project.v"
+    - "tt_um_NTT_Core.v"
+    - "io_in_capture.v"
+    - "io_out_pack.v"
+    - "ntt_core.v"
     - "twiddle_rom.v"
-    - "byte_serializer.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).
 pinout:
   # Inputs
-  ui[0]: ""
-  ui[1]: ""
-  ui[2]: ""
-  ui[3]: ""
-  ui[4]: ""
-  ui[5]: ""
-  ui[6]: ""
-  ui[7]: ""
+  ui[0]: "coeff[0]"
+  ui[1]: "coeff[1]"
+  ui[2]: "coeff[2]"
+  ui[3]: "coeff[3]"
+  ui[4]: "coeff[4]"
+  ui[5]: "coeff[5]"
+  ui[6]: "coeff[6]"
+  ui[7]: "coeff[7]"
 
   # Outputs
-  uo[0]: ""
-  uo[1]: ""
-  uo[2]: ""
-  uo[3]: ""
-  uo[4]: ""
-  uo[5]: ""
-  uo[6]: ""
-  uo[7]: ""
+  uo[0]: "result[0]"
+  uo[1]: "result[1]"
+  uo[2]: "result[2]"
+  uo[3]: "result[3]"
+  uo[4]: "result[4]"
+  uo[5]: "result[5]"
+  uo[6]: "result[6]"
+  uo[7]: "result[7]"
 
   # Bidirectional pins
-  uio[0]: ""
-  uio[1]: ""
-  uio[2]: ""
-  uio[3]: ""
-  uio[4]: ""
-  uio[5]: ""
-  uio[6]: ""
-  uio[7]: ""
+  uio[0]: "coeff[8]"
+  uio[1]: "coeff[9]"
+  uio[2]: "coeff[10]"
+  uio[3]: "coeff[11]"
+  uio[4]: "valid"
+  uio[5]: "sof"
+  uio[6]: "op[0]"
+  uio[7]: "op[1]"
 
 # Do not change!
 yaml_version: 6
