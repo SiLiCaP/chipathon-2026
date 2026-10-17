@@ -51,9 +51,9 @@ clocks: `r0[7:0]`, `{r1[3:0], r0[11:8]}`, `r1[11:4]`.
 The host drives `clk` and sets the input pins once per clock. Coefficients are 0..3328.
 Send one unit per period with valid low on the other clocks: an NTT butterfly (b at
 clock 0, a at clock 1) every 3 clocks, a basemul piece (g1, f1, g0, f0 at clocks 0..3)
-every 15 clocks, a scale coefficient every 3 clocks. Read the first byte of each result
-D clocks after the unit's first coefficient: D = 6 (forward), 7 (inverse), 20 (basemul)
-and 9 (scale, counted from the first coefficient of the pair). For the NTT modes, send each
+every 5 clocks, a scale pair (c at clock 0, c′ at clock 1) every 3 clocks. Read the first
+byte of each result D clocks after the unit's first coefficient: D = 6 (forward),
+8 (inverse), 12 (basemul) and 7 (scale). For the NTT modes, send each
 layer after the previous layer's results have come back; the chip keeps its counters while
 valid is low. A new sof cancels a running job.
 

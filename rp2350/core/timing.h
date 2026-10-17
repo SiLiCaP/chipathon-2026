@@ -13,7 +13,7 @@
 // clocks per unit (the input period the host must keep)
 #define TT_P_F 3
 #define TT_P_I 3
-#define TT_P_B 15
+#define TT_P_B 5
 #define TT_P_S 3
 
 // input offsets of each coefficient within its unit
@@ -23,13 +23,13 @@
 #define TT_OFFS_I {0, 1}
 #define TT_N_OFFS_B 4
 #define TT_OFFS_B {0, 1, 2, 3}
-#define TT_N_OFFS_S 1
-#define TT_OFFS_S {0}
+#define TT_N_OFFS_S 2
+#define TT_OFFS_S {0, 1}
 
 // output delays at the pins
 #define TT_D_F 6
-#define TT_D_I 7
-#define TT_D_B 20
-#define TT_D_S 9
+#define TT_D_I 8
+#define TT_D_B 12
+#define TT_D_S 7
 
 #endif

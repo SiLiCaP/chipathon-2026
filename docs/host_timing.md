@@ -4,8 +4,9 @@ Owner: Control (Spec 3), for the Pi owner's `timing.h` / `timing.py`. The source
 these numbers is `test/timing.py`. The pin-level tests measure D from the waveform and
 fail if it differs (`test/test.py` `test_output_delay`).
 
-Valid for `L_MUL` = 3 (pipelined K-RED multiplier), `PRE_LAT` = `POST_LAT` = 0, 1-clock
-input capture and 1-clock packer. Update if a block's latency changes.
+Valid for `L_MUL` = 3 (pipelined K-RED multiplier, fixed by the basemul schedule),
+`PRE_LAT` = 1, `POST_LAT` = 0, 1-clock input capture and 1-clock packer. Update if a block's
+latency changes. `rp2350/gen_timing.py` writes the same numbers into the C harness.
 
 ## Clock convention
 
@@ -19,28 +20,28 @@ The second and third bytes follow on the next two clocks.
 | Constant | Meaning | Value | Formula |
 | --- | --- | --- | --- |
 | `D_F` | Forward: b of a butterfly → first byte of (a', b') | **6** | L_CAP + 1 + L_MUL + POST_LAT + L_PACK |
-| `D_I` | Inverse: b → first byte of (a + b, (b − a)ζ) | **7** | L_CAP + 2 + PRE_LAT + L_MUL + L_PACK |
-| `D_B` | Basemul: g1 of a piece → first byte of (c0, c1) | **20** | L_CAP + 15 + L_MUL + L_PACK |
-| `D_S` | Scale: first c of a pair → first byte of the pair | **9** | L_CAP + 4 + L_MUL + L_PACK |
+| `D_I` | Inverse: b → first byte of (a + b, (b − a)ζ) | **8** | L_CAP + 2 + PRE_LAT + L_MUL + L_PACK |
+| `D_B` | Basemul: g1 of a piece → first byte of (c0, c1) | **12** | L_CAP + 6 + L_MUL + 1 + L_PACK |
+| `D_S` | Scale: c of a pair → first byte of the pair | **7** | L_CAP + 2 + L_MUL + L_PACK |
 
-The handoff assumed D_F = 5 and D_I = 7. Inverse meets 7. Forward is 6, one clock over,
-because the multiplier takes b from a register one clock after it arrives. The gap between
-them is 1 clock, not 2: the inverse starts its multiply 1 clock after the forward, once
-both b and a are in.
+The handoff assumed D_F = 5 and D_I = 7. Forward is 6, one clock over, because the
+multiplier takes b from a register one clock after it arrives. Inverse is 8: it needs both
+b and a before Pre ±, and the Pre ± result is registered for timing closure.
 
 ## Periods and offsets
 
 | Constant | Value |
 | --- | --- |
 | `P_F`, `P_I` | 3 clocks per butterfly |
-| `P_B` | 15 clocks per basemul piece |
-| `P_S` | 3 clocks per scale coefficient (6 per output pair) |
+| `P_B` | 5 clocks per basemul piece |
+| `P_S` | 3 clocks per scale pair |
 | Input offsets, forward / inverse | b at 0, a at 1 |
 | Input offsets, basemul | g1 at 0, f1 at 1, g0 at 2, f0 at 3 |
-| Input offsets, scale | c at 0 |
+| Input offsets, scale | c at 0, c′ at 1 |
 
-Units may be spaced further apart than the period, never closer. Back-to-back NTT units
-give a continuous byte stream with no gaps.
+Units may be spaced further apart than the period, never closer. Back-to-back NTT and
+scale units give a continuous byte stream with no gaps; basemul has a 2-clock gap per
+piece.
 
 ## Result order
 
@@ -67,10 +68,10 @@ Layer by layer, each layer takes 128 × 3 = 384 clocks of input plus D + 3 clock
 | Job | Clocks, layer by layer |
 | --- | --- |
 | Forward NTT | 7 × (384 + 9) = 2751 |
-| Inverse NTT | 7 × (384 + 10) = 2758 |
-| Basemul | 1920 + 23 = 1943 |
-| Scale | 768 + 12 = 780 |
-| Demo (3 NTT + basemul + scale) | 10,983 (streaming estimate 10,752) |
+| Inverse NTT | 7 × (384 + 11) = 2765 |
+| Basemul | 640 + 15 = 655 |
+| Scale | 384 + 10 = 394 |
+| Demo (2 forward + basemul + inverse + scale) | 9,316 (streaming estimate 9,088) |
 
 The pin-level test `test_full_flow` measures these counts.
 

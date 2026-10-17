@@ -1,8 +1,12 @@
 # Per-mode schedule
 
 Owner: Control (Spec 3). Input offsets the host must keep, and what the chip does on each
-clock. Values for `L_MUL` = 3, `PRE_LAT` = `POST_LAT` = 0. The constants live in
+clock. Values for `L_MUL` = 3, `PRE_LAT` = 1, `POST_LAT` = 0. The constants live in
 `test/timing.py`.
+
+**Multiplier use.** One start per clock in basemul and scale (full rate); once every 3
+clocks in the NTT modes, where the 3 output bytes per butterfly set the rate. The operand
+selects are registered one-hot signals decoded one clock ahead (Spec 3, Timing closure).
 
 **Offsets.** Clocks from the unit's first coefficient. The host column is the pin word in
 that host clock. The chip column is in core clocks: the coefficient the host sends at
@@ -35,48 +39,51 @@ Same unit order as forward, but layers go len = 2, 4, …, 128 (Algorithm 10).
 | --- | --- | --- |
 | 0 | b (valid) | b → R0. Look up ζ′ (ROM′ index 127 down to 1) → `zeta_r` |
 | 1 | a (valid) | a → R1 |
-| 2 | idle | Pre ±: a + b into the bypass line, start (b − a) × `zeta_r` |
-| 2 + L_MUL = 5 | | `pair_valid`: r0 = a + b (delayed), r1 = (b − a) × ζ |
+| 2 | idle | Pre ±: a + b and b − a into the Pre ± output register |
+| 3 | next b | a + b into the bypass line, start (b − a) × `zeta_r` (still this unit's ζ′) |
+| 3 + L_MUL = 6 | | `pair_valid`: r0 = a + b (delayed), r1 = (b − a) × ζ |
 
-With `PRE_LAT` = 1, the start and everything after it move one clock later.
+With `PRE_LAT` = 0 (allowed, but it misses timing closure), the start and everything
+after it move one clock earlier.
 
-## Basemul (op 10), period 15
+## Basemul (op 10), period 5
 
-One unit is one piece i (0..127): g1 = g[2i+1], f1 = f[2i+1], g0 = g[2i], f0 = f[2i].
+One unit is one piece i (0..127): g1 = g[2i+1], f1 = f[2i+1], g0 = g[2i], f0 = f[2i]. The
+four coefficients come on consecutive clocks; the next piece may start at offset 5.
 
 | Offset | Host sends | Chip does |
 | --- | --- | --- |
-| 0 | g1 (valid) | g1 → R0. Look up γ′_i → `zeta_r`. Piece timer starts |
+| 0 | g1 (valid) | g1 → R0. Look up γ′_i → `zeta_r` |
 | 1 | f1 (valid) | f1 → R1 |
-| 2 | g0 (valid) | g0 → R2. Start pass 1: f1 × g1 = m1 |
-| 3 | f0 (valid) | f0 → R3 |
-| 5 | idle | Start pass 3: f0 × g0 = m3. m1 back, stored in the loop-back register |
-| 8 | idle | Start pass 2: m1 × γ′ = m2. m3 back: acc0 ← m3 |
-| 11 | idle | Start pass 4: f0 × g1 = m4. m2 back: acc0 ← acc0 + m2 = c0 |
-| 14 | idle | Start pass 5: f1 × g0 = m5. m4 back: acc1 ← m4 |
-| 15 | next piece's g1 | |
-| 17 | | m5 back: acc1 ← acc1 + m5 = c1 |
-| 18 = 15 + L_MUL | | `pair_valid`: r0 = c0, r1 = c1 (both 2197 × the plain value, K-RED) |
+| 2 | g0 (valid) | g0 → R2. Start m1 = f1 × g1 |
+| 3 | f0 (valid) | f0 → R3. Start m5 = f1 × g0 |
+| 4 | idle | Start m4 = f0 × g1 (last use of g1) |
+| 5 | next piece's g1 | Start m2 = m1 × γ′, m1 straight from `p_out` as it comes out. `zeta_r` still holds this piece's γ′ |
+| 6 | next piece's f1 | Start m3 = f0 × g0. m5 back: acc1 ← m5 |
+| 7 | next piece's g0 | m4 back: acc1 ← acc1 + m4 = c1. The next piece's m1 starts |
+| 8 | | m2 back: acc0 ← m2 |
+| 9 | | m3 back: acc0 ← acc0 + m3 = c0 |
+| 10 = 6 + L_MUL + 1 | | `pair_valid`: r0 = c0, r1 = c1 (both 2197 × the plain value, K-RED) |
 
-m3 runs between m1 and m2 so m1 has up to 6 clocks to come back before m2 needs it. Any
-multiplier latency from 2 to 6 fits; at 6, m1 is taken straight from `p_out` on the clock
-it arrives. The multiplier starts every 3 clocks and a piece takes 15. The last part of
-each piece overlaps the start of the next one.
+The multiplier starts on 5 consecutive clocks per piece (2 to 6), so back-to-back pieces
+keep it busy every clock. m2 starts exactly `L_MUL` clocks after m1, which is why the
+latency is fixed at 3. Each operand register is read for the last time before the next
+piece overwrites it, and both sums hold until the pair goes out.
 
 ## Scale (op 11), period 3
 
-One unit is one coefficient c.
+One unit is a pair c, c′ on consecutive clocks.
 
 | Offset | Host sends | Chip does |
 | --- | --- | --- |
 | 0 | c (valid) | c → R0 |
-| 1 | | Start c × 304 |
-| 1 + L_MUL = 4 | | First of a pair: hold as r0 |
+| 1 | c′ (valid) | c′ → R1. Start c × 304 |
+| 2 | idle | Start c′ × 304 |
+| 1 + L_MUL = 4 | | First product: hold as r0 |
+| 2 + L_MUL = 5 | | `pair_valid`: r0 = held, r1 = second product |
 
-The second coefficient of the pair arrives at offset 3 and its product at 3 + 1 + L_MUL = 7:
-`pair_valid` with r0 = held, r1 = product. One pair every 6 clocks. Each result is
-2197 × 304 × c = 3303 × 2197⁻¹ × c: on basemul output (which carries 2197) the net is
-c × 3303.
+Each result is 2197 × 304 × c = 3303 × 2197⁻¹ × c: on basemul output (which carries
+2197) the net is c × 3303. Back-to-back pairs give a gap-free byte stream.
 
 ## Job lengths, streaming only
 
@@ -84,8 +91,8 @@ c × 3303.
 | --- | --- | --- |
 | Forward NTT | 896 butterflies (7 layers × 128) | 2688 |
 | Inverse NTT | 896 | 2688 |
-| Basemul | 128 pieces | 1920 |
-| Scale | 256 coefficients | 768 |
+| Basemul | 128 pieces | 640 |
+| Scale | 128 pairs | 384 |
 
 The NTT modes add the host's waits between layers (see `host_timing.md`).
 

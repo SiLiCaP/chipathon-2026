@@ -11,40 +11,38 @@
  * Inverse, layer l (len = 2 << l): the forward table read bottom up,
  *   x = (128 + n) >> (l + 1),  k = x ^ (0x7F >> (l + 1))  -> 127..64, ..., 1
  * Basemul piece i: gamma' = ROM'[64 + (i >> 1)], or 3329 minus it for odd i.
+ *   The negation is left to the core (neg out), off the lookup path.
  * Scale: unused (the core wires 304).
+ *
+ * inv / bm are the mode flags for this clock's input, decoded from registers
+ * by the core so the lookup path doesn't start at the heavily loaded op latch.
  */
 
 `default_nettype none
 
 module ntt_twiddle (
-    input  wire [1:0]  op,
+    input  wire        inv,     // inverse NTT
+    input  wire        bm,      // basemul
     input  wire [10:0] idx,
-    output wire [11:0] zeta
+    output wire [11:0] zeta,    // ROM' entry (gamma' before the negation)
+    output wire        neg      // basemul, odd piece: gamma' = 3329 - zeta
 );
-
-  localparam [1:0] OP_INV = 2'b01, OP_BM = 2'b10;
 
   wire [2:0] layer = idx[10:8];
   wire [6:0] bf    = idx[7:1];
   wire [6:0] piece = idx[8:2];
 
-  wire       inv = (op == OP_INV);
   wire [2:0] sh  = inv ? (layer + 3'd1) : (3'd7 - layer);
   wire [7:0] x   = {1'b1, bf} >> sh;
   wire [6:0] k_ntt = x[6:0] ^ (inv ? (7'h7F >> sh) : 7'h00);
 
-  wire       bm   = (op == OP_BM);
   wire [6:0] addr = bm ? {1'b1, piece[6:1]} : k_ntt;
-  wire       neg  = bm & piece[0];
+  assign     neg  = bm & piece[0];
 
-  wire [11:0] rom_data;
   zeta_rom u_rom (
       .addr(addr),
-      .data(rom_data)
+      .data(zeta)
   );
-
-  wire [11:0] negd = 12'd3329 - rom_data;   // no ROM' entry is 0
-  assign zeta = neg ? negd : rom_data;
 
   wire _unused = &{x[7], idx[0], 1'b0};
 

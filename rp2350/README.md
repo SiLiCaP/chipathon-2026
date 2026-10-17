@@ -103,7 +103,7 @@ typed commands. The PC tools written for the FPGA in
   - `in pins, 8 side 1`: `uo_out` is sampled as clk rises, just before the chip captures the word. This is
     exactly the `docs/host_timing.md` convention, so D and every result position apply unchanged.
 - **DMA.** TX writes 16-bit words, one per FIFO entry; RX reads 8-bit samples, one per entry. Clock counts
-  are exact, with no padding: forward NTT 2,751, inverse 2,758, basemul 1,943, scale 780, demo 10,983.
+  are exact, with no padding: forward NTT 2,751, inverse 2,765, basemul 655, scale 394, demo 9,316.
 - **Stalls are harmless.** If DMA ever falls behind, the PIO stalls with the clock held, low or high. A
   synchronous chip can't tell that from a slower clock, so no word is ever lost or repeated.
 - **Clock.** The chip clock is `sys / (div × (low + high))`, with an integer divider (no jitter).

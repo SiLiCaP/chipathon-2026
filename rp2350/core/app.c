@@ -11,7 +11,7 @@
 #define CLK_NTT (7 * (128 * TT_P_F + TT_D_F + 3))
 #define CLK_INTT (7 * (128 * TT_P_I + TT_D_I + 3))
 #define CLK_BM (128 * TT_P_B + TT_D_B + 3)
-#define CLK_SC (256 * TT_P_S + TT_D_S + 3)
+#define CLK_SC (128 * TT_P_S + TT_D_S + 3)
 
 static uint32_t rng_state;
 static void seed_rng(uint32_t s) { rng_state = s ? s : 1; }

@@ -14,11 +14,11 @@ from cocotb.triggers import ClockCycles, FallingEdge, RisingEdge, Timer
 import ntt_ref as ref
 import timing as T
 from ntt_host import (IDLE, OP_BM, OP_FWD, OP_INV, OP_NAMES, OP_SC, basemul_job, layer_units,
-                      ntt_job, pair_starts, rand_poly, scale_job, stream)
+                      ntt_job, pair_starts, rand_poly, scale_units, scale_job, stream)
 
-PRE_LAT = int(os.environ.get("PRE_LAT", "0"))
+PRE_LAT = int(os.environ.get("PRE_LAT", "1"))
 POST_LAT = int(os.environ.get("POST_LAT", "0"))
-L_MUL = int(os.environ.get("CORE_L_MUL", str(T.L_MUL)))
+L_MUL = T.L_MUL
 PV = T.core_timing(L_MUL, PRE_LAT, POST_LAT)
 
 
@@ -92,8 +92,9 @@ async def test_zeta_rom(dut):
 
 @cocotb.test()
 async def test_twiddle_select(dut):
-    """The zeta' / gamma' register for every unit of every mode, read at the
-    unit's start: forward ROM'[1..127], inverse ROM'[127..1], gamma' for all 128 pieces."""
+    """The zeta' / gamma' register for every unit of every mode: forward ROM'[1..127]
+    and inverse ROM'[127..1] in zeta_r at the unit's start, gamma' for all 128 pieces
+    in gamma_r one clock later (the negation for odd pieces happens there)."""
     chip = await new_chip(dut)
     rng = random.Random(11)
     f = rand_poly(rng)
@@ -115,8 +116,10 @@ async def test_twiddle_select(dut):
         for k, w in enumerate(words):
             await FallingEdge(dut.clk)
             chip.drive(w)
-            if k - 1 in starts:     # zeta_r is loaded at the unit's first input
+            if op != OP_BM and k - 1 in starts:     # zeta_r: loaded at the unit's first input
                 seen.append(int(dut.dut.zeta_r.value))
+            if op == OP_BM and k - 2 in starts:     # gamma_r: one clock after zeta_r
+                seen.append(int(dut.dut.gamma_r.value))
         chip.drive(IDLE)
         assert seen == expect, f"{OP_NAMES[op]} twiddles differ"
         await chip.reset()
@@ -160,14 +163,14 @@ async def test_cancel_and_flush(dut):
     chip = await new_chip(dut)
     rng = random.Random(14)
     f = rand_poly(rng)
-    scale_words, scale_starts = stream(OP_SC, [(c,) for c in f], sof=True)
+    scale_words, scale_starts = stream(OP_SC, scale_units(f), sof=True)
     s = await chip.run(scale_words, tail=chip.tail(OP_SC))
     assert not any(x[3] for x in s), "flush with no job running"
     old_units = {
         OP_FWD: [(f[2 * i + 1], f[2 * i]) for i in range(64)],
         OP_INV: [(f[2 * i + 1], f[2 * i]) for i in range(64)],
         OP_BM: [tuple(f[4 * i:4 * i + 4]) for i in range(64)],
-        OP_SC: [(c,) for c in f[:64]],
+        OP_SC: scale_units(f[:64]),
     }
     for old_op, units in old_units.items():
         old, _ = stream(old_op, units, sof=True)

@@ -28,7 +28,7 @@ struct tt_io {
     void *ctx;
 };
 
-// Longest job: basemul = 128 x 15 + D_B + 3 clocks, plus margin for the sample skew.
+// Longest job: basemul = 128 x P_B + D_B + 3 clocks (655), plus margin for the sample skew.
 #define NTT_WORDS_MAX 2048
 
 enum { NTT_OK = 0, NTT_ERR_RANGE = -1, NTT_ERR_IO = -2 };

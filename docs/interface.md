@@ -22,19 +22,17 @@ unsigned in 0..3328 on every port.
 | --- | --- | --- | --- |
 | `io_in_capture` | pins → `_q` outputs | `timing.py` `L_CAP` | 1 |
 | `modq_mul` | `start` → `p_valid` | `ntt_core` parameter `L_MUL`, `timing.py` `L_MUL` | 3 |
-| `modq_addsub` Pre ± | `REG_OUT` | `ntt_core` parameter `PRE_LAT`, `timing.py` `PRE_LAT` | 0 |
+| `modq_addsub` Pre ± | `REG_OUT` | `ntt_core` parameter `PRE_LAT`, `timing.py` `PRE_LAT` | 1 |
 | `modq_addsub` Post ± | `REG_OUT` | `ntt_core` parameter `POST_LAT`, `timing.py` `POST_LAT` | 0 |
 | `modq_acc` | `ld`/`add` → `acc` | fixed by spec | 1 |
 | `io_out_pack` | `pair_valid` → first byte | `timing.py` `L_PACK` | 1 |
 | `ntt_core` own stages | see `schedule.md` | | |
 
-`ntt_core` supports `L_MUL` from 2 to 6 (the basemul m1 → m2 loop-back has 6 clocks; at 6,
-m1 is forwarded from `p_out` on its own clock) and `PRE_LAT`/`POST_LAT` of 0 or 1.
-`make -C test/core all-variants` runs all four `PRE_LAT`/`POST_LAT` settings with the
-multiplier in `src/` (latency 3), and `L_MUL` = 2, 4, 5, 6 with a behavioral test
-multiplier (`test/core/modq_mul_lat.v`). CI runs it. If a multiplier's latency is not 3, set
-`L_MUL` on the `ntt_core` instance in the shell and in `test/timing.py`; the simulation
-assertion `p_valid != schedule` fires if they disagree.
+`ntt_core` needs `L_MUL` = 3: the full-rate basemul schedule starts m2 = m1 × γ′ on the clock
+m1 comes out (Spec 2 fixes the latency). `PRE_LAT` and `POST_LAT` may be 0 or 1;
+`PRE_LAT` = 1 is required for timing closure (Spec 3). `make -C test/core all-variants` runs
+all four settings, and CI runs it. The simulation assertions fire if `L_MUL` is not 3 or if
+`p_valid` disagrees with the schedule.
 
 ## `ntt_core` (Control)
 
@@ -50,7 +48,7 @@ assertion `p_valid != schedule` fires if they disagree.
 | `pair_valid` | out | 1 | High for one clock when `r0` and `r1` are valid. At least 3 clocks apart. Never high in a `flush` clock |
 | `flush` | out | 1 | High for one clock when a running job is cancelled (sof while running). Goes to `io_out_pack` and to `modq_mul.flush` |
 
-Parameters: `L_MUL` (4), `PRE_LAT` (0), `POST_LAT` (0).
+Parameters: `L_MUL` (3), `PRE_LAT` (1), `POST_LAT` (0).
 
 ## `io_in_capture` (I/O, Spec 5)
 
@@ -155,8 +153,7 @@ Constants `ntt_core` feeds to the multiplier's b input:
 
 ## Integrating the owners' blocks
 
-The files in `src/` marked `PLACEHOLDER` (`modq_mul.v`, `modq_addsub.v`, `modq_acc.v`)
-follow Specs 2 and 4 so the chip builds and the tests run end to end. To integrate, copy the
-owner's file over the placeholder with the same name. Then set `L_MUL`, `PRE_LAT` and
-`POST_LAT` on the `ntt_core` instance in `tt_um_NTT_Core.v` and in `test/timing.py`, and run
-`make -C test/mul exhaustive`, `make -C test` and `make -C test/core all-variants`.
+`modq_mul.v`, `modq_addsub.v` and `modq_acc.v` are the owners' blocks (Specs 2 and 4). To
+update one, copy the owner's new file over it with the same name and run
+`make -C test/mul exhaustive`, `make -C test/adders exhaustive`, `make -C test` and
+`make -C test/core all-variants`. The latency must stay 3 for `modq_mul`.

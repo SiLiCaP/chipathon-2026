@@ -23,9 +23,9 @@
 | `test/timing.py` | Every timing constant |
 
 The I/O blocks (`io_in_capture`, `io_out_pack`, `tt_um_NTT_Core`) follow Spec 5.
-`modq_mul`, `modq_addsub` and `modq_acc` are placeholders written to Specs 2 and 4; the
-owners' files replace them as they are (see `interface.md`). `test/mul/` runs the Spec 2
-exhaustive test on whatever `src/modq_mul.v` is.
+`modq_mul` (Spec 2, the full-rate K-RED multiplier) and `modq_addsub` / `modq_acc`
+(Spec 4) are the owners' blocks, used with their ports unchanged (see `interface.md`).
+`test/mul/` and `test/adders/` run their exhaustive tests.
 
 ## Design notes
 
@@ -34,18 +34,26 @@ exhaustive test on whatever `src/modq_mul.v` is.
   units or layers. The arithmetic pipeline runs freely, so results in flight still come out
   during a pause.
 - **Tags instead of timers on the output side.** Each multiplier start pushes its kind
-  (butterfly, scale, or basemul pass 1 to 5) into a delay line of length `L_MUL`. Whatever
+  (butterfly, scale, or basemul product m1 to m5) into a delay line of length `L_MUL`. Whatever
   comes out of the multiplier is routed by its tag, so the result side does not count
   clocks. A simulation assertion checks that `p_valid` matches the tag line, which catches
   a wrong `L_MUL`.
 - **Operands from registers.** Every multiplier operand comes from a register (R0 to R3,
-  `zeta_r`, the loop-back register) or from `p_out`, never straight from the pins. That is
-  why forward starts at offset 1 and inverse at offset 2.
+  `zeta_r`, the Pre ± output register) or from `p_out`, never straight from the pins. That
+  is why forward starts at offset 1 and inverse at offset 3.
+- **Registered operand selects (timing closure).** `ntt_sched` decodes the next clock's
+  operand sources into a 9-bit one-hot register, so the multiplier's input mux is one
+  AND-OR level driven by flip-flops. Before this, the select decode and its fanout took
+  14.5 ns of the 20 ns clock at the slow corner and the chip missed 50 MHz by 3.6 ns.
+  The ζ/γ lookup likewise runs from registered mode flags, and the γ negation happens in
+  `gamma_r` one clock later. Result: +1.41 ns of slack at the slow corner, post-PnR.
 - **ROM index without a block counter.** Forward k = (128 + n) >> (7 − layer) gives
   1, 2..3, 4..7, …, the same as "start at 1, step after every block". Inverse flips the low
   bits to read the table bottom up.
-- **Basemul pass order** m1, m3, m2, m4, m5 gives m1 up to 6 clocks to come back before
-  m2 starts, so any multiplier latency from 2 to 6 fits (see `schedule.md`).
+- **Basemul at full rate.** The products start in the order m1, m5, m4, m2, m3 on 5
+  consecutive clocks. m2 = m1 × γ′ starts on the clock m1 comes out and takes it straight
+  from `p_out`, so the multiplier latency must be exactly 3. A shift register of "piece
+  started" flags times the starts, so pieces can overlap (see `schedule.md`).
 - **K-RED factor 2197.** `modq_mul` returns 2197 × a × b (three rounds). The ROM stores
   ζ′ = ζ × 2197⁻¹ and γ′ comes from it, so the NTT modes are plain. The scale constant is
   304 = 3303 × 2197⁻². Basemul output carries 2197 and scale removes it, so the full flow
@@ -57,24 +65,26 @@ exhaustive test on whatever `src/modq_mul.v` is.
 local-ci/run test                    # what GitHub runs: pin-level tests
 make -C test                         # the same, with iverilog and cocotb installed
 make -C test/core                    # whole-core tests
-make -C test/core all-variants       # ... PRE_LAT / POST_LAT = 0 and 1, L_MUL = 3, 5, 6 (CI runs this)
+make -C test/core all-variants       # ... every PRE_LAT / POST_LAT setting (CI runs this)
 python3 test/ntt_ref.py              # reference model known answers
 python3 scripts/gen_tables.py        # regenerate the ROM and tables
 ```
 
-The simulation assertions (`-DNTT_ASSERT`, on in both Makefiles) check that multiplier
-starts and `pair_valid` are at least 3 clocks apart, that `p_valid` matches the schedule,
-that results and inputs are below 3329, and that basemul pieces are at least 15 clocks
-apart. Every test reads the error count at the end.
+The simulation assertions (`-DNTT_ASSERT`, on in both Makefiles) check that `pair_valid`
+pulses are at least 3 clocks apart, that `p_valid` matches the schedule, that results and
+inputs are below 3329, that units are no closer than their period (5 for basemul, 3
+otherwise), that the inputs of a unit are on consecutive clocks, and that `L_MUL` is 3.
+Every test reads the error count at the end.
 
 ## Status
 
 | Done when (Spec 3) | Status |
 | --- | --- |
-| All four modes match the reference model | Pass (pin level and core level, with the placeholder arithmetic blocks) |
+| All four modes match the reference model | Pass (pin level and core level) |
 | Full polynomial multiply matches schoolbook | Pass |
-| Output delay measured, matches `host_timing.md` | Pass: D = 6 / 7 / 20 / 9 |
-| Rates 3 / 15 / 3 | Pass |
+| Output delay measured, matches `host_timing.md` | Pass: D = 6 / 8 / 12 / 7 |
+| Rates 3 per butterfly / 5 per basemul piece / 3 per scale pair | Pass |
 | Reset and cancel leave no stale bytes | Pass, every mode pair, several cancel points |
 | ROM checked against the reference | Pass, all 128 scaled entries; γ′ for all 128 pieces |
 | Assembled design passes the Tiny Tapeout flow | See the local-ci run |
+| Post-PnR STA meets 50 MHz at the slow corner | See the local-ci gds run (`timing__setup__ws__corner:max_ss_100C_1v60`) |

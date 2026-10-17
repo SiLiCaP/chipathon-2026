@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Host-side job building, shared by the pin-level and the core-level tests.
 
-A job is sent as units (a butterfly, a basemul piece, a scale coefficient).
+A job is sent as units (a butterfly, a basemul piece, a scale pair).
 Each unit occupies one period of clocks, its coefficients on fixed offsets and
 valid low in between (docs/schedule.md). A chip object runs the clock words
 and turns what comes back into result pairs:
@@ -40,8 +40,13 @@ def stream(op, units, sof):
 
 
 def pair_starts(op, starts):
-    """Clock of the first input of each result pair (scale pairs two units)."""
-    return starts[::2] if op == OP_SC else starts
+    """Clock of the first input of each result pair (one pair per unit)."""
+    return starts
+
+
+def scale_units(cs):
+    """Scale inputs as units: pairs (c, c')."""
+    return [(cs[i], cs[i + 1]) for i in range(0, len(cs), 2)]
 
 
 def rand_poly(rng):
@@ -92,5 +97,5 @@ async def basemul_job(chip, f, g):
 
 
 async def scale_job(chip, f):
-    pairs = await run_units(chip, OP_SC, [(c,) for c in f], sof=True)
+    pairs = await run_units(chip, OP_SC, scale_units(f), sof=True)
     return [c for p in pairs for c in p]

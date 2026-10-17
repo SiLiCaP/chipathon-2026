@@ -14,7 +14,7 @@
  * Every other counter in the core is a slice of idx:
  *   forward / inverse : idx[0] = b/a, idx[7:1] = butterfly in layer, idx[10:8] = layer
  *   basemul           : idx[1:0] = g1/f1/g0/f0, idx[8:2] = piece
- *   scale             : idx[7:0] = coefficient
+ *   scale             : idx[0] = c/c', idx[7:1] = pair
  */
 
 `default_nettype none

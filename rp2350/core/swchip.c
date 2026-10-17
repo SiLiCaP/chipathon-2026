@@ -8,7 +8,7 @@
 
 static const uint8_t PERIOD[4] = {TT_P_F, TT_P_I, TT_P_B, TT_P_S};
 static const uint8_t DELAY[4] = {TT_D_F, TT_D_I, TT_D_B, TT_D_S};
-static const uint8_t N_IN[4] = {2, 2, 4, 2};                // inputs per result pair (scale pairs two)
+static const uint8_t N_IN[4] = {2, 2, 4, 2};                // inputs per unit (one result pair each)
 static const uint8_t OFFS_F[] = TT_OFFS_F, OFFS_I[] = TT_OFFS_I, OFFS_B[] = TT_OFFS_B, OFFS_S[] = TT_OFFS_S;
 static const uint32_t UNITS[4] = {896, 896, 128, 128};      // result pairs per job
 
@@ -25,7 +25,7 @@ static int expected_offset(int op, int i) {
     case OP_FWD: return OFFS_F[i];
     case OP_INV: return OFFS_I[i];
     case OP_BM: return OFFS_B[i];
-    default: return OFFS_S[0] + i * TT_P_S;                // scale: c at 0 of two consecutive units
+    default: return OFFS_S[i];                             // scale: c, c'
     }
 }
 
@@ -86,7 +86,7 @@ static uint8_t step(swchip_t *s, uint16_t w) {
         return uo;
     }
     if (s->n_got == 0) {
-        if (s->units_done && t - s->unit_start < (uint32_t)PERIOD[s->op] * (s->op == OP_SC ? 2 : 1) && !sof)
+        if (s->units_done && t - s->unit_start < (uint32_t)PERIOD[s->op] && !sof)
             violation(s, "unit closer than the period");
         s->unit_start = t;
     } else if ((int)(t - s->unit_start) != expected_offset(s->op, s->n_got)) {

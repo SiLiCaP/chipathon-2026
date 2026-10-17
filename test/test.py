@@ -14,7 +14,8 @@ from cocotb.triggers import ClockCycles, FallingEdge, RisingEdge
 import ntt_ref as ref
 import timing as T
 from ntt_host import (DELAY, IDLE, OP_BM, OP_FWD, OP_INV, OP_NAMES, OP_SC, basemul_job,
-                      ntt_job, pair_starts, pin_word, rand_poly, run_units, scale_job, stream)
+                      ntt_job, pair_starts, pin_word, rand_poly, run_units, scale_job, scale_units,
+                      stream)
 
 GL = os.environ.get("GATES") == "yes"
 
@@ -185,7 +186,7 @@ async def test_output_delay(dut):
         OP_FWD: [(5, 7)],                      # b, a -> a' = 7 + 5*zeta[1] != 0
         OP_INV: [(5, 7)],                      # r0 = a + b = 12
         OP_BM: [(1, 2, 3, 4)],                 # c0 = f0 g0 + ...
-        OP_SC: [(7,), (7,)],                   # r0 = 7 * 304 * 2197 = 1300
+        OP_SC: [(7, 7)],                       # r0 = 7 * 304 * 2197 = 1300
     }
     for op, units in cases.items():
         words, starts = stream(op, units, sof=True)
@@ -199,21 +200,22 @@ async def test_output_delay(dut):
 
 @cocotb.test()
 async def test_rates(dut):
-    """Back-to-back units give results every P clocks; NTT bytes have no gaps."""
+    """Back-to-back units give results every P clocks (forward 3, basemul 5,
+    scale 3 per pair); forward and scale bytes have no gaps."""
     chip = await new_chip(dut)
     rng = random.Random(6)
     f = rand_poly(rng)
-    units = [(f[2 * i], f[2 * i + 1]) for i in range(20)]
-    words, starts = stream(OP_FWD, units, sof=True)
-    samples = await chip.run(words, tail=T.D_F + 3)
-    assert all(b - a == T.P_F for a, b in zip(starts, starts[1:]))
-    pairs = chip.pairs(OP_FWD, starts, samples)
-    assert pairs == unit_results(OP_FWD, units, lambda n: 1)
-    words, starts = stream(OP_BM, [tuple(f[4 * i:4 * i + 4]) for i in range(4)], sof=True)
-    samples = await chip.run(words, tail=T.D_B + 3)
-    assert all(b - a == T.P_B for a, b in zip(starts, starts[1:]))
-    units = [tuple(f[4 * i:4 * i + 4]) for i in range(4)]
-    assert chip.pairs(OP_BM, starts, samples) == unit_results(OP_BM, units, None)
+    cases = [
+        (OP_FWD, [(f[2 * i], f[2 * i + 1]) for i in range(20)], lambda n: 1, T.P_F),
+        (OP_BM, [tuple(f[4 * i:4 * i + 4]) for i in range(8)], None, T.P_B),
+        (OP_SC, scale_units(f[:40]), None, T.P_S),
+    ]
+    for op, units, zeta_index, period in cases:
+        words, starts = stream(op, units, sof=True)
+        samples = await chip.run(words, tail=DELAY[op] + 3)
+        assert all(b - a == period for a, b in zip(starts, starts[1:]))
+        # every pair's 3 bytes sit at start + D: with period 3 the stream has no gaps
+        assert chip.pairs(op, starts, samples) == unit_results(op, units, zeta_index)
     chip.check_asserts()
 
 
@@ -223,7 +225,7 @@ def unit_results(op, units, layer_zeta_index):
     q = ref.Q
     out = []
     if op == OP_SC:
-        cs = ref.chip_scale([u[0] for u in units])
+        cs = ref.chip_scale([c for u in units for c in u])
         return [(cs[i], cs[i + 1]) for i in range(0, len(cs), 2)]
     for n, u in enumerate(units):
         if op == OP_FWD:
@@ -250,7 +252,7 @@ async def test_cancel(dut):
         OP_FWD: stream(OP_FWD, [(f[i + 128], f[i]) for i in range(128)], sof=True)[0],
         OP_INV: stream(OP_INV, [(f[i + 2 * (i // 2) + 2], f[i + 2 * (i // 2)]) for i in range(128)], sof=True)[0],
         OP_BM: stream(OP_BM, [tuple(f[4 * i:4 * i + 4]) for i in range(64)], sof=True)[0],
-        OP_SC: stream(OP_SC, [(c,) for c in f], sof=True)[0],
+        OP_SC: stream(OP_SC, scale_units(f), sof=True)[0],
     }
     zeta_index = {OP_FWD: lambda n: 1, OP_INV: lambda n: 127 - n // 2, OP_BM: None, OP_SC: None}
     points = [1, 2, 3, 4, 9, 17, 100] if not GL else [4, 17]
@@ -262,7 +264,7 @@ async def test_cancel(dut):
             elif new_op == OP_BM:
                 units = [tuple(g[4 * i:4 * i + 4]) for i in range(4)]
             else:
-                units = [(c,) for c in g[:16]]
+                units = scale_units(g[:16])
             words = old[:cut]
             new_words, new_starts = stream(new_op, units, sof=True)
             samples = await chip.run(words + new_words, tail=DELAY[new_op] + 3)
@@ -297,8 +299,8 @@ async def test_extra_inputs_ignored(dut):
     chip = await new_chip(dut)
     rng = random.Random(10)
     f = rand_poly(rng)
-    words, starts = stream(OP_SC, [(c,) for c in f], sof=True)
-    extra, _ = stream(OP_SC, [(c,) for c in f[:20]], sof=False)
+    words, starts = stream(OP_SC, scale_units(f), sof=True)
+    extra, _ = stream(OP_SC, scale_units(f[:20]), sof=False)
     samples = await chip.run(words + extra, tail=T.D_S + 3)
     pairs = chip.pairs(OP_SC, starts, samples)
     assert [x for p in pairs for x in p] == ref.chip_scale(f)

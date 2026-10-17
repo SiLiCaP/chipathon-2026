@@ -38,7 +38,7 @@ const char *ntt_err_str(int err) {
 }
 
 // Send n_units units of op (in: n_units x n_in coefficients in send order), wait until all their results
-// are back and unpack them into pairs (out: 2 coefficients per result pair). Scale pairs two units.
+// are back and unpack them into pairs (out: 2 coefficients per result pair, one pair per unit).
 static int run_units(ntt_chip_t *c, int op, const uint16_t *in, int n_units, int sof, uint16_t *out) {
     const int P = OPS[op].period, D = OPS[op].delay, n_in = OPS[op].n_in;
     const uint8_t *offs = OPS[op].offs;
@@ -51,11 +51,9 @@ static int run_units(ntt_chip_t *c, int op, const uint16_t *in, int n_units, int
     if (c->io->run(c->io, c->words, n, c->uo)) return NTT_ERR_IO;
     c->clocks += n;
     c->clocks_total += n;
-    const int units_per_pair = (op == OP_SC) ? 2 : 1;
-    const int n_pairs = n_units / units_per_pair;
     int bad = 0;
-    for (int k = 0; k < n_pairs; k++) {
-        const uint8_t *b = &c->uo[k * units_per_pair * P + D + c->skew];
+    for (int k = 0; k < n_units; k++) {
+        const uint8_t *b = &c->uo[k * P + D + c->skew];
         uint16_t r0, r1;
         unpack_pair(b, &r0, &r1);
         bad |= (r0 >= NTT_Q) | (r1 >= NTT_Q);
@@ -117,9 +115,9 @@ int ntt_chip_basemul(ntt_chip_t *c, const uint16_t f[NTT_N], const uint16_t g[NT
 }
 
 int ntt_chip_scale(ntt_chip_t *c, const uint16_t in[NTT_N], uint16_t out[NTT_N]) {
-    uint16_t units[NTT_N];
+    uint16_t units[NTT_N];                               // pairs c, c' on consecutive clocks
     memcpy(units, in, sizeof units);
     c->clocks = 0;
     c->calls++;
-    return run_units(c, OP_SC, units, NTT_N, 1, out);
+    return run_units(c, OP_SC, units, NTT_N / 2, 1, out);
 }

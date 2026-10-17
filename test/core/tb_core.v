@@ -4,8 +4,8 @@
 // Whole-core testbench top: ntt_core with the arithmetic blocks, driven at its
 // own ports (no pin capture / packer), plus a spare zeta_rom to read all 128.
 module tb_core #(
-    parameter L_MUL    = 4,
-    parameter PRE_LAT  = 0,
+    parameter L_MUL    = 3,
+    parameter PRE_LAT  = 1,
     parameter POST_LAT = 0
 ) ();
 
