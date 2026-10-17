@@ -1,12 +1,5 @@
 ![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/fpga/badge.svg)
 
-# All the links for communicaiton
-Excalidraw whiteboard:
-https://excalidraw.com/#room=9bb0e0ad1c767a1439b4,RBkJs53ucnfbLAz1NOyxAQ
-
-Notion notes keeping:
-https://app.notion.com/p/Chipathon-3fbd208154f880f8a0e9ce96027a0aee?source=copy_link
-
 # Specs and tools
 Specs for the five parts of the chip (the source of truth for every port and timing):
 - [Spec 1: Pi harness and demo](specs/Spec%201%20Pi%20Harness%20and%20Demo.md)
