@@ -4,7 +4,7 @@
 CC ?= cc
 CFLAGS ?= -O2 -std=c11 -Wall -Wextra -Werror
 CORE := ../core
-SRCS := pc_main.c $(CORE)/ntt_ref.c $(CORE)/ntt_chip.c $(CORE)/swchip.c $(CORE)/app.c
+SRCS := pc_main.c $(CORE)/ntt_ref.c $(CORE)/ntt_chip.c $(CORE)/swchip.c $(CORE)/app.c $(CORE)/oplog.c
 
 ntt_host: $(SRCS) $(wildcard $(CORE)/*.h)
 	$(CC) $(CFLAGS) -o $@ $(SRCS)

@@ -10,7 +10,9 @@ and is tagged **measured**, **cited** or **estimate**.*
 
 - **Hashing is two thirds to three quarters of ML-KEM-512's time** on the RP2350 (67–76 %, cited). The
   NTT work our chip takes over is 8–14 %.
-- So even an infinitely fast NTT unit speeds up ML-KEM by at most 1.08–1.16×. A hashing unit could reach 3–4×.
+- So even an infinitely fast NTT unit speeds up ML-KEM by at most 1.08–1.16×.
+- *Update, Oct 18:* with the full-rate schedule the chip gives 0.91× with an optimized RP2350 firmware, and an
+  estimated 0.35× with the firmware as written, which is CPU-bound (tt-viktor-chiptor `docs/ESTIMATES.md`). A hashing unit could reach 3–4×.
 - **Software can already reach about 1.47× without any silicon** (estimate). It needs two changes: keep the
   matrix Â from keygen for decaps, and hash on both M33 cores. Our NTT chip today gives 0.86×.
 - **A Keccak core on the chip would give 1.73× at 1,346 clocks per permutation**, measured RTL. But it needs

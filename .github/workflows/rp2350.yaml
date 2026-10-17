@@ -27,13 +27,17 @@ jobs:
           git clone --depth 1 -b 2.1.1 https://github.com/raspberrypi/pico-sdk.git $HOME/pico-sdk
           git -C $HOME/pico-sdk submodule update --init --depth 1 lib/tinyusb
 
-      - name: Build the firmware
+      - name: Build the firmware for both test environments
         run: |
-          cmake -S rp2350 -B rp2350/build -G Ninja -DPICO_SDK_PATH=$HOME/pico-sdk
-          cmake --build rp2350/build
+          for t in dbv3 pico2w_tang; do
+            cmake -S rp2350 -B rp2350/build_$t -G Ninja -DPICO_SDK_PATH=$HOME/pico-sdk -DTT_TARGET=$t
+            cmake --build rp2350/build_$t
+          done
 
-      - name: Upload tt_ntt.uf2
+      - name: Upload the UF2 files
         uses: actions/upload-artifact@v4
         with:
           name: tt_ntt-firmware
-          path: rp2350/build/tt_ntt.uf2
+          path: |
+            rp2350/build_dbv3/tt_ntt_dbv3.uf2
+            rp2350/build_pico2w_tang/tt_ntt_pico2w_tang.uf2

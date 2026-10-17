@@ -9,6 +9,24 @@ from [`sim/arch_explore.py`](https://github.com/SiLiCaP/tt-viktor-chiptor/blob/m
 (RTL, synthesis, FPGA), **cited** or an **estimate**. The setting is the TT demo board: RP2350 at 150 MHz,
 chip at 50 MHz, every bit moved over the pins.
 
+> **Update, Oct 18 2026.** The team adopted the full-rate schedule (spec change 1) and closed timing at 50 MHz:
+> - **Timing:** +1.41 ns slack at the slow corner, measured locally at `acff283`.
+> - **Area:** 31,799 µm² synthesized, 38,128 µm² placed, 52 % of 2×2.
+> - **Basemul and scale** now take 655 and 394 clocks.
+>
+> The silicon estimate also models the RP2350 firmware as it is actually written, which is CPU-bound. One
+> ML-KEM-512 exchange at 50 MHz (RP2350 alone: 8.08 ms):
+>
+> | RP2350 + team chip | Exchange | vs RP2350 alone |
+> |---|---|---|
+> | firmware as written (estimate, to be measured on the Pico 2 W + Tang Nano rig) | 22.9 ms | 0.35× |
+> | optimized firmware, 1 core (what-if) | 8.88 ms | 0.91× |
+> | optimized firmware, 2 cores (what-if) | 8.57 ms | 0.94× |
+> | optimized, 2 cores, 66 MHz (what-if) | 8.27 ms | 0.98× |
+>
+> These supersede the "today" and "full-rate" rows in the 4-tile, chip-part and clock-sweep tables below, which
+> assumed an optimized firmware. Method and chip-vs-FPGA differences: `docs/ESTIMATES.md` in tt-viktor-chiptor.
+
 The budget for synthesized logic is about **32k µm² for 4 tiles (2×2)** and **63k µm² for 8 tiles (4×2)**.
 That's an estimate: our 2×2 harden needed 1.6× the synthesized area once placed, at up to ~70 % density.
 

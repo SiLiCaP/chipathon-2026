@@ -1,8 +1,18 @@
 # RP2350 harness and demo (Spec 1)
 
-Firmware for the Tiny Tapeout demo board v3 that drives `tt_um_NTT_Core` through PIO and DMA. It runs the
-tests and the demo of Spec 1. The same C code also builds on a PC, where it runs against a software chip or
-against a Tang Nano FPGA. That way it was tested on the chip's real logic before any silicon exists.
+Firmware that drives `tt_um_NTT_Core` through PIO and DMA, and runs the tests and the demo of Spec 1. It
+builds for two test environments:
+- **`dbv3`**: the Tiny Tapeout demo board v3 with the real chip.
+- **`pico2w_tang`**: a Raspberry Pi Pico 2 W (the same RP2350) wired pin for pin to a Tang Nano 20K, which runs
+  the chip's hardened gate netlist. Wiring and bring-up are in tt-viktor-chiptor `docs/PICO_TANG_RIG.md`.
+
+The same C code also builds on a PC, where it runs against a software chip or against a Tang Nano over USB.
+That way it was tested on the chip's real logic before any silicon exists.
+
+The firmware **logs the time of every chip batch and call** in CPU cycles (`core/oplog.c`). On the Pico 2 W +
+Tang Nano rig, that log measures what the RP2350 itself costs around each call. tt-viktor-chiptor
+`tools/rp_log.py` turns it into the silicon prediction (tt-viktor-chiptor `docs/ESTIMATES.md`). That precise
+simulation needs both boards connected.
 
 ```
 rp2350/
@@ -12,12 +22,14 @@ rp2350/
     ntt_chip.c     the harness: job building, layer waits, unpacking, range checks, clock counting
     swchip.c       software chip: pin-level stand-in with the same protocol and delays
     app.c          selftest, demo, fuzz, matvec (stretch goal), bench, calibrate
+    oplog.c        operation timing log: prep / run / conv / post per batch, total per call; CSV and predictions
   rp/            RP2350 only
     tt_lockstep.pio  one loop = one chip clock: input word out, uo_out sampled, clk via side-set
-    tt_rp.c        pins, TT mux select, reset, PIO + DMA transport, chip clock settings
+    tt_rp.h        the two targets' pin maps (TT_TARGET)
+    tt_rp.c        pins, TT mux select, reset, PIO + DMA transport, chip clock settings, package check
     main.c         USB command line + the TTE1 binary protocol
   pc/            the PC build (pc_main.c, Makefile)
-  boards/        board header for the demo board v3 (RP2350B)
+  boards/        board header for the demo board v3 (RP2350B); the rig uses the SDK's pico2_w
 ```
 
 ## Build
@@ -32,16 +44,20 @@ rp2350/pc/ntt_host --port /dev/ttyUSB1 all           # against a Tang Nano runni
 **Firmware**, with pico-sdk 2.1.1 and an Arm GCC:
 
 ```bash
-cmake -S rp2350 -B rp2350/build -G Ninja -DPICO_SDK_PATH=/path/to/pico-sdk [-DTT_PROJECT_ADDR=<n>]
-cmake --build rp2350/build                           # -> rp2350/build/tt_ntt.uf2
+cmake -S rp2350 -B rp2350/build_dbv3 -G Ninja -DPICO_SDK_PATH=/path/to/pico-sdk [-DTT_PROJECT_ADDR=<n>]
+cmake --build rp2350/build_dbv3                      # -> tt_ntt_dbv3.uf2         (demo board, the default)
+cmake -S rp2350 -B rp2350/build_pico2w_tang -G Ninja -DPICO_SDK_PATH=/path/to/pico-sdk -DTT_TARGET=pico2w_tang
+cmake --build rp2350/build_pico2w_tang               # -> tt_ntt_pico2w_tang.uf2  (Pico 2 W + Tang Nano rig)
 ```
 
-Every push also builds it on GitHub (workflow `rp2350`). The UF2 is attached to the run as `tt_ntt-firmware`.
+Every push builds both on GitHub (workflow `rp2350`); the UF2 files are attached to the run as `tt_ntt-firmware`.
+Each firmware checks the RP2350 package at boot (QFN80 for the demo board, QFN60 for the Pico 2 W). On the wrong
+board it leaves every pin alone, says so in `status`, and only offers the software chip.
 `TT_PROJECT_ADDR` is our project's address on the shuttle's mux. Without it, select the project at run time
 with `select <n>`. The address is in the shuttle index once the chips ship.
 
-To flash it, put the board's RP2350 into BOOTSEL mode and copy `tt_ntt.uf2` onto the drive that appears, or
-use `picotool load -x tt_ntt.uf2`. This replaces the Tiny Tapeout MicroPython firmware. To go back, flash
+To flash it, put the board's RP2350 into BOOTSEL mode and copy the UF2 onto the drive that appears, or
+use `picotool load -x <file>.uf2`. This replaces the Tiny Tapeout MicroPython firmware. To go back, flash
 the TT MicroPython UF2 from the tt-micropython-firmware releases.
 
 ## Use
@@ -51,14 +67,16 @@ Open the USB serial port, for example `python3 -m serial.tools.miniterm /dev/tty
 | Command | What it does |
 |---|---|
 | `status` | board, project, chip clock (divider and phases), counters, uo_out right now |
-| `select <n>` | select project n on the TT mux (the TT SDK sequence), then reset the chip |
+| `select <n>` | select project n on the TT mux (the TT SDK sequence), then reset the chip. On the rig: just a reset |
 | `clk <hz>` | chip clock. Starts at 1 MHz, as Spec 1 asks |
 | `sys <mhz>` | RP2350 clock: 150 by default, 200 gives 50 MHz with even phases |
 | `selftest` | the Spec 1 known answers, first on the reference model, then on the chip |
 | `demo [seed]` | Spec 1 demo: f × g on the chip vs schoolbook, with clocks, estimate, chip time and wall time per step |
 | `fuzz [n]` | all four modes against the chip-level model: zeros, all 3328, ramp, single ones, n random |
 | `matvec [seed]` | stretch goal: t = A·s for k = 2, chip for every NTT and basemul, CPU for the sums |
-| `bench [n]` | time per call |
+| `bench [n]` | time per call, where it goes (prep, stream, transfer set-up, post, other), predicted at 50 MHz |
+| `log` / `log csv` / `log clear` | the operation log: per-call summary, every batch as CSV, or empty it |
+| `predict <hz>` | the logged calls re-predicted at chip clock `hz`: measured CPU work + clocks / hz |
 | `cal` | find the sample skew (see bring-up) |
 | `sweep` | known answers at 1–75 MHz, sample skews 0–2 |
 | `sw` / `hw` | software chip / real chip. With `sw`, any RP2350 board runs everything without a TT chip |
@@ -98,11 +116,25 @@ typed commands. The PC tools written for the FPGA in
 
   One 16-bit pin word `{uio, ui_in}` is exactly 16 consecutive GPIOs. The PIO runs with GPIO base 16, and
   the build refuses any board that isn't an RP2350B.
+- **Pins (Pico 2 W rig).** The Pico 2 W has 26 usable GPIOs (0–22, 26–28) for the chip's 26 signals:
+
+  | Signal | GPIO |
+  |---|---|
+  | `ui_in[7:0]` | 0–7 |
+  | `uio[4:0]` | 8–12 |
+  | `uio[7:5]` | 26–28 |
+  | `uo_out[7:0]` | 13–20 |
+  | `clk` | 21 |
+  | `rst_n` | 22 |
+
+  The PIO's 16 output pins must form one window, and GPIO 0–22 is too short. So the window starts at GPIO 26
+  and wraps around at 32: 19 bits, of which 29–31 stay unconnected. The firmware spreads each word over it,
+  about 3 cycles per word. The log records this as `conv` and the predictions drop it.
 - **Lockstep PIO, two instructions.** Each loop is one chip clock:
   - `out pins, 16 side 0`: clk falls and the next input word goes on the pins.
   - `in pins, 8 side 1`: `uo_out` is sampled as clk rises, just before the chip captures the word. This is
     exactly the `docs/host_timing.md` convention, so D and every result position apply unchanged.
-- **DMA.** TX writes 16-bit words, one per FIFO entry; RX reads 8-bit samples, one per entry. Clock counts
+- **DMA.** TX writes 16-bit words (32-bit on the rig), one per FIFO entry; RX reads 8-bit samples, one per entry. Clock counts
   are exact, with no padding: forward NTT 2,751, inverse 2,765, basemul 655, scale 394, demo 9,316.
 - **Stalls are harmless.** If DMA ever falls behind, the PIO stalls with the clock held, low or high. A
   synchronous chip can't tell that from a slower clock, so no word is ever lost or repeated.
@@ -116,6 +148,10 @@ typed commands. The PC tools written for the FPGA in
 - **Timing constants.** All come from `core/timing.h`, generated from `test/timing.py`. CI fails if the two
   disagree.
 
+- **Operation log.** Every batch records prep (build the words), run (PIO + DMA), conv (rig only) and post
+  (unpack) in CPU cycles from the Cortex-M33 cycle counter; every call records its total. `predict` keeps the
+  measured CPU parts and the transfer set-up, and replaces the streaming time with clocks / target clock.
+
 ## Verification so far (Oct 17, 2026)
 
 | Run | Result |
@@ -124,6 +160,8 @@ typed commands. The PC tools written for the FPGA in
 | PC + Tang Nano 20K, `tt_um_NTT_Core` **RTL** (`main` 91eb006) | PASS, same tests |
 | PC + Tang Nano 20K, `tt_um_NTT_Core` **hardened sky130 gate netlist** | PASS, same tests; sample skew 0 |
 | Firmware build (pico-sdk 2.1.1, Arm GCC 14.2) | builds without warnings, 50 kB code |
+| Firmware for the Pico 2 W rig (`pico2w_tang`), Oct 18 | builds without warnings; the rig's FPGA side passes in simulation (tt-viktor-chiptor `fpga/sim_pico`) |
+| **On the Pico 2 W + Tang Nano rig** | **not run yet**: code ready, boards not connected |
 | **On an RP2350 demo board** | **not run yet**: no board here. The PIO/DMA transport, mux select and USB layer are untested on hardware |
 
 On the Tang Nano the chip runs as its gate netlist: every sky130 standard cell is rebuilt from its logic
