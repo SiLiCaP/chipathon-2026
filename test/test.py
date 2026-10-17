@@ -12,33 +12,16 @@ def pack(a_prime, b_prime):
     return [word & 0xFF, (word >> 8) & 0xFF, (word >> 16) & 0xFF]
 
 
-def set_input(dut, value, sel_b):
-    """Put a 12-bit value on the input pins and pick its register (uio_in[4]: 0 = a, 1 = b)."""
+def set_input(dut, value):
+    """Put a 12-bit value on the input pins: ui_in = bits [7:0], uio_in[3:0] = bits [11:8]."""
     dut.ui_in.value = value & 0xFF
-    dut.uio_in.value = (sel_b << 4) | (value >> 8)
+    dut.uio_in.value = value >> 8
 
 
 async def read_byte(dut):
     await RisingEdge(dut.clk)  # uo_out changes on the rising edge
     await FallingEdge(dut.clk)  # read it half a clock later, once it has settled
     return int(dut.uo_out.value)
-
-
-async def read_frame(dut):
-    return [await read_byte(dut) for _ in range(3)]
-
-
-async def load_and_read_frame(dut, a, b):
-    """Load a then b into the input registers while reading one frame.
-
-    a' and b' follow a and b one clock later, so the pair is in place
-    before the next frame starts and goes out in that frame.
-    """
-    set_input(dut, a, sel_b=0)
-    frame = [await read_byte(dut)]
-    set_input(dut, b, sel_b=1)
-    frame += [await read_byte(dut) for _ in range(2)]
-    return frame
 
 
 @cocotb.test()
@@ -60,25 +43,38 @@ async def test_project(dut):
 
     dut._log.info("Test project behavior")
 
-    # Data_in comes from the input pins: ui_in = bits [7:0], uio_in[3:0] = bits [11:8].
-    # uio_in[4] picks which input register it loads: 0 = a, 1 = b.
-    # a' = a and b' = b (one clock later) until the NTT core computes them.
-    # The first clock edge after reset sends byte 1, and a frame is 3 clocks.
+    # One 12-bit word goes in per clock while BUSY (uio_out[4]) is low.
+    # The words go into b, a, b, a, ... so words 1 and 2 are the pair (b, a),
+    # words 3 and 4 the next pair, and so on. Once a pair is in, BUSY goes high
+    # and the inputs are ignored until byte 3 of that pair is out on uo_out.
+    # a' = a and b' = b until the NTT core computes them.
+    # uo_out is 0 while no bytes are being sent.
+    assert int(dut.uio_oe.value) == 0b0001_0000
 
-    # The first frame is the reset value of a' and b'
-    assert await load_and_read_frame(dut, 0x456, 0xABC) == [0x00, 0x00, 0x00]
+    pairs = [(0x123, 0xDEF), (0x789, 0x312), (0x5A5, 0xA5A), (0xFED, 0x0C1)]  # (b, a)
+    words = [w for pair in pairs for w in pair]
+    out = []
+    busy = []
+    sent = 0
+    for _ in range(6 * len(pairs) + 3):
+        busy.append((int(dut.uio_out.value) >> 4) & 1)
+        if busy[-1] or sent == len(words):
+            set_input(dut, 0xBAD)  # must be ignored
+        else:
+            set_input(dut, words[sent])
+            sent += 1
+        out.append(await read_byte(dut))
 
-    # Each pair goes out in the frame after it is loaded
-    assert await load_and_read_frame(dut, 0xDEF, 0x123) == [0xBC, 0x6A, 0x45]
+    # Every word was taken
+    assert sent == len(words)
 
-    # a' changes in the middle of this frame, but all 3 bytes still belong to one pair
-    assert await load_and_read_frame(dut, 0x312, 0x789) == pack(0xDEF, 0x123)
-    assert await read_frame(dut) == pack(0x312, 0x789)
+    # Each pair takes 6 clocks: load b, load a, a' and b' load, then bytes 1, 2, 3.
+    # BUSY is high from loading a until byte 3 goes out, so the next b loads on the
+    # clock edge right after byte 3.
+    assert busy[:12] == [0, 0, 1, 1, 1, 1] * 2
+    assert out[:6] == [0x00, 0x00, 0x00, 0x23, 0xF1, 0xDE]  # pack(a'=0xDEF, b'=0x123)
 
-    # With uio_in[4] = 1 only b loads, so a keeps its value
-    set_input(dut, 0x5A5, sel_b=1)
-    assert await read_frame(dut) == pack(0x312, 0x789)  # b' catches up during this frame
-    assert await read_frame(dut) == pack(0x312, 0x5A5)
-
-    # Keep testing the module by changing the input values, waiting for
-    # one or more clock cycles, and asserting the expected output values.
+    # Every pair goes out once, in order, with 0 in between
+    for n, (b, a) in enumerate(pairs):
+        assert out[6 * n : 6 * n + 6] == [0, 0, 0] + pack(a_prime=a, b_prime=b)
+    assert out[6 * len(pairs) :] == [0, 0, 0]

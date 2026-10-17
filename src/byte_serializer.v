@@ -12,34 +12,39 @@
  *   byte 3 = a'[11:4]
  * This is the 24-bit word {a', b'} cut into bytes, lowest byte first.
  *
- * b' and a' are sampled on the clock edge that puts byte 1 out, so all three
- * bytes always belong to the same pair. The sequence repeats forever and
- * starts again at byte 1 on the first clock edge after reset.
+ * Sending starts on a clock edge where start is high: b' and a' are sampled
+ * and byte 1 goes out on that edge. last is high during the clock before
+ * byte 3 goes out. When no bytes are being sent, data_out is 0.
  */
 module byte_serializer (
     input  wire        clk,
     input  wire        rst_n,
+    input  wire        start,
     input  wire [11:0] b_prime,
     input  wire [11:0] a_prime,
-    output wire [7:0]  data_out
+    output wire [7:0]  data_out,
+    output wire        last
 );
 
   reg [23:0] shift;  // byte now on data_out is in [7:0], the rest wait above it
-  reg [1:0]  index;  // which byte is on data_out: 0 = byte 1, 1 = byte 2, 2 = byte 3
+  reg [1:0]  left;   // how many bytes are still waiting after the one on data_out
 
   always @(posedge clk) begin
     if (!rst_n) begin
       shift <= 24'd0;
-      index <= 2'd2;            // so the first edge after reset loads a new pair
-    end else if (index == 2'd2) begin
-      shift <= {a_prime, b_prime};  // load the next pair, byte 1 goes out
-      index <= 2'd0;
+      left  <= 2'd0;
+    end else if (start) begin
+      shift <= {a_prime, b_prime};  // load the pair, byte 1 goes out
+      left  <= 2'd2;
     end else begin
-      shift <= shift >> 8;      // move the next byte down into [7:0]
-      index <= index + 2'd1;
+      shift <= shift >> 8;      // move the next byte down into [7:0], 0 once all 3 are out
+      if (left != 2'd0) begin
+        left <= left - 2'd1;
+      end
     end
   end
 
   assign data_out = shift[7:0];
+  assign last     = (left == 2'd1);
 
 endmodule
