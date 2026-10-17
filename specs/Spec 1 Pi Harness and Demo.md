@@ -40,7 +40,7 @@ Order of inputs for each mode:
 | Basemul | g1, f1, g0, f0 for each piece | 512 | 384 |
 | Scale | One coefficient c at a time | 256 | 384 |
 
-What the output bytes mean. The chip multiplier returns 169 × the product, so forward and inverse NTT outputs are plain, but basemul bytes carry 169 × the plain basemul, and scale returns c × 3303 × 169⁻¹ mod 3329. Run the whole flow (forward, forward, basemul, inverse, scale) and the final answer is correct. Do not compare basemul or scale output alone against the plain reference. Compare it against your chip-level model.
+What the output bytes mean. The chip multiplier returns 2197 × the product (2197 = 13³), so forward and inverse NTT outputs are plain, but basemul bytes carry 2197 × the plain basemul, and scale returns c × 3303 × 2197⁻¹ mod 3329. Run the whole flow (forward, forward, basemul, inverse, scale) and the final answer is correct. Do not compare basemul or scale output alone against the plain reference. Compare it against your chip-level model.
 
 How an NTT job runs end to end:
 
@@ -74,10 +74,10 @@ Timing constants never appear in the code. They come from one file, described in
 
 ## Reference model and test vectors
 
-Your reference model is the truth for all five specs. It follows FIPS 203 Algorithms 9, 10, 11 and 12 exactly, plus the final multiply by 3303. You also write a chip-level model that mimics the multiplier exactly: two K-RED rounds (K-RED(x) = 13 × (x & 255) − (x >> 8)) and one final correction, so every product comes out as 169 × the plain product mod 3329. Use scaled constants in that model: ROM′ = ROM × 169⁻¹ and γ′ likewise, with 169⁻¹ = 2285, and the scale constant 1441 = 3303 × 169⁻². All pin-level vectors come from this model.
+Your reference model is the truth for all five specs. It follows FIPS 203 Algorithms 9, 10, 11 and 12 exactly, plus the final multiply by 3303. You also write a chip-level model that mimics the multiplier exactly: three K-RED rounds (K-RED(x) = 13 × (x & 255) − (x >> 8)) and one final correction, so every product comes out as 2197 × the plain product mod 3329. Use scaled constants in that model: ROM′ = ROM × 2197⁻¹ and γ′ likewise, with 2197⁻¹ = 944, and the scale constant 304 = 3303 × 2197⁻². All pin-level vectors come from this model.
 
 - **Language.** Python first, for vectors. Add a C version later if the RP2350 self-test needs it.
-- **ROM and γ.** ROM\[k\] = 17^BitRev7(k) mod 3329 and γ\_i = 17^(2·BitRev7(i)+1) mod 3329. Export all 128 of each as files, in two versions: plain and scaled by 169⁻¹ mod 3329 (the chip stores the scaled one). The Control owner checks `zeta_rom.v` against them.
+- **ROM and γ.** ROM\[k\] = 17^BitRev7(k) mod 3329 and γ\_i = 17^(2·BitRev7(i)+1) mod 3329. Export all 128 of each as files, in two versions: plain and scaled by 2197⁻¹ mod 3329 (the chip stores the scaled one). The Control owner checks `zeta_rom.v` against them.
 - **Stimulus and expected output at pin level.** For each mode write `stim_<mode>.hex` (one 16-bit input word per chip clock, idle clocks included, following the Control owner's schedule) and `exp_<mode>.hex` (expected `uo_out` per clock, once the delays are known).
 - **Unit-level files.** Small files for the multiplier (a, b, product), the adders (x, y, sum, diff, and accumulate sequences) and the packer (r0, r1, three bytes). The owners also run their own exhaustive tests.
 - **Vector sets.** Random polynomials (10 seeds), all zeros, all 3328, the ramp f\[i\] = i, a single 1 at several positions, and cancel tests with a new sof at several points mid-job.
@@ -94,10 +94,10 @@ Known answers to reproduce. I ran a reference with the same algorithms. Forward 
 | Forward NTT of f\[i\] = i, outputs 248 to 255 | 2883, 149, 2594, 3105, 2502, 2134, 2717, 2303 |
 | Inverse NTT of that, before the scale, outputs 0 to 3 | 0, 128, 256, 384 |
 | After the 3303 scale, outputs 0 to 3 | 0, 1, 2, 3 |
-| Scaled ROM′\[0\], \[1\], \[64\], \[127\] | 2285, 2571, 2226, 1628 |
-| Scaled γ′ for pieces 0, 1, 127; scale constant | 2226, 1103, 1701; 1441 |
-| Basemul with f0 = 5, f1 = 7, g0 = 11, g1 = 13, γ = 17: plain answer, then chip pins | plain c0 = 1602, c1 = 142; pins c0 = 1089, c1 = 695 |
-| Scale mode, input then output | 169 → 3303, 1275 → 316, 3160 → 26 |
+| Scaled ROM′\[0\], \[1\], \[64\], \[127\] | 944, 966, 2732, 2686 |
+| Scaled γ′ for pieces 0, 1, 127; scale constant | 2732, 597, 643; 304 |
+| Basemul with f0 = 5, f1 = 7, g0 = 11, g1 = 13, γ = 17: plain answer, then chip pins | plain c0 = 1602, c1 = 142; pins c0 = 841, c1 = 2377 |
+| Scale mode, input then output | 2197 → 3303, 3259 → 316, 1132 → 26 |
 
 ## Demo
 
@@ -107,7 +107,7 @@ One demo that uses all four modes: multiply two polynomials mod X^256 + 1 on the
 2. Forward NTT of f, then forward NTT of g, on the chip.
 3. Basemul of the two results on the chip.
 4. Inverse NTT of that result on the chip.
-5. Scale on the chip (constant 1441, which nets out to 3303 once the 169 from basemul is removed).
+5. Scale on the chip (constant 304, which nets out to 3303 once the 2197 from basemul is removed).
 6. Multiply f and g on the CPU with the schoolbook method (negacyclic, mod 3329).
 7. Compare. Print PASS or FAIL, the chip clock count for each step, and the CPU time.
 
@@ -126,10 +126,10 @@ All output delays are assumptions until RTL has been simulated. Keep every timin
 
 | Constant | Meaning | Value now | Source of the final value |
 | --- | --- | --- | --- |
-| `D_F` | Clocks from a forward pair's first input to its first byte | 5 | Control owner's `host_timing.md` |
+| `D_F` | Clocks from a forward pair's first input to its first byte | 6 | Control owner's `host_timing.md` |
 | `D_I` | Same, inverse | 7 | Same |
-| `D_B` | Same, basemul | to be determined | Same |
-| `D_S` | Same, scale | to be determined | Same |
+| `D_B` | Same, basemul | 20 | Same |
+| `D_S` | Same, scale (from the first coefficient of a pair) | 9 | Same |
 | `P_F`, `P_I` | Clocks per butterfly | 3 | Handoff |
 | `P_B` | Clocks per basemul piece | 15 | Handoff (12 if Karatsuba is added later) |
 | `P_S` | Clocks per scale coefficient | 3, so 6 per output pair | Handoff |
