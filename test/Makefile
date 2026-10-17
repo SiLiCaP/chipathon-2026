@@ -8,6 +8,8 @@ TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
 PROJECT_SOURCES = project.v twiddle_rom.v byte_serializer.v
 
+PROJECT_SOURCES += multiplier/modmul_kred.v
+
 ifneq ($(GATES),yes)
 
 # RTL simulation:
