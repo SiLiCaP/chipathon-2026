@@ -34,8 +34,9 @@ module ntt_core #(
     input  wire        valid_q,
     input  wire        sof_q,
     input  wire [1:0]  op_q,
-    output reg  [11:0] r0,
-    output reg  [11:0] r1,
+    input  wire        blk_q,      // block-mode header (ntt_blk): op_q = pass, coeff_q[3:0] = block
+    output wire [11:0] r0,
+    output wire [11:0] r1,
     output wire        pair_valid,
     output wire        flush
 );
@@ -107,13 +108,17 @@ module ntt_core #(
   wire        neg_lu;
   wire        tw_inv = job_start ? (op_q == OP_INV) : tw_inv_r;
   wire        tw_bm  = job_start ? (op_q == OP_BM)  : tw_bm_r;
+  wire [6:0]  blk_rom_addr;
+  wire        blk_rom_use;
 
   ntt_twiddle u_twiddle (
-      .inv (tw_inv),
-      .bm  (tw_bm),
-      .idx (idx),
-      .zeta(zeta_lu),
-      .neg (neg_lu)
+      .inv     (tw_inv),
+      .bm      (tw_bm),
+      .idx     (idx),
+      .ovr     (blk_rom_use),
+      .ovr_addr(blk_rom_addr),
+      .zeta    (zeta_lu),
+      .neg     (neg_lu)
   );
 
   always @(posedge clk) begin
@@ -161,17 +166,22 @@ module ntt_core #(
   reg  [11:0] hold;                // scale: first result of the pair
   wire [11:0] p_out;
   wire        p_valid, mul_ready;
-  wire [11:0] mul_a = ({12{mul_sel[0]}} & R0)    | ({12{mul_sel[1]}} & R1) |
-                      ({12{mul_sel[2]}} & p_out) | ({12{mul_sel[3]}} & R3) |
-                      ({12{mul_sel[4]}} & pre_diff);
-  wire [11:0] mul_b = ({12{mul_sel[5]}} & C_SCALE) | ({12{mul_sel[6]}} & R0) |
-                      ({12{mul_sel[7]}} & zeta_r)  | ({12{mul_sel[8]}} & R2) |
-                      ({12{mul_sel[9]}} & gamma_r);
+  wire [11:0] mul_a_s = ({12{mul_sel[0]}} & R0)    | ({12{mul_sel[1]}} & R1) |
+                        ({12{mul_sel[2]}} & p_out) | ({12{mul_sel[3]}} & R3) |
+                        ({12{mul_sel[4]}} & pre_diff);
+  wire [11:0] mul_b_s = ({12{mul_sel[5]}} & C_SCALE) | ({12{mul_sel[6]}} & R0) |
+                        ({12{mul_sel[7]}} & zeta_r)  | ({12{mul_sel[8]}} & R2) |
+                        ({12{mul_sel[9]}} & gamma_r);
+  // block mode (ntt_blk): its operands come from its own registers, select blk_go is a flip-flop
+  wire        blk_go, blk_res_v;
+  wire [11:0] blk_y, blk_z, blk_x;
+  wire [11:0] mul_a = blk_go ? blk_y : mul_a_s;
+  wire [11:0] mul_b = blk_go ? blk_z : mul_b_s;
 
   modq_mul u_mul (
       .clk    (clk),
       .rst_n  (rst_n),
-      .start  (mul_start),
+      .start  (mul_start | blk_go),
       .a_in   (mul_a),
       .b_in   (mul_b),
       .flush  (cancel),
@@ -183,7 +193,7 @@ module ntt_core #(
   // ------------------------------------------------- bypass delay line
   // Forward: a (on coeff_q at the start clock). Inverse: a + b (at the start
   // clock). Both meet the product L_MUL clocks later.
-  wire [11:0] byp_in  = !busy ? 12'd0 : (op == OP_INV) ? pre_sum : coeff_q;
+  wire [11:0] byp_in  = blk_go ? blk_x : !busy ? 12'd0 : (op == OP_INV) ? pre_sum : coeff_q;
   wire [11:0] byp_out;
   ntt_delay #(.W(12), .N(L_MUL)) u_byp (
       .clk  (clk),
@@ -247,18 +257,48 @@ module ntt_core #(
   wire pv_inv = is_bf && op == OP_INV;
   wire pv_sc  = is_sc && sc_half;
 
-  assign pair_valid = (pv_fwd | pv_inv | pv_sc | pv_bm) & ~cancel;
+  wire blk_pv;
+  wire [11:0] blk_r0, blk_r1;
+  assign pair_valid = ((pv_fwd | pv_inv | pv_sc | pv_bm) & ~cancel) | blk_pv;
 
+  reg [11:0] s_r0, s_r1;
   always @(*) begin
     case (op)
-      OP_FWD:  begin r0 = post_sum; r1 = post_diff; end  // a', b'
-      OP_INV:  begin r0 = byp_out;  r1 = p_out;     end  // a + b, (b - a) * zeta
-      OP_BM:   begin r0 = acc0;     r1 = acc1;      end  // c0, c1
-      default: begin r0 = hold;     r1 = p_out;     end  // c * 304 (x2197), two at a time
+      OP_FWD:  begin s_r0 = post_sum; s_r1 = post_diff; end  // a', b'
+      OP_INV:  begin s_r0 = byp_out;  s_r1 = p_out;     end  // a + b, (b - a) * zeta
+      OP_BM:   begin s_r0 = acc0;     s_r1 = acc1;      end  // c0, c1
+      default: begin s_r0 = hold;     s_r1 = p_out;     end  // c * 304 (x2197), two at a time
     endcase
   end
+  assign r0 = blk_pv ? blk_r0 : s_r0;
+  assign r1 = blk_pv ? blk_r1 : s_r1;
 
-  wire _unused = &{mul_ready, p_valid, mul_kind, 1'b0};
+  // ------------------------------------------------ block engine (NTT cache)
+  ntt_blk u_blk (
+      .clk       (clk),
+      .rst_n     (rst_n),
+      .hdr       (blk_q),
+      .op_q      (op_q),
+      .valid_q   (valid_q),
+      .coeff_q   (coeff_q),
+      .rom_addr  (blk_rom_addr),
+      .rom_use   (blk_rom_use),
+      .rom_data  (zeta_lu),
+      .mul_go    (blk_go),
+      .mul_y     (blk_y),
+      .mul_z     (blk_z),
+      .byp_x     (blk_x),
+      .p_out     (p_out),
+      .byp_out   (byp_out),
+      .post_sum  (post_sum),
+      .post_diff (post_diff),
+      .res_v     (blk_res_v),
+      .pair_valid(blk_pv),
+      .r0        (blk_r0),
+      .r1        (blk_r1)
+  );
+
+  wire _unused = &{mul_ready, p_valid, mul_kind, blk_res_v, 1'b0};
 
   // --------------------------------------------- simulation assertions
 `ifdef NTT_ASSERT
@@ -279,7 +319,7 @@ module ntt_core #(
         $display("%t ntt_core ASSERT: pair_valid %0d clocks after the previous one", $time, since_pair);
         assert_errors = assert_errors + 1;
       end
-      if (p_valid !== res_v) begin
+      if (p_valid !== (res_v | blk_res_v)) begin
         $display("%t ntt_core ASSERT: p_valid=%b but the schedule expects %b (L_MUL wrong?)", $time, p_valid, res_v);
         assert_errors = assert_errors + 1;
       end

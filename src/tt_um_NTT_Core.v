@@ -48,6 +48,7 @@ module tt_um_NTT_Core #(
   );
 
   wire hash_w = valid_q & (coeff_q[11:8] == 4'hF);
+  wire blk_w  = valid_q & (coeff_q[11:8] == 4'hE);   // block-mode header (NTT cache)
   wire [HASH_K-1:0] hash_dout;
   wire [7:0] ntt_byte;
 
@@ -65,9 +66,10 @@ module tt_um_NTT_Core #(
       .clk       (clk),
       .rst_n     (rst_n),
       .coeff_q   (coeff_q),
-      .valid_q   (valid_q & ~hash_w),
-      .sof_q     (sof_q & ~hash_w),
+      .valid_q   (valid_q & ~hash_w & ~blk_w),
+      .sof_q     (sof_q & ~hash_w & ~blk_w),
       .op_q      (op_q),
+      .blk_q     (blk_w),
       .r0        (r0),
       .r1        (r1),
       .pair_valid(pair_valid),

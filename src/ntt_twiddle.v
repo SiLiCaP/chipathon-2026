@@ -24,6 +24,8 @@ module ntt_twiddle (
     input  wire        inv,     // inverse NTT
     input  wire        bm,      // basemul
     input  wire [10:0] idx,
+    input  wire        ovr,     // block mode: ovr_addr drives the ROM
+    input  wire [6:0]  ovr_addr,
     output wire [11:0] zeta,    // ROM' entry (gamma' before the negation)
     output wire        neg      // basemul, odd piece: gamma' = 3329 - zeta
 );
@@ -40,7 +42,7 @@ module ntt_twiddle (
   assign     neg  = bm & piece[0];
 
   zeta_rom u_rom (
-      .addr(addr),
+      .addr(ovr ? ovr_addr : addr),
       .data(zeta)
   );
 

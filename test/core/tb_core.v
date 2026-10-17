@@ -30,6 +30,7 @@ module tb_core #(
       .valid_q   (valid_q),
       .sof_q     (sof_q),
       .op_q      (op_q),
+      .blk_q     (1'b0),
       .r0        (r0),
       .r1        (r1),
       .pair_valid(pair_valid),

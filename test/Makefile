@@ -8,7 +8,7 @@ TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
 PROJECT_SOURCES = tt_um_NTT_Core.v io_in_capture.v io_out_pack.v \
                   ntt_core.v ntt_ctrl.v ntt_sched.v ntt_twiddle.v ntt_delay.v zeta_rom.v \
-                  modq_mul.v modq_addsub.v modq_acc.v keccak_ring.v
+                  modq_mul.v modq_addsub.v modq_acc.v keccak_ring.v ntt_blk.v
 
 ifneq ($(GATES),yes)
 
@@ -17,6 +17,10 @@ SIM_BUILD				= sim_build/rtl
 VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
 # ntt_core simulation assertions (start / pair_valid spacing, L_MUL, ranges)
 COMPILE_ARGS    += -DNTT_ASSERT
+# block-mode RTL variant for the NTT cache study (NTT_BLK = LF default, L, F or C; see timing.py)
+ifneq ($(NTT_BLK),)
+COMPILE_ARGS    += -DNTT_BLK_L=$(if $(findstring L,$(NTT_BLK)),1,0) -DNTT_BLK_F=$(if $(findstring F,$(NTT_BLK)),1,0)
+endif
 # keccak_ring clock gates: behavioral model in RTL sim (GL uses the sky130 dlclkp cell model)
 COMPILE_ARGS    += -DKC_BEHAV_ICG
 
@@ -45,7 +49,7 @@ VERILOG_SOURCES += $(PWD)/tb.v
 TOPLEVEL = tb
 
 # List test modules to run, separated by commas and without the .py suffix:
-COCOTB_TEST_MODULES = test,test_hash
+COCOTB_TEST_MODULES = test,test_hash,test_blk
 
 # include cocotb's make rules to take care of the simulator setup
 include $(shell cocotb-config --makefiles)/Makefile.sim

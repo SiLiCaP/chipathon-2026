@@ -29,6 +29,7 @@ project:
     - "modq_mul.v"
     - "modq_addsub.v"
     - "modq_acc.v"
+    - "ntt_blk.v"
     - "keccak_ring.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.

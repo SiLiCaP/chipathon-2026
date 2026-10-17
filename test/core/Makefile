@@ -12,7 +12,7 @@ PRE_LAT ?= 1
 POST_LAT ?= 0
 
 CORE_SOURCES = ntt_core.v ntt_ctrl.v ntt_sched.v ntt_twiddle.v ntt_delay.v zeta_rom.v \
-               modq_addsub.v modq_acc.v
+               modq_addsub.v modq_acc.v ntt_blk.v
 
 SIM_BUILD        = sim_build/pre$(PRE_LAT)_post$(POST_LAT)
 VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,modq_mul.v $(CORE_SOURCES)) $(PWD)/tb_core.v
