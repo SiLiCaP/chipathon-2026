@@ -4,6 +4,10 @@
  * Tiny Tapeout shell (Spec 5).
  *
  *   ui_in, uio_in -> io_in_capture -> ntt_core -> io_out_pack -> uo_out
+ *                                  \-> keccak_ring (hash words) ----/
+ *
+ * Hash words: a captured word with valid and coeff[11:8] = 0xF (never a coefficient) is a hash
+ * command for keccak_ring: op = command, coeff[K-1:0] = data. The NTT core never sees it.
  *
  * Pins: ui_in[7:0] = coefficient bits 7:0, uio_in[3:0] = bits 11:8,
  * uio_in[4] = valid, uio_in[5] = sof, uio_in[7:6] = op. uo_out = result bytes
@@ -12,7 +16,9 @@
 
 `default_nettype none
 
-module tt_um_NTT_Core (
+module tt_um_NTT_Core #(
+    parameter HASH_K = 8
+) (
     input  wire [7:0] ui_in,    // Dedicated inputs
     output wire [7:0] uo_out,   // Dedicated outputs
     input  wire [7:0] uio_in,   // IOs: Input path
@@ -40,12 +46,26 @@ module tt_um_NTT_Core (
       .op_q   (op_q)
   );
 
+  wire hash_w = valid_q & (coeff_q[11:8] == 4'hF);
+  wire [HASH_K-1:0] hash_dout;
+  wire [7:0] ntt_byte;
+
+  keccak_ring #(.K(HASH_K)) u_hash (
+      .clk      (clk),
+      .rst_n    (rst_n),
+      .cmd_valid(hash_w),
+      .cmd      (op_q),
+      .din      (coeff_q[HASH_K-1:0]),
+      .dout     (hash_dout),
+      .busy     ()
+  );
+
   ntt_core u_core (
       .clk       (clk),
       .rst_n     (rst_n),
       .coeff_q   (coeff_q),
-      .valid_q   (valid_q),
-      .sof_q     (sof_q),
+      .valid_q   (valid_q & ~hash_w),
+      .sof_q     (sof_q & ~hash_w),
       .op_q      (op_q),
       .r0        (r0),
       .r1        (r1),
@@ -60,8 +80,12 @@ module tt_um_NTT_Core (
       .r0        (r0),
       .r1        (r1),
       .flush     (flush),
-      .uo_byte   (uo_out)
+      .uo_byte   (ntt_byte)
   );
+
+  // the idle side outputs 0
+  wire [7:0] hash_byte = hash_dout;   // zero-extended
+  assign uo_out = ntt_byte | hash_byte;
 
   // Every uio pin is an input
   assign uio_out = 8'h00;
