@@ -34,13 +34,30 @@ order.
 Each result pair (r0, r1) leaves as three bytes on consecutive clocks (ByteEncode12):
 `r0[7:0]`, `{r1[3:0], r0[11:8]}`, `r1[11:4]`. Between results `uo_out` is 0x00.
 
+Next to the NTT core sits a Keccak-f[1600] sponge (`keccak_ring`) for SHA-3 and SHAKE. Its
+1600-bit state lives in clock-gated shift rings and it processes 8 slices per clock: one
+permutation takes 368 clocks. A captured word with valid high and coefficient bits 11:8 =
+0xF (never a valid coefficient) is a hash command instead of a coefficient; the NTT core
+never sees it. The host does the padding and absorbs and squeezes whole 8-byte lanes.
+
+| op (`uio[7:6]`) | Hash command | Data (`ui[7:0]`) | Busy afterwards |
+| --- | --- | --- | --- |
+| 00 | Absorb: XOR the byte into the next state byte | byte | - |
+| 01 | Squeeze: the next state byte on `uo_out` 2 clocks later | - | - |
+| 10 | Permute, rewinds the byte pointer | - | 368 clocks |
+| 11 | Clear the state, rewinds the byte pointer | - | 8 clocks |
+
+The host has no busy flag: it waits the busy clocks before the next hash command. Hash
+outputs are ORed onto `uo_out` and are 0x00 when no squeeze is running, so NTT jobs and
+hash jobs can share the pins as long as their output bytes don't fall on the same clocks.
+
 ## How to test
 
 | Pin | Direction | Function |
 | --- | --- | --- |
 | `ui[7:0]` | in | Coefficient bits 7:0 |
 | `uio[3:0]` | in | Coefficient bits 11:8 |
-| `uio[4]` | in | valid: the data pins hold a coefficient this clock |
+| `uio[4]` | in | valid: the data pins hold a coefficient (or, with bits 11:8 = 0xF, a hash command) this clock |
 | `uio[5]` | in | sof: with valid, the first coefficient of a job |
 | `uio[7:6]` | in | op: 00 forward NTT, 01 inverse NTT, 10 basemul, 11 scale (read on the sof clock) |
 | `uo[7:0]` | out | Result bytes at a fixed delay, 0x00 otherwise |
@@ -58,7 +75,9 @@ layer after the previous layer's results have come back; the chip keeps its coun
 valid is low. A new sof cancels a running job.
 
 The cocotb tests in `test/` run a whole polynomial multiply (forward NTT of f and g, basemul,
-inverse NTT, scale) and compare it with a schoolbook product.
+inverse NTT, scale) and compare it with a schoolbook product. `test/test_hash.py` checks
+SHA3-256, SHA3-512, SHAKE128 and SHAKE256 against Python's `hashlib`, and an NTT job
+interleaved with a hash job.
 
 ## External hardware
 
