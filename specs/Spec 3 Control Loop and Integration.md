@@ -111,9 +111,17 @@ Tell the Pi owner if you change any of this, because the reference model, the ve
 
 ## Per-mode schedules
 
-Every mode repeats on a fixed period: 3 clocks for forward, inverse and scale, and 15 for basemul. The multiplier starts at most once every 3 clocks.
+Every mode repeats on a fixed period: 3 clocks per butterfly in forward and inverse, 5 clocks per basemul piece, and 3 clocks per scale pair. Each mode runs as fast as its real limit allows:
 
-The tables below are a proposed starting point. You own the final cadence. Publish it as `schedule.md`. Offsets are clocks from the unit's first input, and idle clocks have `valid` low.
+| Mode | Clocks per unit | Limited by |
+| --- | --- | --- |
+| Forward and inverse NTT | 3 per butterfly | Output pins: 3 bytes per butterfly |
+| Basemul | 5 per piece | Multiplier: 5 products per piece, one start per clock |
+| Scale | 3 per pair | Output pins: 3 bytes per pair |
+
+The multiplier starts on consecutive clocks in basemul and scale (full rate, Oct 17 change). In the NTT modes it starts once every 3 clocks because the pins can't carry results any faster.
+
+The tables below are the required cadence. Publish them as `schedule.md`. Offsets are clocks from the unit's first input, and idle clocks have `valid` low.
 
 **Forward NTT, one butterfly (period 3)**
 
@@ -130,29 +138,48 @@ The tables below are a proposed starting point. You own the final cadence. Publi
 | --- | --- | --- |
 | 0 | b | Capture b |
 | 1 | a | Capture a |
-| 2 | idle | Pre ±: a + b and b − a. Start (b − a) × ζ. Delay a + b |
+| 2 | idle | Pre ±: a + b and b − a, into the Pre ± output register (`REG_OUT` = 1) |
+| 3 | next b | Start (b − a) × ζ. Delay a + b. `zeta_r` still holds this unit's ζ′ on this clock |
 | product arrives | none | Pair out: r0 = a + b (delayed), r1 = (b − a) × ζ |
 
-The inverse needs both inputs before the multiplier can start, which is why its output delay is larger than forward's.
+The inverse needs both inputs before the multiplier can start, and the Pre ± result is registered (see Timing closure), which is why its output delay is larger than forward's.
 
-**Basemul, one piece (period 15)**
+**Basemul, one piece (period 5)**
 
-| Offset | Host sends | Chip does |
+The host sends g1, f1, g0, f0 on 4 consecutive clocks, then one idle clock, and the next piece starts at 5. Core offsets count from the clock g1 is on `coeff_q`. With L\_mult = 3:
+
+| Core offset | Host sends | Chip does |
 | --- | --- | --- |
-| 0 | g1 | Capture g1 |
-| 1 | f1 | Capture f1 |
-| 2 | g0 | Start pass 1: f1 × g1 = m1 |
-| 3 | f0 | Capture f0 |
-| 4 to 14 | idle | Passes 2 to 5, each 3 clocks after the last: m1 × γ = m2 (loop-back), f0 × g0 = m3, f0 × g1 = m4, f1 × g0 = m5 |
-| after pass 5 | none | c0 = m2 + m3 and c1 = m4 + m5. Pair out: r0 = c0, r1 = c1 |
+| 0 | g1 | g1 → R0. Look up γ′ → `zeta_r` |
+| 1 | f1 | f1 → R1 |
+| 2 | g0 | g0 → R2. Start m1 = f1 × g1 |
+| 3 | f0 | f0 → R3. Start m5 = f1 × g0 |
+| 4 | idle | Start m4 = f0 × g1 (last use of g1) |
+| 5 | next g1 | Start m2 = m1 × γ′, with m1 taken straight from `p_out` as it arrives. The next piece's g1 → R0 and its γ′ lookup happen on this clock; `zeta_r` still holds this piece's γ′ |
+| 6 | next f1 | Start m3 = f0 × g0. m5 back: acc1 ← m5 |
+| 7 | | m4 back: acc1 ← acc1 + m4 = c1 |
+| 8 | | m2 back: acc0 ← m2 |
+| 9 | | m3 back: acc0 ← acc0 + m3 = c0 |
+| 10 | | Pair out: r0 = c0, r1 = c1 |
 
-f1 and g1 come first because f1 × g1 × γ is the only chain of two multiplications.
+- f1 and g1 come first because f1 × g1 × γ is the only chain of two multiplications. m2 starts exactly L\_mult clocks after m1.
+- The multiplier starts on 5 consecutive clocks (2 to 6). The next piece's starts are 7 to 11, so they never collide.
+- Every operand register is read for the last time before the next piece overwrites it: g1 at 4 (next write at 5), f1 at 3 (6), g0 at 6 (7), f0 at 6 (8).
+- c1 loads m5 and adds m4; c0 loads m2 and adds m3. Both accumulators hold until the pair goes out at 10, before the next piece loads them at 11 and 13.
 
-**Scale (one coefficient per 3 clocks)**
+**Scale, one pair (period 3)**
 
-c arrives and c × 304 starts (net c × 3303 in the full flow, see the K-RED section). Two results make one pair, so one pair is emitted every 6 clocks. You do the pairing: hold the first result as r0, and pulse `pair_valid` when the second result is ready as r1.
+The host sends c and c′ on consecutive clocks, then one idle clock. Each result is c × 304 (net c × 3303 in the full flow, see the K-RED section).
 
-Streaming job lengths with this cadence: forward and inverse 896 butterflies × 3 = 2688 clocks, basemul 128 × 15 = 1920, scale 256 × 3 = 768. These exclude the host's waits between NTT layers.
+| Core offset | Host sends | Chip does |
+| --- | --- | --- |
+| 0 | c | c → R0 |
+| 1 | c′ | Start c × 304. c′ → R1 |
+| 2 | idle | Start c′ × 304 |
+| 4 | | First product back: hold as r0 |
+| 5 | | Pair out: r0 = held, r1 = second product |
+
+Streaming job lengths with this cadence: forward and inverse 896 butterflies × 3 = 2688 clocks, basemul 128 × 5 = 640, scale 128 pairs × 3 = 384. These exclude the host's waits between NTT layers.
 
 ## Latency and alignment
 
@@ -160,7 +187,7 @@ Results must reach the Post ± stage together, so you delay the shorter lane to 
 
 - **Forward.** t = b × ζ arrives L\_mult clocks after the multiplier starts. The bypass value a waits in a delay line of the same length before Post ±.
 - **Inverse.** The bypass lane carries a + b. The product (b − a) × ζ arrives L\_mult clocks after the start. Delay a + b to match.
-- **Basemul.** Pass 2 needs the output of pass 1. If L\_mult is more than 3, run an independent pass (such as f0 × g0) in between. The 15 clocks per piece still hold.
+- **Basemul.** m2 needs m1, so the 5-clock schedule above is built for L\_mult = 3 exactly. A multiplier with another latency needs a new schedule (and new host constants), so Spec 2 fixes the latency at 3.
 - **Output delay D.** The first byte of a pair leaves D clocks after the pair's first input. The handoff assumed D = 5 forward and 7 inverse. The real value is the sum of the stage latencies below plus your own register stages.
 
 | Stage | Owner | Reports |
@@ -171,9 +198,36 @@ Results must reach the Post ± stage together, so you delay the shorter lane to 
 | Output packer | I/O | 1 clock |
 | Your registers, muxes and delay lines | You | Your own count |
 
-Compute D for each mode and send the numbers to the Pi owner as `host_timing.md`. If D for forward comes out above 5, that is fine. Only a constants file on the host changes. With L\_mult = 3 the measured values are D = 6 forward, 7 inverse, 20 basemul and 9 scale. Forward is one clock over the handoff because the multiplier takes b from a register, one clock after it arrives.
+Compute D for each mode and send the numbers to the Pi owner as `host_timing.md`. If D for forward comes out above 5, that is fine. Only a constants file on the host changes. With L\_mult = 3 and the cadence above, D = 6 forward, 8 inverse, 12 basemul and 7 scale (basemul: 1 capture + 10 + 1 packer; scale: 1 + 5 + 1). Forward is one clock over the handoff because the multiplier takes b from a register, one clock after it arrives. Inverse is one clock over the earlier 7 because the Pre ± result is registered.
 
 Also check that `pair_valid` is never closer than 3 clocks apart, and add that as an assertion.
+
+## Timing closure (Oct 17 change)
+
+**Target:** 50 MHz (20 ns) at the slow corner (ss, 100 °C, 1.60 V) after place and route, with no setup or hold violation. Check it in the gds run's post-PnR STA: `local-ci/run gds` shows it on the results page, or read `runs/wokwi/*-openroad-stapostpnr/max_ss_100C_1v60/max.rpt`.
+
+Why: before this change the chip missed the target by 3.6 ns, so it could compute wrong products on a hot or slow die. The worst path ran from the op latch through the `kind` decode and the multiplier's operand mux into the 12 × 12 multiply. The select logic alone took 14.5 ns, mostly fanout buffers driving the select across 24 mux bits; the multiply took about 9.5 ns.
+
+Rules for the multiplier's inputs:
+
+1. **Operand selects come straight from flip-flops.** Decode them one clock early, from the next clock's op and schedule position, into one-hot registers (one bit per source). The operand mux is then one AND-OR level.
+2. **Pre ± uses `REG_OUT` = 1.** No adder sits in front of the multiplier. Inverse starts its product at offset 3, as in the table above.
+3. **m2's loop-back operand comes from `p_out` directly.** The basemul schedule fixes that m1 is on `p_out` on the m2 start clock, so no comparison on the result tag sits in front of the multiplier.
+4. **The ζ/γ lookup is short.** The ROM index logic runs from mode flags decoded into their own registers one clock early, not from the heavily loaded op latch. The γ negation for odd pieces (3329 − x) happens in a separate register one clock after the lookup, off the lookup path; m2 reads that register.
+
+Measured on the full chip (LibreLane, post-PnR, slow corner, worst setup slack at 50 MHz):
+
+| Change | Worst slack | Cell area |
+| --- | --- | --- |
+| Before (combinational `kind` decode, `PRE_LAT` = 0) | −3.59 ns | 36.4k µm² |
+| Split the 12 × 12 multiply into two 12 × 6 halves (rejected) | −3.33 ns | 37.2k µm² |
+| Rule 2 only | −2.14 ns | 37.7k µm² |
+| Rule 1 only | −0.62 ns | 36.5k µm² |
+| Rules 1 and 2 | +0.12 ns | 37.5k µm² |
+| Rules 1 to 3 with the full-rate schedule | −0.47 ns (the ζ/γ lookup is now worst) | 37.6k µm² |
+| **Rules 1 to 4 with the full-rate schedule (as built)** | **+1.41 ns, 0 violations** | 38.1k µm² |
+
+With all four rules the worst path is the registered operand select through the 12 × 12 multiply. The multiplier block itself doesn't change. Re-check the slack in the gds run after any change to Control.
 
 ## Reset, cancel and flush
 
@@ -188,7 +242,7 @@ Also check that `pair_valid` is never closer than 3 clocks apart, and add that a
 - **Whole-core, per mode.** Run `ntt_core` with the other four blocks against the Pi owner's reference model: one forward layer, one inverse layer, basemul of two random polynomials, and scale.
 - **Full flow.** Forward NTT of f and g, basemul, inverse NTT, scale. The result must equal schoolbook negacyclic multiplication mod 3329.
 - **Output delay.** Measure D for each mode from the waveform. It must match `host_timing.md`.
-- **Rates.** Check clocks per butterfly (3), per basemul piece (15) and per scale coefficient (3).
+- **Rates.** Check clocks per butterfly (3), per basemul piece (5) and per scale pair (3).
 - **Reset and cancel.** Reset mid-job. Start a new frame mid-job. Both must leave no stale bytes.
 
 ## Deliverables and done when
@@ -205,12 +259,13 @@ Also check that `pair_valid` is never closer than 3 clocks apart, and add that a
 - All four modes match the reference model.
 - The full polynomial multiply flow matches schoolbook.
 - The assembled design passes the Tiny Tapeout flow.
+- Post-PnR STA meets 50 MHz at the slow corner (see Timing closure).
 
 **Do not:** change another owner's ports without agreeing it with them first.
 
 ## Risks to watch
 
-- **Multiplier latency too long.** Basemul pass 2 depends on pass 1. If L\_mult is more than 3, interleave an independent pass.
+- **Multiplier latency changes.** The basemul schedule depends on L\_mult = 3 (m2 starts on the clock m1 arrives). Any change to the multiplier's latency means a new schedule and new host constants.
 - **Output delay differs from the handoff.** D of 5 and 7 are assumptions. Send the real numbers to the Pi owner early.
 - **Area.** The ROM is 128 × 12 bits. If it does not fit, use the γ symmetry to store only 64 entries for basemul and derive the rest.
 - **Layer-by-layer round trips.** The host re-sends data for every NTT layer because the chip stores nothing. Check the host counts against the timing table.

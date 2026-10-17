@@ -89,7 +89,7 @@ Examples:
 
 I checked these against a bit-by-bit little-endian encoding of the two 12-bit values.
 
-Timing contract: Control sends `pair_valid` at least 3 clocks apart. In the NTT modes it is exactly every 3 clocks, so the byte stream has no gaps. Add a simulation assertion that fails if two `pair_valid` pulses come closer than 3 clocks. In basemul and scale there are gaps, and `uo_byte` is 0x00 in them. Control does the pairing for scale, so you only ever see pairs.
+Timing contract: Control sends `pair_valid` at least 3 clocks apart. In the NTT modes it is exactly every 3 clocks, so the byte stream has no gaps. Add a simulation assertion that fails if two `pair_valid` pulses come closer than 3 clocks. Scale is also exactly every 3 clocks, with no gaps. Basemul sends a pair every 5 clocks, so there are 2-clock gaps, and `uo_byte` is 0x00 in them. Control does the pairing for scale, so you only ever see pairs.
 
 ## Tiny Tapeout shell and pin documentation
 

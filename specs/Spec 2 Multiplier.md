@@ -40,7 +40,7 @@ The block takes one start pulse and gives one valid pulse, with fixed timing and
 Rules:
 
 - Sample both operands on the `start` clock. Control does not hold them.
-- The block is pipelined: a `start` on every clock gives a result on every clock, each exactly the latency after its start. Today Control starts at most once every 3 clocks, but a planned on-chip polynomial cache would let it start more often.
+- The block is pipelined: a `start` on every clock gives a result on every clock, each exactly the latency after its start. Control starts it on consecutive clocks in basemul (5 starts per piece) and in scale, and once every 3 clocks in the NTT modes, where the output pins set the rate.
 - `flush` drops everything in flight, and a `start` on the clock right after `flush` is accepted. Control never raises `start` in the same clock as `flush`.
 - No other ports. If you need one, ask the Control owner.
 
@@ -70,18 +70,18 @@ Two designs were compared: the digit-serial multiplier first proposed here (one 
 | Digit-serial (one shared 12 × 4), three K-RED rounds | 6,813 µm² |
 | Digit-serial, two K-RED rounds | 6,256 µm² |
 
-Decision: the full-rate design. It is about a third larger, and today Control uses one product every 3 clocks. In return:
+Decision: the full-rate design. It is about a third larger. In return:
 
 - it has latency 3 instead of 4, so every output delay D is one clock shorter;
 - three rounds leave only a one-sided correction;
-- one product per clock is ready for when the pins stop being the limit. Today the three output bytes per pair set the NTT rate. A planned on-chip cache of polynomials (future work, not part of this tapeout) would let basemul and scale run up to three times faster without touching this block.
+- one product per clock lets basemul and scale run at full rate (Spec 3, Oct 17 change): basemul 15 → 5 clocks per piece, scale 6 → 3 clocks per pair. The NTT modes stay at 3 clocks per butterfly, set by the three output bytes per pair.
 
 To be accepted, a multiplier must:
 
 - be module `modq_mul` with exactly the ports above, including `flush` and `ready`;
 - use a synchronous reset (shared rules), not an asynchronous one;
 - return 2197 × a × b;
-- accept a `start` on every clock, with a fixed latency (3 for `modmul_kred`). Control supports latencies 2 to 6; report the number.
+- accept a `start` on every clock, with a latency of exactly 3.
 
 `src/modq_mul.v` is `modmul_kred` with these interface changes, and it passes the exhaustive test.
 
@@ -91,14 +91,16 @@ One operation per clock, with a fixed latency that you report.
 
 | Quantity | Requirement |
 | --- | --- |
-| Throughput | One `start` per clock, sustained. Control uses one every 3 clocks today: 3 clocks per butterfly, and 5 products in 15 clocks per basemul piece |
-| Latency, `start` to `p_valid` | Fixed for every input. 3 clocks (one per pipeline stage). Report the real number |
+| Throughput | One `start` per clock, sustained. Control uses it: 5 products in 5 clocks per basemul piece, 2 in 3 clocks per scale pair, one every 3 clocks per butterfly |
+| Latency, `start` to `p_valid` | Exactly 3 clocks for every input. The basemul schedule in Spec 3 depends on it |
 | Data-dependent timing | None |
 | `p_out` hold | Stable until the next `p_valid` |
 
-Why latency matters: Control delays the bypass lane by exactly your latency, and the host's output-delay constants are built from it. With latency 3 the first byte appears 6 clocks after the first input in forward mode and 7 in inverse mode. A different latency only changes constants. It does not break the design.
+Why latency matters: Control delays the bypass lane by exactly your latency, and the host's output-delay constants are built from it. With latency 3 the first byte appears 6 clocks after the first input in forward mode and 8 in inverse mode. Basemul starts m2 = m1 × γ′ on the clock m1 comes out, so its 5-clock schedule only works with latency 3. Keep it at 3.
 
 Report to the Control owner: the latency in clocks, the longest combinational path in your design (likely the 12 × 12 multiply in S1), and a rough cell count.
+
+Clock target: the chip must meet 50 MHz at the slow corner after place and route (Spec 3, Timing closure). S1 takes its operands from Control's one-level operand mux, which is driven by flip-flops, so S1 holds the 12 × 12 multiply and nothing else. Measured, the multiply takes about 9.5 ns of the 20 ns. Splitting it into two 12 × 6 halves was tried and gave only 0.26 ns, so the block stays as it is.
 
 ## Tests and test vectors
 

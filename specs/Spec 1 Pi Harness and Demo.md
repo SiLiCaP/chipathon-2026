@@ -38,7 +38,7 @@ Order of inputs for each mode:
 | Forward NTT | Pairs, b first then a, where b = f\[j + len\] and a = f\[j\] | 1792 | 2688 |
 | Inverse NTT | Same order as forward | 1792 | 2688 |
 | Basemul | g1, f1, g0, f0 for each piece | 512 | 384 |
-| Scale | One coefficient c at a time | 256 | 384 |
+| Scale | Pairs c, c′ on consecutive clocks, one pair every 3 clocks | 256 | 384 |
 
 What the output bytes mean. The chip multiplier returns 2197 × the product (2197 = 13³), so forward and inverse NTT outputs are plain, but basemul bytes carry 2197 × the plain basemul, and scale returns c × 3303 × 2197⁻¹ mod 3329. Run the whole flow (forward, forward, basemul, inverse, scale) and the final answer is correct. Do not compare basemul or scale output alone against the plain reference. Compare it against your chip-level model.
 
@@ -65,7 +65,7 @@ The PIO owns the clocked pins, DMA moves the words, and firmware only orders the
 - **Clock and pins in lockstep.** One PIO state machine drives `clk` and, on every chip clock, puts a 16-bit word on the input pins (12 coefficient bits, valid, sof, 2 op bits) and samples the 8 output pins. Every PIO tick is one chip clock, so clock counting is exact.
 - **Input words.** One word per chip clock, including idle clocks with valid low. Use a repeat count or pre-built buffers so idle clocks do not double the DMA traffic.
 - **Output samples.** Capture `uo_out` on every clock into SRAM by DMA. Firmware then picks out the real bytes at known clock positions and ignores the rest. A sampled 0x00 only means something at a scheduled position.
-- **Start slow.** Run the chip clock slow (for example about 1 MHz, as a setting) until it works, then raise it. The ceiling comes from the chip's timing, which is not known yet.
+- **Start slow.** Run the chip clock slow (for example about 1 MHz, as a setting) until it works, then raise it. The chip is designed to meet 50 MHz at the slow corner (Spec 3, Timing closure). Bring it up at 50 MHz or below; the board's clock insertion delay (up to 10 ns) means the PIO sampling phase must be calibrated on the real board before going faster.
 - **Library API.** Four calls, each taking and returning 256 coefficients: forward, inverse, basemul and scale. Every call checks that the outputs are below 3329.
 - **Reset.** The RP2350 also drives `rst_n`. Hold it low for several clocks at start-up and after any fault.
 - **Errors.** The chip has no timeout hook. If a result is out of range, abort with a new sof and report a fault.
@@ -111,7 +111,7 @@ One demo that uses all four modes: multiply two polynomials mod X^256 + 1 on the
 6. Multiply f and g on the CPU with the schoolbook method (negacyclic, mod 3329).
 7. Compare. Print PASS or FAIL, the chip clock count for each step, and the CPU time.
 
-Expected chip clocks, streaming only: three NTT jobs at about 2688 each, basemul about 1920 and scale about 768, so about 10,750 in total, plus the waits between NTT layers. Print the measured count next to this estimate.
+Expected chip clocks, streaming only: three NTT jobs at about 2688 each, basemul about 640 and scale about 384, so about 9,090 in total, plus the waits between NTT layers. Print the measured count next to this estimate.
 
 Two more parts:
 
@@ -127,12 +127,12 @@ All output delays are assumptions until RTL has been simulated. Keep every timin
 | Constant | Meaning | Value now | Source of the final value |
 | --- | --- | --- | --- |
 | `D_F` | Clocks from a forward pair's first input to its first byte | 6 | Control owner's `host_timing.md` |
-| `D_I` | Same, inverse | 7 | Same |
-| `D_B` | Same, basemul | 20 | Same |
-| `D_S` | Same, scale (from the first coefficient of a pair) | 9 | Same |
+| `D_I` | Same, inverse | 8 | Same |
+| `D_B` | Same, basemul | 12 | Same |
+| `D_S` | Same, scale (from the first coefficient of a pair) | 7 | Same |
 | `P_F`, `P_I` | Clocks per butterfly | 3 | Handoff |
-| `P_B` | Clocks per basemul piece | 15 | Handoff (12 if Karatsuba is added later) |
-| `P_S` | Clocks per scale coefficient | 3, so 6 per output pair | Handoff |
+| `P_B` | Clocks per basemul piece | 5 (g1, f1, g0, f0, then one idle clock) | Spec 3 schedule |
+| `P_S` | Clocks per scale pair | 3 (c, c′, then one idle clock) | Spec 3 schedule |
 | Input offsets | Clock offset of every input within a unit | see the schedule | Control owner's `schedule.md` |
 | `CHIP_CLK` | Chip clock setting | slow at first | You |
 

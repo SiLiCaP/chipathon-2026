@@ -14,7 +14,7 @@ You build the modular add, subtract and accumulate blocks. The Control owner wir
 | --- | --- |
 | Forward NTT | a' = a + t and b' = a − t |
 | Inverse NTT | a + b and b − a |
-| Basemul | two running sums: c0 = m2 + m3 and c1 = m4 + m5 |
+| Basemul | two running sums: c0 = m2 + m3 and c1 = m5 + m4 |
 | Scale | not used |
 
 ## Modules and ports
@@ -69,7 +69,7 @@ Control picks the operands and decides which result to use. You only need the mo
 | Forward NTT, Post ± | `modq_addsub` | x = a (bypass, delayed), y = t | `sum` = a' and `diff` = b' |
 | Inverse NTT, Pre ± | `modq_addsub` | x = b, y = a | `sum` = a + b (to the bypass lane) and `diff` = b − a (to the multiplier) |
 | Basemul, c0 | `modq_acc` | y = m2 on `ld`, then y = m3 on `add` | `acc` = c0 |
-| Basemul, c1 | `modq_acc` | y = m4 on `ld`, then y = m5 on `add` | `acc` = c1 |
+| Basemul, c1 | `modq_acc` | y = m5 on `ld`, then y = m4 on `add` | `acc` = c1 |
 | Scale | none | no inputs | Control routes around the adders |
 
 Notes:
@@ -83,7 +83,7 @@ Notes:
 
 Combinational by default, with an optional output register.
 
-- **Rate needed.** One add/subtract per 3 clocks in the NTT modes, and one accumulate per multiplier result in basemul. Anything that settles inside one clock is fast enough.
+- **Rate needed.** One add/subtract per 3 clocks in the NTT modes, and one accumulate per clock in basemul (the multiplier returns a product every clock). Anything that settles inside one clock is fast enough.
 - **`REG_OUT`.** 0 gives latency 0 clocks. 1 gives latency 1 clock. Control picks per instance, depending on the multiplier's latency and the longest path. Support both.
 - **`modq_acc`.** `acc` is valid 1 clock after `ld` or `add`.
 - **Report** to the Control owner: the longest combinational path with `REG_OUT` = 0, the latency for each setting, and a rough cell count for each module.
