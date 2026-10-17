@@ -28,3 +28,4 @@ gds_render*.svg
 test/core/sim_build
 test/core/results*.xml
 test/mul/mul.vvp
+test/*.log
