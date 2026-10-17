@@ -49,6 +49,8 @@ How an NTT job runs end to end:
 - Start layer by layer. Overlapping layers is an optimization for later.
 - The ≈2700 clock figure is streaming time only. Expect extra clocks for the waits between layers.
 
+**Hashing (Oct 18, 4x2 build).** The chip also has a Keccak-f[1600] sponge. A word with valid high and coefficient bits 11:8 = 0xF is a hash command: op 00 absorbs the data byte (bits 7:0) into the next state byte, 01 squeezes the next state byte onto `uo_out` 2 clocks later (1 capture + 1 core), 10 permutes (busy 368 clocks) and 11 clears the state (busy 8 clocks); permute and clear rewind the byte pointer. There is no busy flag: wait the busy clocks before the next hash command. The host does the SHA-3 / SHAKE padding and absorbs and squeezes whole 8-byte lanes. Hash bytes are ORed onto `uo_out`, so a hash job and an NTT job may share the pins as long as their output bytes never fall on the same clock (`test/test_hash.py` interleaves them).
+
 To unpack results, three bytes b0, b1, b2 make two coefficients:
 
 ```
