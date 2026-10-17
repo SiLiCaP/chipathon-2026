@@ -12,6 +12,8 @@ chip at 50 MHz, every bit moved over the pins.
 The budget for synthesized logic is about **32k µm² for 4 tiles (2×2)** and **63k µm² for 8 tiles (4×2)**.
 That's an estimate: our 2×2 harden needed 1.6× the synthesized area once placed, at up to ~70 % density.
 
+**Data point from the TT flow (Oct 17, `main` at 91eb006):** the team chip hardens cleanly in 2×2 (LVS and DRC clean, 0 antenna violations). The TT flow synthesizes it to 30,758 µm² and places it at 36,379 µm², 50 % utilization. 22.9k plain-yosys × 1.6 predicts 36.6k placed, so the budget model above holds. Timing at 50 MHz: +8.8 ns slack typical (about 89 MHz), −2.3 ns at the slow corner (44.8 MHz).
+
 ## Where ML-KEM-512 spends its time on the RP2350 alone
 
 | | Total | SHA-3 / SHAKE | NTT, basemul | Rest |

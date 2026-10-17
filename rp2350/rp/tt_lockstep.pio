@@ -1,0 +1,22 @@
+; SPDX-License-Identifier: Apache-2.0
+; Clocks the Tiny Tapeout chip in lockstep with its pins: one loop is one chip clock.
+;
+;   OUT  {uio_in, ui_in} (16 pins, GPIO 17-32 on demo board v3) while clk (side-set, GPIO 16) falls
+;   IN   uo_out (8 pins, GPIO 33-40) at the moment clk rises, i.e. just before the chip captures the
+;        word: the docs/host_timing.md convention, so D and the result positions apply unchanged.
+;
+; Autopull every 16 bits (one word per TX FIFO entry, written by 16-bit DMA) and autopush every 8 bits
+; (one sample per RX FIFO entry, read by 8-bit DMA), so no padding clocks are needed.
+; When the TX FIFO runs dry the OUT stalls with clk low and the inputs held; when the RX FIFO is full
+; the IN stalls with clk high. Either way the chip simply sees a longer clock phase, which a synchronous
+; design cannot tell from a slower clock: no word is ever lost or repeated.
+;
+; The delay fields of both instructions are patched at run time (tt_rp.c) to set the low and high
+; phase lengths, so the chip clock is sys_clk / (clkdiv * (low + high)).
+
+.program tt_lockstep
+.side_set 1
+.wrap_target
+    out pins, 16    side 0      ; clk low, next input word on the pins   [delay: low - 1]
+    in  pins, 8     side 1      ; sample uo_out, clk high                 [delay: high - 1]
+.wrap

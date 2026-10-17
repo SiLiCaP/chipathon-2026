@@ -11,6 +11,8 @@ Specs for the five parts of the chip (the source of truth for every port and tim
 Control and integration: [ntt_core](docs/control.md), [interface table](docs/interface.md),
 [per-mode schedule](docs/schedule.md), [host timing](docs/host_timing.md).
 Adders: [modq_addsub and modq_acc](docs/adders.md).
+RP2350 harness and demo (Spec 1): [rp2350/](rp2350/README.md), firmware for the demo board (PIO + DMA) plus the same C code on a PC against a software chip or the Tang Nano FPGA.
+Why SHA-3 sets ML-KEM's speed: [docs/sha3_report.md](docs/sha3_report.md). Tile options: [docs/architecture_options.md](docs/architecture_options.md).
 
 [Local CI](local-ci/README.md): `local-ci/run` runs the GitHub workflows (test, docs, gds,
 precheck, gate-level test) on your machine with Docker and shows the results on a local page.
