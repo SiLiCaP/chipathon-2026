@@ -152,10 +152,16 @@ core_test_run() {
     make -C test/core all-variants
 }
 
+adder_test_run() {
+    [ -d test/adders ] || { echo "No test/adders in this repo, nothing to run"; return 0; }
+    make -C test/adders exhaustive
+}
+
 workflow_test() {
     job_begin test test test
     step "Run tests" test_run
     step "Run core tests" core_test_run
+    step "Run adder tests" adder_test_run
     step --always "Test Summary" junit_summary test/results.xml
     step --always "upload waveform and test results" upload_artifact test-results test/tb.fst test/results.xml 'test/output/*'
     job_end

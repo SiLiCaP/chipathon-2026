@@ -10,6 +10,7 @@ Specs for the five parts of the chip (the source of truth for every port and tim
 
 Control and integration: [ntt_core](docs/control.md), [interface table](docs/interface.md),
 [per-mode schedule](docs/schedule.md), [host timing](docs/host_timing.md).
+Adders: [modq_addsub and modq_acc](docs/adders.md).
 
 [Local CI](local-ci/README.md): `local-ci/run` runs the GitHub workflows (test, docs, gds,
 precheck, gate-level test) on your machine with Docker and shows the results on a local page.
