@@ -15,3 +15,13 @@
 5. `make adder_mod` needs cocotb (container) and must run from `test/`.
 6. `ks_adder` invalid for W=1; no check that a,b < N.
 7. Two parallel KS adders is ~2x area; consider Brent-Kung.
+
+## Efficiency review notes (estimates, generic-gate counts via Yosys; no STA)
+8. Area (only matters once instantiated; W=12, N=3329): replacing both `ks_adder` with `+` cuts ~260 -> ~171 gates (-34%). A single adder plus constant subtract (`s=a+b; t=s-N`) gives ~141 gates (-46%), at logic depth 11 -> 19. Ripple is ~100 gates, depth 25. Clock period in `src/config.json` is 20 ns. Keep KS only if adder_mod shares a stage with the multiplier.
+9. Waveform: the VCD is ~9 MB because it covers the 40k-vector exhaustive loop. Use `$dumpoff` after `$dumpvars` and `$dumpon` before the stream phase (~99 KB), or dump FST.
+10. Exhaustive loop does not scale to W=12 (~11M vectors, ~11-14 min, ~3 GB VCD, extrapolated). Check only i<=j, or use Verilator.
+11. `test/tb_adder_mod_all.tcl` adds ~177 constant `parameter` rows (genvar `i`/`l`, `W`, `N`, `L`); filter them out.
+12. `make clean` does not remove `sim_build/tb_adder_mod` or the VCD.
+
+## Review status
+Four review agents (line-by-line, altitude, simplification, language-pitfall) died on the session limit; their results were not collected.
