@@ -25,3 +25,6 @@ datasheet.pdf
 docs/doc.typ
 gds_render*.png
 gds_render*.svg
+test/core/sim_build
+test/core/results*.xml
+test/mul/mul.vvp

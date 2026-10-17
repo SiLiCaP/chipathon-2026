@@ -6,13 +6,17 @@ SIM ?= icarus
 FST ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = tt_um_NTT_Core.v io_in_capture.v io_out_pack.v ntt_core.v
+PROJECT_SOURCES = tt_um_NTT_Core.v io_in_capture.v io_out_pack.v \
+                  ntt_core.v ntt_ctrl.v ntt_sched.v ntt_twiddle.v ntt_delay.v zeta_rom.v \
+                  modq_mul.v modq_addsub.v modq_acc.v
 
 ifneq ($(GATES),yes)
 
 # RTL simulation:
 SIM_BUILD				= sim_build/rtl
 VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
+# ntt_core simulation assertions (start / pair_valid spacing, L_MUL, ranges)
+COMPILE_ARGS    += -DNTT_ASSERT
 
 else
 

@@ -1,0 +1,396 @@
+rm -f results.xml
+"make" -f Makefile results.xml
+make[1]: Entering directory '/home/papart/development/TT/chipathon-2026/test'
+mkdir -p sim_build/rtl
+/usr/bin/iverilog -o sim_build/rtl/sim.vvp -s tb -g2012 -DNTT_ASSERT -I/home/papart/development/TT/chipathon-2026/test/../src -f sim_build/rtl/cmds.f  /home/papart/development/TT/chipathon-2026/test/../src/tt_um_NTT_Core.v /home/papart/development/TT/chipathon-2026/test/../src/io_in_capture.v /home/papart/development/TT/chipathon-2026/test/../src/io_out_pack.v /home/papart/development/TT/chipathon-2026/test/../src/ntt_core.v /home/papart/development/TT/chipathon-2026/test/../src/ntt_ctrl.v /home/papart/development/TT/chipathon-2026/test/../src/ntt_sched.v /home/papart/development/TT/chipathon-2026/test/../src/ntt_twiddle.v /home/papart/development/TT/chipathon-2026/test/../src/ntt_delay.v /home/papart/development/TT/chipathon-2026/test/../src/zeta_rom.v /home/papart/development/TT/chipathon-2026/test/../src/modq_mul.v /home/papart/development/TT/chipathon-2026/test/../src/modq_addsub.v /home/papart/development/TT/chipathon-2026/test/../src/modq_acc.v /home/papart/development/TT/chipathon-2026/test/tb.v
+rm -f results.xml
+COCOTB_TEST_MODULES=test COCOTB_TESTCASE= COCOTB_TEST_FILTER= COCOTB_TOPLEVEL=tb TOPLEVEL_LANG=verilog \
+         /usr/bin/vvp -M /opt/venv-test/lib/python3.12/site-packages/cocotb/libs -m libcocotbvpi_icarus   sim_build/rtl/sim.vvp -fst   
+     -.--ns INFO     gpi                                ..mbed/gpi_embed.cpp:93   in _embed_init_python              Using Python 3.12.4 interpreter at /opt/venv-test/bin/python3
+     -.--ns INFO     gpi                                ../gpi/GpiCommon.cpp:79   in gpi_print_registered_impl       VPI registered
+     0.00ns INFO     cocotb                             Running on Icarus Verilog version 13.0 (stable)
+     0.00ns INFO     cocotb                             Seeding Python random module with 1792244532
+     0.00ns INFO     cocotb                             Initialized cocotb v2.0.1 from /opt/venv-test/lib/python3.12/site-packages/cocotb
+     0.00ns INFO     cocotb                             Running tests
+     0.00ns INFO     cocotb.regression                  running test.test_reference_model (1/14)
+                                                            The reference model reproduces every known answer in the specs.
+     0.00ns INFO     cocotb.regression                  test.test_reference_model passed
+     0.00ns INFO     cocotb.regression                  running test.test_idle (2/14)
+                                                            After reset, and with coefficients but no sof, every output is 0x00; uio are inputs.
+950000.00ns INFO     cocotb.regression                  test.test_idle passed
+950000.00ns INFO     cocotb.regression                  running test.test_forward_ntt (3/14)
+                                                            Forward NTT, all 7 layers in one job, against the reference model.
+28520000.00ns INFO     cocotb.regression                  test.test_forward_ntt passed
+28520000.00ns INFO     cocotb.regression                  running test.test_inverse_ntt (4/14)
+                                                              Inverse NTT (before the scale), all 7 layers, against the reference model.
+56160000.00ns INFO     cocotb.regression                  test.test_inverse_ntt passed
+56160000.00ns INFO     cocotb.regression                  running test.test_basemul (5/14)
+75650000.00ns INFO     cocotb.regression                  test.test_basemul passed
+75650000.00ns INFO     cocotb.regression                  running test.test_scale (6/14)
+83510000.00ns INFO     cocotb.regression                  test.test_scale passed
+83510000.00ns INFO     cocotb.regression                  running test.test_edge_values (7/14)
+                                                              All zeros, all 3328, and a single 1, through scale and basemul.
+165260000.01ns INFO     cocotb.regression                  test.test_edge_values passed
+165260000.01ns INFO     cocotb.regression                  running test.test_full_flow (8/14)
+                                                               The demo: forward NTT of f and g, basemul, inverse NTT, scale ==
+275150000.01ns INFO     cocotb.tb                          forward f    2751 clocks
+275150000.01ns INFO     cocotb.tb                          forward g    2751 clocks
+275150000.01ns INFO     cocotb.tb                          basemul      1943 clocks
+275150000.01ns INFO     cocotb.tb                          inverse      2758 clocks
+275150000.01ns INFO     cocotb.tb                          scale         780 clocks
+275150000.01ns INFO     cocotb.tb                          total       10983 clocks (streaming estimate 10752 + layer waits)
+275150000.01ns INFO     cocotb.regression                  test.test_full_flow passed
+275150000.01ns INFO     cocotb.regression                  running test.test_output_delay (9/14)
+                                                               Measure D per mode: first nonzero byte after one unit, compare with timing.py.
+275640000.01ns INFO     cocotb.tb                          D forward  = 6 (timing.py: 6)
+276070000.01ns INFO     cocotb.tb                          D inverse  = 7 (timing.py: 7)
+276620000.01ns INFO     cocotb.tb                          D basemul  = 20 (timing.py: 20)
+277080000.01ns INFO     cocotb.tb                          D scale    = 9 (timing.py: 9)
+277080000.01ns INFO     cocotb.regression                  test.test_output_delay passed
+277080000.01ns INFO     cocotb.regression                  running test.test_rates (10/14)
+                                                               Back-to-back units give results every P clocks; NTT bytes have no gaps.
+278660000.01ns INFO     cocotb.regression                  test.test_rates passed
+278660000.01ns INFO     cocotb.regression                  running test.test_cancel (11/14)
+                                                               A new sof mid-job cancels it, at several points and for every pair of
+298860000.01ns INFO     cocotb.regression                  test.test_cancel passed
+298860000.01ns INFO     cocotb.regression                  running test.test_reset_mid_job (12/14)
+                                                               Reset in the middle of a job leaves no stale bytes; the next job works.
+307560000.01ns INFO     cocotb.regression                  test.test_reset_mid_job passed
+307560000.01ns INFO     cocotb.regression                  running test.test_extra_inputs_ignored (13/14)
+                                                               Coefficients after the last expected one are ignored until the next sof.
+316020000.01ns INFO     cocotb.regression                  test.test_extra_inputs_ignored passed
+316020000.01ns INFO     cocotb.regression                  running test.test_capture_pins (14/14)
+                                                               io_in_capture: each _q output equals the pins one clock earlier, and sof_q
+FST info: dumpfile tb.fst opened for output.
+        316240000000 ntt_core ASSERT: input coefficient 3990 >= 3329
+        316450000000 ntt_core ASSERT: input coefficient 3589 >= 3329
+        316640000000 ntt_core ASSERT: input coefficient 3772 >= 3329
+        316670000000 ntt_core ASSERT: input coefficient 3525 >= 3329
+        316680000000 ntt_core ASSERT: input coefficient 3918 >= 3329
+        316690000000 ntt_core ASSERT: input coefficient 3956 >= 3329
+        316860000000 ntt_core ASSERT: input coefficient 3711 >= 3329
+        316940000000 ntt_core ASSERT: input coefficient 4023 >= 3329
+        316950000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        316970000000 ntt_core ASSERT: input coefficient 3874 >= 3329
+        316980000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        317050000000 ntt_core ASSERT: input coefficient 3855 >= 3329
+        317140000000 ntt_core ASSERT: input coefficient 3599 >= 3329
+        317170000000 ntt_core ASSERT: input coefficient 3641 >= 3329
+        317300000000 ntt_core ASSERT: input coefficient 3652 >= 3329
+        317320000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        317640000000 ntt_core ASSERT: input coefficient 3890 >= 3329
+        317750000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        317760000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        317890000000 ntt_core ASSERT: input coefficient 3789 >= 3329
+        317930000000 ntt_core ASSERT: result out of range r0=3800 r1=1053
+        317960000000 ntt_core ASSERT: input coefficient 3757 >= 3329
+        317970000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        318050000000 ntt_core ASSERT: input coefficient 3509 >= 3329
+        318070000000 ntt_core ASSERT: input coefficient 3839 >= 3329
+        318210000000 ntt_core ASSERT: input coefficient 3633 >= 3329
+        318350000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        318350000000 ntt_core ASSERT: input coefficient 3888 >= 3329
+        318410000000 ntt_core ASSERT: input coefficient 3947 >= 3329
+        318450000000 ntt_core ASSERT: input coefficient 3512 >= 3329
+        318540000000 ntt_core ASSERT: input coefficient 3496 >= 3329
+        318640000000 ntt_core ASSERT: input coefficient 3535 >= 3329
+        318810000000 ntt_core ASSERT: input coefficient 3581 >= 3329
+        318820000000 ntt_core ASSERT: input coefficient 3547 >= 3329
+        318840000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        318840000000 ntt_core ASSERT: input coefficient 4044 >= 3329
+        318850000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        318860000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        318880000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        318890000000 ntt_core ASSERT: pair_valid 2 clocks after the previous one
+        318890000000 io_out_pack ASSERT: pair_valid 2 clocks after the previous one
+        318900000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        318910000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        318920000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        319110000000 ntt_core ASSERT: input coefficient 3642 >= 3329
+        319120000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        319150000000 ntt_core ASSERT: input coefficient 3937 >= 3329
+        319270000000 ntt_core ASSERT: input coefficient 3503 >= 3329
+        319410000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        319620000000 ntt_core ASSERT: input coefficient 3441 >= 3329
+        319640000000 ntt_core ASSERT: basemul piece started 7 clocks after the previous one (need 15)
+        319710000000 ntt_core ASSERT: input coefficient 3544 >= 3329
+        319790000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        319860000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        319870000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        319890000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        319930000000 ntt_core ASSERT: input coefficient 3931 >= 3329
+        319950000000 ntt_core ASSERT: result out of range r0=1140 r1=3521
+        319970000000 ntt_core ASSERT: input coefficient 3685 >= 3329
+        320100000000 ntt_core ASSERT: input coefficient 3468 >= 3329
+        320120000000 ntt_core ASSERT: input coefficient 3825 >= 3329
+        320130000000 ntt_core ASSERT: input coefficient 3814 >= 3329
+        320300000000 ntt_core ASSERT: input coefficient 3539 >= 3329
+        320310000000 ntt_core ASSERT: input coefficient 3920 >= 3329
+        320320000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        320320000000 ntt_core ASSERT: input coefficient 4001 >= 3329
+        320330000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        320380000000 ntt_core ASSERT: input coefficient 3820 >= 3329
+        320420000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        320460000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        320500000000 ntt_core ASSERT: input coefficient 3752 >= 3329
+        320610000000 ntt_core ASSERT: input coefficient 3920 >= 3329
+        320680000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        320690000000 ntt_core ASSERT: input coefficient 3490 >= 3329
+        320720000000 ntt_core ASSERT: input coefficient 3503 >= 3329
+        320820000000 ntt_core ASSERT: input coefficient 3397 >= 3329
+        320910000000 ntt_core ASSERT: input coefficient 3658 >= 3329
+        320980000000 ntt_core ASSERT: input coefficient 3398 >= 3329
+        321090000000 ntt_core ASSERT: input coefficient 3790 >= 3329
+        321120000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        321130000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        321140000000 ntt_core ASSERT: input coefficient 3793 >= 3329
+        321160000000 ntt_core ASSERT: input coefficient 3497 >= 3329
+        321190000000 ntt_core ASSERT: input coefficient 3479 >= 3329
+        321220000000 ntt_core ASSERT: input coefficient 3965 >= 3329
+        321350000000 ntt_core ASSERT: basemul piece started 7 clocks after the previous one (need 15)
+        321430000000 ntt_core ASSERT: input coefficient 3488 >= 3329
+        321440000000 ntt_core ASSERT: input coefficient 4006 >= 3329
+        321470000000 ntt_core ASSERT: input coefficient 3735 >= 3329
+        321480000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        321590000000 ntt_core ASSERT: input coefficient 3485 >= 3329
+        321720000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        321750000000 ntt_core ASSERT: pair_valid 2 clocks after the previous one
+        321750000000 io_out_pack ASSERT: pair_valid 2 clocks after the previous one
+        321790000000 ntt_core ASSERT: input coefficient 3839 >= 3329
+        321940000000 ntt_core ASSERT: input coefficient 3838 >= 3329
+        321990000000 ntt_core ASSERT: input coefficient 3867 >= 3329
+        322030000000 ntt_core ASSERT: result out of range r0=3412 r1=1625
+        322040000000 ntt_core ASSERT: input coefficient 3970 >= 3329
+        322050000000 ntt_core ASSERT: input coefficient 3665 >= 3329
+        322060000000 ntt_core ASSERT: input coefficient 4072 >= 3329
+        322070000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        322230000000 ntt_core ASSERT: input coefficient 3770 >= 3329
+        322260000000 ntt_core ASSERT: input coefficient 3534 >= 3329
+        322320000000 ntt_core ASSERT: input coefficient 3761 >= 3329
+        322360000000 ntt_core ASSERT: input coefficient 3567 >= 3329
+        322470000000 ntt_core ASSERT: input coefficient 3512 >= 3329
+        322760000000 ntt_core ASSERT: input coefficient 3902 >= 3329
+        322800000000 ntt_core ASSERT: input coefficient 3836 >= 3329
+        322840000000 ntt_core ASSERT: basemul piece started 8 clocks after the previous one (need 15)
+        322860000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        322920000000 ntt_core ASSERT: input coefficient 3528 >= 3329
+        323020000000 ntt_core ASSERT: input coefficient 3974 >= 3329
+        323130000000 ntt_core ASSERT: input coefficient 3486 >= 3329
+        323290000000 ntt_core ASSERT: input coefficient 3478 >= 3329
+        323310000000 ntt_core ASSERT: input coefficient 4027 >= 3329
+        323320000000 ntt_core ASSERT: input coefficient 3961 >= 3329
+        323360000000 ntt_core ASSERT: input coefficient 3636 >= 3329
+        323400000000 ntt_core ASSERT: result out of range r0=3501 r1=960
+        323510000000 ntt_core ASSERT: input coefficient 3702 >= 3329
+        323550000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        323590000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        323600000000 ntt_core ASSERT: input coefficient 3510 >= 3329
+        323630000000 ntt_core ASSERT: input coefficient 3927 >= 3329
+        323640000000 ntt_core ASSERT: input coefficient 3618 >= 3329
+        323720000000 ntt_core ASSERT: input coefficient 3577 >= 3329
+        323720000000 ntt_core ASSERT: basemul piece started 9 clocks after the previous one (need 15)
+        323840000000 ntt_core ASSERT: input coefficient 3330 >= 3329
+        323890000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        323950000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        323960000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        323980000000 ntt_core ASSERT: input coefficient 3596 >= 3329
+        324030000000 ntt_core ASSERT: input coefficient 3453 >= 3329
+        324040000000 ntt_core ASSERT: input coefficient 3532 >= 3329
+        324070000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        324100000000 ntt_core ASSERT: input coefficient 3526 >= 3329
+        324220000000 ntt_core ASSERT: input coefficient 3657 >= 3329
+        324230000000 ntt_core ASSERT: input coefficient 3507 >= 3329
+        324360000000 ntt_core ASSERT: input coefficient 3492 >= 3329
+        324560000000 ntt_core ASSERT: input coefficient 3959 >= 3329
+        324690000000 ntt_core ASSERT: input coefficient 3620 >= 3329
+        324760000000 ntt_core ASSERT: input coefficient 3541 >= 3329
+        324870000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        324880000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        324970000000 ntt_core ASSERT: input coefficient 4057 >= 3329
+        325040000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        325050000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        325150000000 ntt_core ASSERT: input coefficient 4050 >= 3329
+        325320000000 ntt_core ASSERT: input coefficient 3384 >= 3329
+        325350000000 ntt_core ASSERT: input coefficient 3691 >= 3329
+        325400000000 ntt_core ASSERT: input coefficient 3570 >= 3329
+        325470000000 ntt_core ASSERT: input coefficient 3994 >= 3329
+        325510000000 ntt_core ASSERT: input coefficient 3508 >= 3329
+        325670000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        325680000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        325810000000 ntt_core ASSERT: input coefficient 3865 >= 3329
+        325830000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        325850000000 ntt_core ASSERT: input coefficient 3634 >= 3329
+        325890000000 ntt_core ASSERT: input coefficient 3844 >= 3329
+        325950000000 ntt_core ASSERT: input coefficient 3745 >= 3329
+        326000000000 ntt_core ASSERT: input coefficient 4057 >= 3329
+        326080000000 ntt_core ASSERT: input coefficient 3472 >= 3329
+        326100000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        326160000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        326180000000 ntt_core ASSERT: input coefficient 4069 >= 3329
+        326230000000 ntt_core ASSERT: input coefficient 3787 >= 3329
+        326260000000 ntt_core ASSERT: result out of range r0=874 r1=3371
+        326300000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        326310000000 ntt_core ASSERT: input coefficient 3430 >= 3329
+        326320000000 ntt_core ASSERT: input coefficient 4092 >= 3329
+        326350000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        326530000000 ntt_core ASSERT: input coefficient 3958 >= 3329
+        326550000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        326560000000 ntt_core ASSERT: result out of range r0=3442 r1=1145
+        326570000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        326580000000 io_out_pack ASSERT: pair_valid 2 clocks after the previous one
+        326580000000 ntt_core ASSERT: pair_valid 2 clocks after the previous one
+        326630000000 ntt_core ASSERT: input coefficient 3504 >= 3329
+        326800000000 ntt_core ASSERT: basemul piece started 11 clocks after the previous one (need 15)
+        326910000000 ntt_core ASSERT: input coefficient 3772 >= 3329
+        326960000000 ntt_core ASSERT: input coefficient 3879 >= 3329
+        326980000000 ntt_core ASSERT: input coefficient 4021 >= 3329
+        327050000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        327150000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        327170000000 ntt_core ASSERT: input coefficient 3584 >= 3329
+        327320000000 ntt_core ASSERT: input coefficient 3754 >= 3329
+        327350000000 ntt_core ASSERT: input coefficient 3934 >= 3329
+        327400000000 ntt_core ASSERT: input coefficient 3368 >= 3329
+        327430000000 ntt_core ASSERT: input coefficient 3398 >= 3329
+        327510000000 ntt_core ASSERT: input coefficient 3866 >= 3329
+        327540000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        327640000000 ntt_core ASSERT: input coefficient 3518 >= 3329
+        327660000000 ntt_core ASSERT: input coefficient 3620 >= 3329
+        327680000000 ntt_core ASSERT: input coefficient 3391 >= 3329
+        327690000000 ntt_core ASSERT: input coefficient 3492 >= 3329
+        327700000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        327730000000 ntt_core ASSERT: pair_valid 2 clocks after the previous one
+        327730000000 io_out_pack ASSERT: pair_valid 2 clocks after the previous one
+        327740000000 ntt_core ASSERT: input coefficient 3623 >= 3329
+        327840000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        327850000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        327860000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        327890000000 ntt_core ASSERT: pair_valid 2 clocks after the previous one
+        327890000000 io_out_pack ASSERT: pair_valid 2 clocks after the previous one
+        327940000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        328090000000 ntt_core ASSERT: input coefficient 3641 >= 3329
+        328120000000 ntt_core ASSERT: input coefficient 3721 >= 3329
+        328140000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        328240000000 ntt_core ASSERT: input coefficient 3508 >= 3329
+        328400000000 ntt_core ASSERT: input coefficient 4039 >= 3329
+        328410000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        328410000000 ntt_core ASSERT: input coefficient 3970 >= 3329
+        328430000000 ntt_core ASSERT: input coefficient 3869 >= 3329
+        328440000000 io_out_pack ASSERT: pair_valid 2 clocks after the previous one
+        328440000000 ntt_core ASSERT: pair_valid 2 clocks after the previous one
+        328490000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        328540000000 ntt_core ASSERT: input coefficient 3979 >= 3329
+        328640000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        328650000000 ntt_core ASSERT: input coefficient 4082 >= 3329
+        328800000000 ntt_core ASSERT: input coefficient 3421 >= 3329
+        328810000000 ntt_core ASSERT: input coefficient 3660 >= 3329
+        328820000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        328840000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        328850000000 ntt_core ASSERT: input coefficient 3359 >= 3329
+        328920000000 ntt_core ASSERT: input coefficient 3583 >= 3329
+        329010000000 ntt_core ASSERT: input coefficient 3434 >= 3329
+        329100000000 ntt_core ASSERT: input coefficient 4027 >= 3329
+        329200000000 ntt_core ASSERT: input coefficient 3816 >= 3329
+        329290000000 ntt_core ASSERT: input coefficient 3684 >= 3329
+        329300000000 ntt_core ASSERT: input coefficient 3870 >= 3329
+        329390000000 ntt_core ASSERT: input coefficient 3503 >= 3329
+        329470000000 ntt_core ASSERT: input coefficient 3508 >= 3329
+        329560000000 ntt_core ASSERT: input coefficient 3999 >= 3329
+        329730000000 ntt_core ASSERT: input coefficient 3417 >= 3329
+        329780000000 ntt_core ASSERT: input coefficient 3770 >= 3329
+        329860000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        329870000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        329880000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        329930000000 ntt_core ASSERT: input coefficient 3841 >= 3329
+        330180000000 ntt_core ASSERT: input coefficient 3802 >= 3329
+        330360000000 ntt_core ASSERT: input coefficient 3412 >= 3329
+        330410000000 ntt_core ASSERT: input coefficient 3716 >= 3329
+        330510000000 ntt_core ASSERT: input coefficient 3968 >= 3329
+        330530000000 ntt_core ASSERT: input coefficient 3476 >= 3329
+        330640000000 ntt_core ASSERT: input coefficient 3845 >= 3329
+        330840000000 ntt_core ASSERT: input coefficient 3897 >= 3329
+        330910000000 ntt_core ASSERT: input coefficient 3570 >= 3329
+        331010000000 ntt_core ASSERT: input coefficient 3477 >= 3329
+        331020000000 ntt_core ASSERT: input coefficient 3890 >= 3329
+        331110000000 ntt_core ASSERT: input coefficient 3907 >= 3329
+        331350000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        331360000000 ntt_core ASSERT: input coefficient 3511 >= 3329
+        331480000000 ntt_core ASSERT: input coefficient 3504 >= 3329
+        331490000000 ntt_core ASSERT: input coefficient 3774 >= 3329
+        331580000000 ntt_core ASSERT: input coefficient 3720 >= 3329
+        331840000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        331900000000 ntt_core ASSERT: input coefficient 3568 >= 3329
+        331910000000 ntt_core ASSERT: input coefficient 3482 >= 3329
+        331920000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        331940000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        332070000000 ntt_core ASSERT: input coefficient 3799 >= 3329
+        332110000000 ntt_core ASSERT: input coefficient 3699 >= 3329
+        332140000000 ntt_core ASSERT: input coefficient 3961 >= 3329
+        332350000000 ntt_core ASSERT: input coefficient 3334 >= 3329
+        332440000000 ntt_core ASSERT: input coefficient 4024 >= 3329
+        332480000000 ntt_core ASSERT: result out of range r0=3534 r1=433
+        332510000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        332540000000 ntt_core ASSERT: input coefficient 3488 >= 3329
+        332580000000 ntt_core ASSERT: input coefficient 3666 >= 3329
+        332770000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        332780000000 ntt_core ASSERT: input coefficient 3419 >= 3329
+        332790000000 ntt_core ASSERT: input coefficient 3434 >336165000.01ns INFO     cocotb.regression                  test.test_capture_pins passed
+336165000.01ns INFO     cocotb.regression                  ****************************************************************************************
+                                                           ** TEST                            STATUS  SIM TIME (ns)  REAL TIME (s)  RATIO (ns/s) **
+                                                           ****************************************************************************************
+                                                           ** test.test_reference_model        PASS           0.00           0.09          0.00  **
+                                                           ** test.test_idle                   PASS      950000.00           0.01   83427666.92  **
+                                                           ** test.test_forward_ntt            PASS    27570000.00           0.46   60294347.43  **
+                                                           ** test.test_inverse_ntt            PASS    27640000.00           0.55   50284347.24  **
+                                                           ** test.test_basemul                PASS    19490000.00           0.37   52368813.66  **
+                                                           ** test.test_scale                  PASS     7860000.00           0.13   58480530.47  **
+                                                           ** test.test_edge_values            PASS    81750000.00           1.18   69391175.85  **
+                                                           ** test.test_full_flow              PASS   109890000.00           1.91   57454435.81  **
+                                                           ** test.test_output_delay           PASS     1930000.00           0.02   83294816.28  **
+                                                           ** test.test_rates                  PASS     1580000.00           0.02   72544365.36  **
+                                                           ** test.test_cancel                 PASS    20200000.00           0.29   69137480.91  **
+                                                           ** test.test_reset_mid_job          PASS     8700000.00           0.13   67562386.22  **
+                                                           ** test.test_extra_inputs_ignored   PASS     8460000.00           0.12   72649309.91  **
+                                                           ** test.test_capture_pins           PASS    20145000.00           0.36   55966652.26  **
+                                                           ****************************************************************************************
+                                                           ** TESTS=14 PASS=14 FAIL=0 SKIP=0          336165000.01           5.66   59379574.27  **
+                                                           ****************************************************************************************
+= 3329
+        332860000000 ntt_core ASSERT: input coefficient 4018 >= 3329
+        332880000000 ntt_core ASSERT: input coefficient 3567 >= 3329
+        333160000000 ntt_core ASSERT: input coefficient 3698 >= 3329
+        333230000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        333260000000 ntt_core ASSERT: input coefficient 3538 >= 3329
+        333300000000 ntt_core ASSERT: input coefficient 3354 >= 3329
+        333570000000 ntt_core ASSERT: input coefficient 3385 >= 3329
+        333580000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        333620000000 ntt_core ASSERT: input coefficient 4076 >= 3329
+        333700000000 ntt_core ASSERT: input coefficient 3384 >= 3329
+        333750000000 ntt_core ASSERT: input coefficient 3444 >= 3329
+        333780000000 ntt_core ASSERT: input coefficient 3990 >= 3329
+        333950000000 ntt_core ASSERT: input coefficient 4041 >= 3329
+        333970000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        333980000000 ntt_core ASSERT: input coefficient 3746 >= 3329
+        333990000000 ntt_core ASSERT: input coefficient 3772 >= 3329
+        334000000000 io_out_pack ASSERT: pair_valid 2 clocks after the previous one
+        334000000000 ntt_core ASSERT: pair_valid 2 clocks after the previous one
+        334250000000 ntt_core ASSERT: input coefficient 4019 >= 3329
+        334290000000 ntt_core ASSERT: input coefficient 4042 >= 3329
+        334320000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        334430000000 ntt_core ASSERT: input coefficient 3650 >= 3329
+        334480000000 ntt_core ASSERT: input coefficient 3721 >= 3329
+        334600000000 ntt_core ASSERT: input coefficient 3907 >= 3329
+        334750000000 ntt_core ASSERT: input coefficient 4089 >= 3329
+        334930000000 ntt_core ASSERT: input coefficient 3663 >= 3329
+        334960000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        334980000000 ntt_core ASSERT: multiplier start 2 clocks after the previous one
+        335340000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        335340000000 ntt_core ASSERT: input coefficient 4090 >= 3329
+        335350000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        335430000000 ntt_core ASSERT: basemul piece started 7 clocks after the previous one (need 15)
+        335520000000 ntt_core ASSERT: multiplier start 1 clocks after the previous one
+        335730000000 ntt_core ASSERT: input coefficient 3966 >= 3329
+        335810000000 ntt_core ASSERT: input coefficient 3604 >= 3329
+        335900000000 ntt_core ASSERT: input coefficient 3729 >= 3329
+        335940000000 ntt_core ASSERT: input coefficient 3644 >= 3329
+        335970000000 ntt_core ASSERT: basemul piece started 4 clocks after the previous one (need 15)
+make[1]: Leaving directory '/home/papart/development/TT/chipathon-2026/test'
