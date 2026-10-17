@@ -43,3 +43,9 @@ COCOTB_TEST_MODULES = test
 
 # include cocotb's make rules to take care of the simulator setup
 include $(shell cocotb-config --makefiles)/Makefile.sim
+
+# Standalone mod-adder testbench (plain Verilog, no cocotb): make adder_mod
+.PHONY: adder_mod
+adder_mod:
+	iverilog -g2012 -o sim_build/tb_adder_mod tb_adder_mod.v $(SRC_DIR)/adder_mod.v
+	vvp sim_build/tb_adder_mod
