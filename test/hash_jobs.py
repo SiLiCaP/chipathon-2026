@@ -46,15 +46,16 @@ def s4(v):
 
 class HashJob:
     """One sponge: CLEAR, absorb, PERMUTE, squeeze. K: core step width; io: bits per word (min(K, 8)).
-    burst: squeeze with BURST words; cbd_eta: 2 or 3 for a PRF (SHAKE256) whose output goes through BURST_CBD."""
+    burst: squeeze with BURST words; cbd_eta: 2 or 3 for a PRF (SHAKE256) whose output goes through BURST_CBD;
+    outlen: bytes to squeeze (default: the digest size, or the ML-KEM XOF / PRF length in ALGOS)."""
 
-    def __init__(self, name, msg, K=8, core="ring", skip=False, burst=False, cbd_eta=None):
+    def __init__(self, name, msg, K=8, core="ring", skip=False, burst=False, cbd_eta=None, outlen=None):
         self.name, self.msg, self.K, self.skip = name, bytes(msg), K, skip
         self.io = min(K, 8)
         self.burst = burst or cbd_eta is not None
         self.cbd_eta = cbd_eta
-        self.rate, self.dom, outlen = ALGOS[name]
-        self.outlen = 64 * cbd_eta if cbd_eta else outlen
+        self.rate, self.dom, default_len = ALGOS[name]
+        self.outlen = 64 * cbd_eta if cbd_eta else (outlen or default_len)
         self.clear_busy, self.perm_busy = busy(core, K)
 
     def _lane_words(self, lane):
@@ -118,6 +119,8 @@ class HashJob:
 
     def expected(self):
         h = hashlib.new(self.name, self.msg)
+        if self.name.startswith("sha3") and not self.cbd_eta:
+            return h.digest()[:self.outlen]
         if self.cbd_eta:
             return cbd(h.digest(self.outlen), self.cbd_eta)
         return h.digest(self.outlen) if self.name.startswith("shake") else h.digest()
