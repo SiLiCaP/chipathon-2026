@@ -75,6 +75,11 @@ and all NTT work, an ML-KEM-512 exchange is **2.3–3.2× faster** than the RP23
    ff/−40 °C/1.95 V had +0.016 ns slack, so about 0.16 ns with no uncertainty. Under the default
    0.25 ns it would fail by about 0.09 ns. A hold failure can't be fixed by slowing the clock, so the
    firmware self-test and software fallback (§6) matter.
+   **TT organisers' answer (Discord, Oct 18):** `sky130_fd_sc_hd__dlclkp` cells are allowed; any SDC is
+   allowed; submissions are taken from the GDS and are almost never modified (only rare analog DRC fixes,
+   with contact first), so there is no later re-timing with default constraints. They know of no silicon
+   measurement that argues for more or less hold uncertainty. So both flow exceptions are within the rules;
+   the 0.14 ns margin is our own engineering risk and our signoff is the final word on timing.
 4. **Placement density doesn't help.** Utilization after global placement is already 69.7 %, so
    targets of 65 % and 70 % are both raised to the same floor (byte-identical placements). Global
    routing came out at 74.6 %, worse than the 69.6 % at 75 %.

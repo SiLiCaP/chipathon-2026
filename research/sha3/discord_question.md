@@ -17,3 +17,14 @@ Setup stays at 0.25 ns and the 5 % timing derate is unchanged. Hold margins are 
 We also use a `SYNTH_EXCLUDED_CELL_FILE` that allows the small `_1` cells, and we exclude the `clkdlybuf4s*` delay cells through `EXTRA_EXCLUDED_CELLS`. Let us know if either of those is a problem.
 
 Thanks!
+
+---
+
+Answer (TT support, Oct 18):
+
+> You can use sky130_fd_sc_hd__dlclkp cells if you'd like.
+> You can use any SDC you like.
+> Submissions are based on the GDS, we almost never modify them.
+> I don't know of any silicon measurement that would argue for either more/less.
+>
+> (We very rarely have to modify submitted GDS, almost exclusively analog ones that fail an obscure DRC rule not in the OSS decks, and we get in touch if that's needed.)

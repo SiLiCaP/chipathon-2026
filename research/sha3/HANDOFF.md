@@ -71,7 +71,7 @@ Launch a harden: `cd /home/papart/development/TT/exp_<name> && local-ci/run --no
 | `exp_k8_t2` | 3x2, K = 8, small cells, **hold 0.14 SDC**, margins 0.03 / 0.02, density 75, **new top**, `EXTRA_EXCLUDED_CELLS` bans `clkdlybuf4s*` | RTL tests 16/16 pass. 7 hold buffers, GRT 69.6 %. Detailed routing early passes (3.8k–5.7k violations) |
 | `exp_k8_t2_d65` | As `exp_k8_t2`, density 65 (`gds` only) | Placement raised the target to the 69.7 % floor. 7 hold buffers, GRT 74.6 % (worse than 75). Backup only |
 | `exp_k8_t2_d70` | As `exp_k8_t2`, density 70 | **Stopped**: byte-identical placement to `d65` |
-| `exp_k8_t2_h16` | As `exp_k8_t2`, hold uncertainty 0.16 | 819 hold buffers, GRT 96.6 %. Probably won't route; left running for a definite answer |
+| `exp_k8_t2_h16` | As `exp_k8_t2`, hold uncertainty 0.16 | **Stopped** at detailed routing (user's call): 819 hold buffers, GRT 96.6 %, not a usable fallback |
 | `exp_k8_t2_h18` | hold 0.18 | **Failed** at antenna repair: 1,319 buffers, GRT 142.5 % |
 | `exp_k8_t2_h20` | hold 0.20 | **Stopped**: 1,373 buffers, GRT 150.2 % |
 | `exp_lat_4x2` | 4x2, `keccak_lat` (branch `sha3-latch`), every TT default | **Failed**: RTL tests 16/16 pass, then 122.1k µm² synthesized, 95.2 % utilization, DPL-0036 |
@@ -82,6 +82,12 @@ routes in 3x2 at 0.14 or below; there is no less aggressive setting to fall back
 
 `exp_k8_t2` is the candidate: it has the safer hold setting and the setup fix. Whichever of the
 `t2` runs (`t2`, `t2_d65`) signs off clean first wins.
+
+**TT organisers' answer (Discord, Oct 18):** `sky130_fd_sc_hd__dlclkp` cells are allowed; any SDC is
+allowed; submissions are taken from the GDS and are almost never modified (only rare analog DRC fixes,
+with contact first), so there is no later re-timing with default constraints. They know of no silicon
+measurement that argues for more or less hold uncertainty. So both flow exceptions are within the rules;
+the 0.14 ns margin is our own engineering risk and our signoff is the final word on timing.
 
 ## Measured findings to keep in mind
 
@@ -130,7 +136,6 @@ routes in 3x2 at 0.14 or below; there is no less aggressive setting to fall back
    - a **6x2 run with default settings** (12 tiles, paid), as proof of what the defaults cost;
    - a **latch-based lane-serial Keccak** prototype: estimated 50–60k µm², about 1,300–1,400
      clocks, no shift hops, so it may pass with default hold. Plain synthesis first;
-   - a Discord question to the TT organisers about clock gating and the custom SDC.
 8. Real-use firmware notes for Spec 1: hybrid X25519 + ML-KEM, a known-answer self-test at boot, a
    pairwise-consistency check after keygen, software fallback, and CLEAR at the start of every hash
    call (the state is not reset and holds the previous call's secrets).
