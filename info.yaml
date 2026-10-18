@@ -29,7 +29,7 @@ project:
     - "modq_mul.v"
     - "modq_addsub.v"
     - "modq_acc.v"
-    - "keccak_ring.v"
+    - "keccak_lat.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).

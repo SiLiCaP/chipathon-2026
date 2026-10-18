@@ -7,8 +7,8 @@ data byte. SKIP moves to the next lane and leaves it untouched (only at a lane b
 with skip on, the host sends each all-zero lane of a padded block as one SKIP word
 instead of 8 zero absorb bytes. Cases run both with and without SKIP.
 The host has no busy flag on the pins, so it waits the fixed busy times:
-PERMUTE 368 clocks, CLEAR 8 clocks (K = 8). The squeezed byte of word k is on
-uo_out at sample k + 2 (1 clock io_in_capture, 1 clock keccak_ring dout register).
+PERMUTE 1,464 clocks, CLEAR 1 clock (keccak_lat). The squeezed byte of word k is on
+uo_out at sample k + 2 (1 clock io_in_capture, 1 clock keccak_lat dout register).
 The host pads and absorbs / squeezes whole lanes (8 bytes) between permutations.
 
 Under GATES=yes a reduced set of cases runs because gate-level simulation is slow.
@@ -27,8 +27,8 @@ from test import new_chip
 GL = os.environ.get("GATES") == "yes"
 
 ABSORB, SQUEEZE, PERMUTE, CLEAR, SKIP = 0, 1, 2, 3, 4
-PERM_BUSY = 368            # 8 + 24 * 15 for K = 8
-CLEAR_BUSY = 8
+PERM_BUSY = 1464           # 24 rounds x 61 clocks (keccak_lat)
+CLEAR_BUSY = 1
 SQ_DELAY = 2               # squeeze word k -> byte at sample k + 2
 
 ALGOS = {  # name: (rate, domain byte, output length)
@@ -149,7 +149,7 @@ async def test_hash_ntt_interleaved(dut):
     words = list(ntt_words)
     for k, w in zip(idle_slots, abs_words + perm[:1]):
         words[k] = w                       # absorb bytes, then PERMUTE, in NTT gaps
-    # the permutation (368 clocks) overlaps the end of the NTT stream and its results
+    # the permutation (1,464 clocks) overlaps the end of the NTT stream and its results
     perm_at = idle_slots[n_abs]
     words += [IDLE] * max(0, perm_at + 1 + PERM_BUSY - len(words))
     sq_words, sq = job.squeeze_words()

@@ -4,10 +4,10 @@
  * Tiny Tapeout shell (Spec 5).
  *
  *   ui_in, uio_in -> io_in_capture -> ntt_core -> io_out_pack -> uo_out
- *                                  \-> keccak_ring (hash words) ----/
+ *                                  \-> keccak_lat (hash words) -----/
  *
- * Hash words: a captured word with valid and coeff[11:8] = 0xF (never a coefficient) is a hash
- * command for keccak_ring: {sof, op} = command (0 absorb, 1 squeeze, 2 permute, 3 clear, 4 skip lane),
+ * Research prototype (branch sha3-latch): a captured word with valid and coeff[11:8] = 0xF (never a coefficient) is a hash
+ * command for keccak_lat: {sof, op} = command (0 absorb, 1 squeeze, 2 permute, 3 clear, 4 skip lane),
  * coeff[K-1:0] = data. The NTT core never sees it.
  *
  * Pins: ui_in[7:0] = coefficient bits 7:0, uio_in[3:0] = bits 11:8,
@@ -31,7 +31,7 @@ module tt_um_NTT_Core #(
 );
 
   wire [11:0] coeff_q;
-  wire        valid_q, sof_q;
+  wire        valid_q, sof_q;   // valid_q is unused: ntt_valid and hash_w replace it
   wire [1:0]  op_q;
   wire [11:0] r0, r1;
   wire        pair_valid, flush;
@@ -47,11 +47,26 @@ module tt_um_NTT_Core #(
       .op_q   (op_q)
   );
 
-  wire hash_w = valid_q & (coeff_q[11:8] == 4'hF);
+  // Hash-word flag, decoded from the pins and registered beside io_in_capture (same clock), so the
+  // 4-input decode is not in front of the NTT control paths. Equals valid_q & (coeff_q[11:8] == 4'hF).
+  // ntt_valid / ntt_sof are valid_q / sof_q with hash words masked, registered the same way.
+  wire hash_in = uio_in[4] & (uio_in[3:0] == 4'hF);
+  reg  hash_w, ntt_valid, ntt_sof;
+  always @(posedge clk) begin
+    if (!rst_n) begin
+      hash_w    <= 1'b0;
+      ntt_valid <= 1'b0;
+      ntt_sof   <= 1'b0;
+    end else begin
+      hash_w    <= hash_in;
+      ntt_valid <= uio_in[4] & ~hash_in;
+      ntt_sof   <= uio_in[5] & uio_in[4] & ~hash_in;
+    end
+  end
   wire [HASH_K-1:0] hash_dout;
   wire [7:0] ntt_byte;
 
-  keccak_ring #(.K(HASH_K)) u_hash (
+  keccak_lat #(.K(HASH_K)) u_hash (
       .clk      (clk),
       .rst_n    (rst_n),
       .cmd_valid(hash_w),
@@ -65,8 +80,8 @@ module tt_um_NTT_Core #(
       .clk       (clk),
       .rst_n     (rst_n),
       .coeff_q   (coeff_q),
-      .valid_q   (valid_q & ~hash_w),
-      .sof_q     (sof_q & ~hash_w),
+      .valid_q   (ntt_valid),
+      .sof_q     (ntt_sof),
       .op_q      (op_q),
       .r0        (r0),
       .r1        (r1),
@@ -93,6 +108,6 @@ module tt_um_NTT_Core #(
   assign uio_oe  = 8'h00;
 
   // List all unused inputs to prevent warnings
-  wire _unused = &{ena, 1'b0};
+  wire _unused = &{ena, valid_q, 1'b0};
 
 endmodule
