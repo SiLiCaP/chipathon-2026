@@ -34,9 +34,9 @@ order.
 Each result pair (r0, r1) leaves as three bytes on consecutive clocks (ByteEncode12):
 `r0[7:0]`, `{r1[3:0], r0[11:8]}`, `r1[11:4]`. Between results `uo_out` is 0x00.
 
-Next to the NTT core sits a Keccak-f[1600] sponge (`keccak_ring`) for SHA-3 and SHAKE. Its
-1600-bit state lives in clock-gated shift rings and it processes 8 slices per clock: one
-permutation takes 368 clocks. A captured word with valid high and coefficient bits 11:8 =
+Next to the NTT core sits a Keccak-f[1600] sponge (`keccak_lat`) for SHA-3 and SHAKE. Its
+1600-bit state lives in a latch array (25 lanes of 64 latches) and a 64-bit datapath
+processes one lane per clock: one permutation takes 1,464 clocks (24 rounds of 61). A captured word with valid high and coefficient bits 11:8 =
 0xF (never a valid coefficient) is a hash command instead of a coefficient; the NTT core
 never sees it. The host does the padding and absorbs and squeezes whole 8-byte lanes; an
 all-zero lane of a padded block can be passed over with one SKIP word.
@@ -45,8 +45,8 @@ all-zero lane of a padded block can be passed over with one SKIP word.
 | --- | --- | --- | --- |
 | 000 | Absorb: XOR the byte into the next state byte | byte | - |
 | 001 | Squeeze: the next state byte on `uo_out` 2 clocks later | - | - |
-| 010 | Permute, rewinds the byte pointer | - | 368 clocks |
-| 011 | Clear the state, rewinds the byte pointer | - | 8 clocks |
+| 010 | Permute, rewinds the byte pointer | - | 1,464 clocks |
+| 011 | Clear the state, rewinds the byte pointer | - | 1 clock |
 | 100 | Skip: the pointer moves to the next lane, which stays untouched (only at a lane boundary) | - | - |
 | 101-111 | Reserved, no-op | - | - |
 
