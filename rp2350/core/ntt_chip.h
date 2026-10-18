@@ -26,6 +26,7 @@ struct tt_io {
     int (*reset)(tt_io_t *io, uint32_t cycles);   // rst_n low for `cycles` clocks, inputs idle
     const char *name;
     void *ctx;
+    uint32_t conv_cyc;          // set by run(): cycles spent reformatting words (0 if the pins take them as is)
 };
 
 // Longest job: basemul = 128 x P_B + D_B + 3 clocks (655), plus margin for the sample skew.

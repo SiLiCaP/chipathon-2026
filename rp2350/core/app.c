@@ -218,8 +218,9 @@ int app_matvec(ntt_chip_t *c, uint32_t seed) {
 }
 
 // ---------------- bench ----------------
-int app_bench(ntt_chip_t *c, uint32_t n) {
+int app_bench(ntt_chip_t *c, uint32_t n, uint32_t target_hz) {
     static uint16_t f[NTT_N], g[NTT_N], h[NTT_N];
+    oplog_clear();                                       // the summary below covers exactly these calls
     seed_rng(7);
     rand_poly(f); rand_poly(g);
     const char *names[4] = {"forward NTT", "inverse NTT", "basemul", "scale"};
@@ -243,6 +244,8 @@ int app_bench(ntt_chip_t *c, uint32_t n) {
         ref_ntt(h);
     }
     printf("  CPU reference NTT (portable C, not optimized): %.1f us\n", (double)(plat_time_us() - t0) / n);
+    printf("\nwhere the time goes, from the operation log (`log csv` for every batch):\n");
+    oplog_summary(target_hz);
     return 0;
 }
 

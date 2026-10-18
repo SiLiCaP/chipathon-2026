@@ -6,6 +6,8 @@
 //
 //   make -C rp2350/pc && rp2350/pc/ntt_host [--sw | --port /dev/ttyUSB1] all | selftest | demo [seed] |
 //                                     fuzz [n] | matvec [seed] | bench [n] | cal
+//   --log summary|csv   after the command, print the operation log (oplog.h). On a PC the times are this PC's,
+//                       and with --port the transfer overhead is USB: use the RP2350 log for silicon estimates.
 #define _DEFAULT_SOURCE
 #include <errno.h>
 #include <fcntl.h>
@@ -27,6 +29,12 @@ uint64_t plat_time_us(void) {
     return (uint64_t)ts.tv_sec * 1000000u + (uint64_t)ts.tv_nsec / 1000u;
 }
 uint32_t plat_chip_hz(void) { return chip_hz; }
+uint32_t plat_cycles(void) {           // nanoseconds stand in for cycles on a PC
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint32_t)((uint64_t)ts.tv_sec * 1000000000u + (uint64_t)ts.tv_nsec);
+}
+uint32_t plat_cycles_hz(void) { return 1000000000u; }
 uint32_t plat_rand32(void) { return (uint32_t)random(); }
 
 // ---------------- TTE1 transport (Tang Nano emulator) ----------------
@@ -118,11 +126,13 @@ int main(int argc, char **argv) {
     tt_io_t io;
     const char *port = NULL;
     uint32_t div = 1;
+    const char *log = NULL;
     int a = 1;
     for (; a < argc && argv[a][0] == '-'; a++) {
         if (!strcmp(argv[a], "--port") && a + 1 < argc) port = argv[++a];
         else if (!strcmp(argv[a], "--div") && a + 1 < argc) div = (uint32_t)atoi(argv[++a]);
         else if (!strcmp(argv[a], "--sw")) port = NULL;
+        else if (!strcmp(argv[a], "--log") && a + 1 < argc) log = argv[++a];
         else { fprintf(stderr, "unknown option %s\n", argv[a]); return 2; }
     }
     if (port) {
@@ -142,7 +152,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(cmd, "demo")) fail = app_demo(&chip, arg ? arg : 1);
     else if (!strcmp(cmd, "fuzz")) fail = app_fuzz(&chip, arg ? arg : 10, 1);
     else if (!strcmp(cmd, "matvec")) fail = app_matvec(&chip, arg ? arg : 1);
-    else if (!strcmp(cmd, "bench")) fail = app_bench(&chip, arg ? arg : 5);
+    else if (!strcmp(cmd, "bench")) fail = app_bench(&chip, arg ? arg : 5, 50000000);
     else if (!strcmp(cmd, "cal")) fail = app_calibrate(&chip);
     else if (!strcmp(cmd, "all")) {
         fail |= app_selftest(&chip);
@@ -150,6 +160,8 @@ int main(int argc, char **argv) {
         fail |= app_fuzz(&chip, 10, 1);
         fail |= app_matvec(&chip, 1);
     } else { fprintf(stderr, "unknown command %s\n", cmd); return 2; }
+    if (log && !strcmp(log, "csv")) oplog_csv();
+    else if (log) oplog_summary(50000000);
     if (!port && sw.violations) {
         printf("software chip saw %lu protocol violations, last: %s\n", (unsigned long)sw.violations, sw.last_violation);
         fail = 1;
