@@ -7,7 +7,8 @@
  *                                  \-> keccak_ring (hash words) ----/
  *
  * Hash words: a captured word with valid and coeff[11:8] = 0xF (never a coefficient) is a hash
- * command for keccak_ring: op = command, coeff[K-1:0] = data. The NTT core never sees it.
+ * command for keccak_ring: {sof, op} = command (0 absorb, 1 squeeze, 2 permute, 3 clear, 4 skip lane),
+ * coeff[K-1:0] = data. The NTT core never sees it.
  *
  * Pins: ui_in[7:0] = coefficient bits 7:0, uio_in[3:0] = bits 11:8,
  * uio_in[4] = valid, uio_in[5] = sof, uio_in[7:6] = op. uo_out = result bytes
@@ -54,7 +55,7 @@ module tt_um_NTT_Core #(
       .clk      (clk),
       .rst_n    (rst_n),
       .cmd_valid(hash_w),
-      .cmd      (op_q),
+      .cmd      ({sof_q, op_q}),   // sof is free in hash words: bit 2 selects SKIP
       .din      (coeff_q[HASH_K-1:0]),
       .dout     (hash_dout),
       .busy     ()

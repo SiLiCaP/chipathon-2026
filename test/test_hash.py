@@ -2,7 +2,10 @@
 """Hash (Keccak sponge) tests through the Tiny Tapeout pins.
 
 A hash word is a pin word with valid = 1 and coeff[11:8] = 0xF (never a coefficient):
-op = command (0 absorb, 1 squeeze, 2 permute, 3 clear), coeff[7:0] = data byte.
+{sof, op} = command (0 absorb, 1 squeeze, 2 permute, 3 clear, 4 skip lane), coeff[7:0] =
+data byte. SKIP moves to the next lane and leaves it untouched (only at a lane boundary):
+with skip on, the host sends each all-zero lane of a padded block as one SKIP word
+instead of 8 zero absorb bytes. Cases run both with and without SKIP.
 The host has no busy flag on the pins, so it waits the fixed busy times:
 PERMUTE 368 clocks, CLEAR 8 clocks (K = 8). The squeezed byte of word k is on
 uo_out at sample k + 2 (1 clock io_in_capture, 1 clock keccak_ring dout register).
@@ -23,7 +26,7 @@ from test import new_chip
 
 GL = os.environ.get("GATES") == "yes"
 
-ABSORB, SQUEEZE, PERMUTE, CLEAR = 0, 1, 2, 3
+ABSORB, SQUEEZE, PERMUTE, CLEAR, SKIP = 0, 1, 2, 3, 4
 PERM_BUSY = 368            # 8 + 24 * 15 for K = 8
 CLEAR_BUSY = 8
 SQ_DELAY = 2               # squeeze word k -> byte at sample k + 2
@@ -37,8 +40,8 @@ ALGOS = {  # name: (rate, domain byte, output length)
 
 
 def hw(cmd, data=0):
-    """A hash command as a (coeff, valid, sof, op) pin word."""
-    return (0xF00 | data, 1, 0, cmd)
+    """A hash command as a (coeff, valid, sof, op) pin word: sof is command bit 2."""
+    return (0xF00 | data, 1, cmd >> 2, cmd & 3)
 
 
 class HashJob:
@@ -46,8 +49,8 @@ class HashJob:
     finds the squeezed bytes in the samples. Words are lists so callers can
     splice them between other traffic."""
 
-    def __init__(self, name, msg):
-        self.name, self.msg = name, msg
+    def __init__(self, name, msg, skip=False):
+        self.name, self.msg, self.skip = name, msg, skip
         rate, dom, outlen = ALGOS[name]
         self.rate, self.outlen = rate, outlen
 
@@ -59,7 +62,12 @@ class HashJob:
         m[-1] |= 0x80
         words = [hw(CLEAR)] + [IDLE] * CLEAR_BUSY
         for i in range(0, len(m), rate):
-            words += [hw(ABSORB, b) for b in m[i:i + rate]]
+            for ln in range(i, i + rate, 8):            # lane by lane (8 bytes, K = 8)
+                lane = m[ln:ln + 8]
+                if self.skip and not any(lane):
+                    words.append(hw(SKIP))
+                else:
+                    words += [hw(ABSORB, b) for b in lane]
             words += [hw(PERMUTE)] + [IDLE] * PERM_BUSY
         return words
 
@@ -103,20 +111,19 @@ async def run_hash(chip, job):
 @cocotb.test()
 async def test_hash_algos(dut):
     """SHA3-256, SHA3-512, SHAKE128, SHAKE256 against hashlib, for message lengths
-    0, 1, 33, rate - 1, rate, rate + 1, 800 (GL: a reduced set)."""
+    0, 1, 33, rate - 1, rate, rate + 1, 800, each with and without SKIP (GL: a reduced set)."""
     chip = await new_chip(dut)
     rng = random.Random(21)
-    if GL:
-        cases = [("sha3_256", (0, 136)), ("sha3_512", (33,)),
-                 ("shake_128", (1,)), ("shake_256", (135,))]
-    else:
-        cases = [(name, (0, 1, 33, rate - 1, rate, rate + 1, 800))
-                 for name, (rate, _, _) in ALGOS.items()]
-    for name, lengths in cases:
-        for n in lengths:
-            msg = bytes(rng.getrandbits(8) for _ in range(n))
-            clocks = await run_hash(chip, HashJob(name, msg))
-            dut._log.info(f"{name:9s} len {n:3d}: ok, {clocks} clocks")
+    if GL:   # reduced set: gate-level simulation is slow
+        cases = [("sha3_256", 0, True), ("sha3_256", 136, False), ("sha3_512", 33, True),
+                 ("shake_128", 1, True), ("shake_256", 135, False)]
+    else:    # every length with and without SKIP
+        cases = [(name, n, skip) for name, (rate, _, _) in ALGOS.items()
+                 for n in (0, 1, 33, rate - 1, rate, rate + 1, 800) for skip in (True, False)]
+    for name, n, skip in cases:
+        msg = bytes(rng.getrandbits(8) for _ in range(n))
+        clocks = await run_hash(chip, HashJob(name, msg, skip))
+        dut._log.info(f"{name:9s} len {n:3d} skip {int(skip)}: ok, {clocks} clocks")
 
 
 @cocotb.test()
@@ -128,12 +135,12 @@ async def test_hash_ntt_interleaved(dut):
     chip = await new_chip(dut)
     rng = random.Random(22)
     f = [rng.randrange(ref.Q) for _ in range(256)]
-    job = HashJob("sha3_512", bytes(rng.getrandbits(8) for _ in range(50)))
+    job = HashJob("sha3_512", bytes(rng.getrandbits(8) for _ in range(50)), skip=True)
 
     absorb = job.absorb_words()
     clear, rest = absorb[:1 + CLEAR_BUSY], absorb[1 + CLEAR_BUSY:]
-    n_abs = job.rate                      # one block: 72 absorb words, then PERMUTE + busy
-    abs_words, perm = rest[:n_abs], rest[n_abs:]
+    abs_words, perm = rest[:-(1 + PERM_BUSY)], rest[-(1 + PERM_BUSY):]   # one block, then PERMUTE
+    n_abs = len(abs_words)                 # absorb words (zero lanes skipped)
     assert len(perm) == 1 + PERM_BUSY
 
     ntt_words, starts = stream(OP_SC, scale_units(f), sof=True)

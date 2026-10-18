@@ -19,7 +19,9 @@
  *   SQUEEZE dout[K-1:0] <= the same K bits of the lane, next clock, ptr++
  *   PERMUTE Keccak-f[1600], busy for the permutation, ptr = 0
  *   CLEAR   state = 0, busy for M clocks, ptr = 0
- * The host pads, and absorbs and squeezes whole lanes between permutations.
+ *   SKIP    ptr jumps to the next lane, which stays untouched (only at a lane boundary)
+ * The host pads, and absorbs and squeezes whole lanes between permutations; SKIP passes over the
+ * all-zero lanes of a padded block in one clock each.
  */
 
 `default_nettype none
@@ -31,7 +33,7 @@ module keccak_ring #(
     input  wire         clk,
     input  wire         rst_n,
     input  wire         cmd_valid,
-    input  wire [1:0]   cmd,
+    input  wire [2:0]   cmd,
     input  wire [K-1:0] din,
     output reg  [K-1:0] dout,
     output wire         busy
@@ -40,7 +42,7 @@ module keccak_ring #(
   localparam M  = 64 / K;                  // flip-flops per sub-ring
   localparam MW = (M == 8) ? 3 : (M == 16) ? 4 : 5;
   localparam PW = MW + 5;                  // byte/lane-step pointer
-  localparam CMD_ABSORB = 2'd0, CMD_SQUEEZE = 2'd1, CMD_PERMUTE = 2'd2, CMD_CLEAR = 2'd3;
+  localparam CMD_ABSORB = 3'd0, CMD_SQUEEZE = 3'd1, CMD_PERMUTE = 3'd2, CMD_CLEAR = 3'd3, CMD_SKIP = 3'd4;
   localparam S_IDLE = 3'd0, S_THI = 3'd1, S_RHO = 3'd2, S_PASS = 3'd3, S_CLR = 3'd4;
 
   // ---------------- constants ----------------
@@ -121,7 +123,9 @@ module keccak_ring #(
             case (cmd)
               CMD_PERMUTE: begin st <= S_THI; ptr <= 0; end
               CMD_CLEAR:   begin st <= S_CLR; ptr <= 0; end
-              default:     ptr <= ptr + 1'b1;
+              CMD_ABSORB, CMD_SQUEEZE: ptr <= ptr + 1'b1;
+              CMD_SKIP:    ptr <= (ptr | (M - 1)) + 1'b1;   // next lane, lane untouched
+              default:     ;                                // 5..7 reserved: no-op
             endcase
           end
         end
