@@ -10,7 +10,8 @@ the team, cited from the branch), **model** or **estimate**. Tools: tt-viktor-ch
 
 ## 1. Summary
 
-- **The NTT-free chip exists: branch `sha3-only`** (section 7). The NTT core is removed; the chip is the K = 8
+- **The NTT-free chip exists: branch `sha3-only`** (section 7; 3×2 signoff detail in
+  [sha3_only_3x2.md](sha3_only_3x2.md)). The NTT core is removed; the chip is the K = 8
   ring Keccak engine behind a new host adapter with burst squeeze and on-chip SamplePolyCBD (the "helper").
   Every hash, burst and CBD job is bit-exact in RTL simulation (K = 8 and K = 16), and the rig wiring is
   verified. Model: **3.18 ms per ML-KEM-512 exchange, 2.54×** the RP2350 alone (K = 16: 2.82 ms, 2.82×).
@@ -68,7 +69,7 @@ is. Core area: 2×2 = 72.6k µm², 3×2 = 110.9k µm².
 | SHA-only latch | 3×2 | small cells | 24/24 | | **stalls**: 75 min in post-CTS timing repair without progress, stopped | | |
 | **Hash-only chip K = 8 + CBD** (`sha3-only`) | 2×2 | relaxed | 4/4 tests (43 jobs) | 48.6k | **does not route**: global routing needed overflow passes, detailed routing started at 23,058 violations; stopped | 83.6 % after CTS | |
 | **Hash-only chip K = 8 + CBD** (`sha3-only`) | 3×2 | relaxed | 4/4 tests | 48.6k | **fits, clean** (0 DRC / LVS / antenna, hold +0.018 ns) | 55.5 % | +8.17 ns |
-| Hash-only chip K = 16 + CBD | 3×2 | relaxed | 4/4 tests (K = 16) | 60.8k | detailed routing in progress | 69.2 % after CTS | |
+| Hash-only chip K = 16 + CBD | 3×2 | relaxed | 4/4 tests (K = 16) | 60.8k | **does not route**: 32,578 violations after 1 h 40 min, stopped | 69.2 % after CTS | |
 | NTT + ring K = 8 | 3×2 | relaxed | team suite | | team run in progress | | |
 
 Notes:
@@ -152,8 +153,8 @@ function that does the work), one exchange run under an instruction-level emulat
    project.** Every ring-core route depends on it. Without it, only the latch core hardens, and the latch
    core doesn't fit 2×2.
 2. **Pick the route.**
-   - Fastest overall: the hash-only chip (`sha3-only`), K = 8 + CBD, in **3×2**, hardened clean. K = 16 would be faster still
-     (2.87 ms) if it fits 3×2 [section 7].
+   - Fastest overall: the hash-only chip (`sha3-only`), K = 8 + CBD, in **3×2**, hardened clean
+     ([sha3_only_3x2.md](sha3_only_3x2.md)). K = 16 would be faster still (2.87 ms) but doesn't route in 3×2.
    - In 2×2 only the slower cores fit: K = 2 (clean) and K = 4 [section 3].
    - Keeping the NTT core next to a hash engine needs 3×2 or 4×2, and it is slower.
 3. **The firmware.** Hash calls in the RP2350 harness, a PIO program that inserts the hash flag bits, the
