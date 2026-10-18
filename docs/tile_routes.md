@@ -204,10 +204,9 @@ plus two new ones:
 - **Hash-only chip on the rig.** Pico build: 2,025 LUT4, 1,745 DFF, DUT logic up to 144 MHz on the GW2AR-18.
   `host/test_variant.py --hash 8 --hash-only` runs 42 jobs through the Pico (24 byte-squeeze, 12 burst,
   6 CBD): **42/42 bit-exact at 1.04, 3.38, 6.75 and 13.5 MHz**, the top of the rig's clock range, and `uo_out` is 0 on every clock where no byte is due. All 48,676 clocks take 1.9 s through the TTE1 bridge.
-- **Tang Nano USB debugger.** Since the boards were re-plugged, its UART is silent at 1 Mbaud and 115,200,
-  even with a bitstream that worked before, and one JTAG flash hung until it was restarted. The rig wires are
-  verified, so it isn't a misplaced jumper; the on-board debugger chip looks wedged. JTAG still flashes and
-  every test goes through the Pico. A power cycle of the Tang should bring the UART back.
+- **Tang Nano USB alone.** The same chip in the USB-UART build (Tang Nano without the Pico) also passes
+  **42/42** (3.3 s). After the first re-plug the Tang's on-board debugger had wedged: the UART was silent and
+  one JTAG flash hung. Unplugging and replugging the Tang fixed it.
 
 ## 9. How long a harden takes on this machine (measured)
 
