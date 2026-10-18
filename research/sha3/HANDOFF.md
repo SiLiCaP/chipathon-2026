@@ -74,6 +74,8 @@ Launch a harden: `cd /home/papart/development/TT/exp_<name> && local-ci/run --no
 | `exp_k8_t2_h16` | As `exp_k8_t2`, hold uncertainty 0.16 | 819 hold buffers, GRT 96.6 %. Probably won't route; left running for a definite answer |
 | `exp_k8_t2_h18` | hold 0.18 | **Failed** at antenna repair: 1,319 buffers, GRT 142.5 % |
 | `exp_k8_t2_h20` | hold 0.20 | **Stopped**: 1,373 buffers, GRT 150.2 % |
+| `exp_lat_4x2` | 4x2, `keccak_lat` (branch `sha3-latch`), every TT default | **Failed**: RTL tests 16/16 pass, then 122.1k µm² synthesized, 95.2 % utilization, DPL-0036 |
+| `exp_lat_4x2s` | 4x2, `keccak_lat`, small-cell list + `clkdlybuf4s*` ban, **default hold** (no custom SDC, margins 0.1 / 0.05) | Running (`gds` only). The test: does the latch core harden without the custom hold SDC? |
 
 **Hold cliff (measured):** 0.14 ns → 7 buffers, 0.16 → 819, 0.18 → 1,319, 0.25 → 1,400+. The ring only
 routes in 3x2 at 0.14 or below; there is no less aggressive setting to fall back on.
@@ -122,7 +124,8 @@ routes in 3x2 at 0.14 or below; there is no less aggressive setting to fall back
    lanes form one pi cycle, so the mapping is identity again after 24 rounds). Same ports and commands as
    `keccak_ring`. RTL passes the ring's test set bit-exact (hashlib). **But:** plain synthesis 74.4k µm²
    (ring 47.0k), 1,464 clocks per permutation, ML-KEM model 1.65× vs RP2350 (ring 2.55×). Does not fit 3x2
-   with the NTT; floor of the approach is about 35k (latches + read port). Not hardened.
+   with the NTT; floor of the approach is about 35k (latches + read port). 4x2 hardens: see the live-runs table.
+   Write-up: `docs/keccak_lat.md` on that branch. All four branches are on GitHub (`SiLiCaP/chipathon-2026`).
 7. Things the user may ask for next (offered, not started):
    - a **6x2 run with default settings** (12 tiles, paid), as proof of what the defaults cost;
    - a **latch-based lane-serial Keccak** prototype: estimated 50–60k µm², about 1,300–1,400

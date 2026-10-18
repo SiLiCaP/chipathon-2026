@@ -45,6 +45,7 @@ and all NTT work, an ML-KEM-512 exchange is **2.3–3.2× faster** than the RP23
 | keccak_ring K = 2, clock gates | 38.6k µm² | 1,544 |
 | keccak_ring K = 4, enable flops (no gates) | 56.7k µm² | 760 |
 | Viktor's lane-serial, flip-flop state | 151k µm² | 1,346 |
+| `keccak_lat`, latch-array state, 64-bit lane-serial (branch `sha3-latch`, §7) | 74.4k µm² | 1,464 |
 
 ## 3. Fitting 3x2 (6 tiles, free): what it took (measured)
 
@@ -59,7 +60,25 @@ and all NTT work, an ML-KEM-512 exchange is **2.3–3.2× faster** than the RP23
    - With a custom SDC (`set_clock_uncertainty -hold 0.14`, setup stays 0.25) the resizer inserts
      **0–2 hold buffers**.
    - Global routing then drops to **65.8 %** (K = 8) / **67.3 %** (K = 4).
-3. **Status of signoff:** detailed routing, then DRC/LVS/STA, precheck and gl_test. *Pending, see §8.*
+3. **How close 0.14 ns is to the edge (3x2 sweep, Oct 18).** Same build as `exp_k8_t2`, only the hold
+   uncertainty changed:
+
+   | Hold uncertainty | Hold buffers | Global routing | Result |
+   | --- | --- | --- | --- |
+   | 0.14 ns | 7 | 69.6 % | in detailed routing |
+   | 0.16 ns | 819 | 96.6 % | in detailed routing, unlikely to finish clean |
+   | 0.18 ns | 1,319 | 142.5 % | fails (antenna repair) |
+   | 0.20 ns | 1,373 | 150.2 % | stopped, worse than 0.18 |
+
+   The ring core only routes in 3x2 at 0.14 ns or less. There is no less aggressive setting to fall
+   back on. In the 4x2 signoff with the 0.14 SDC (`exp_4x2_hu14m`), the worst hold path at
+   ff/−40 °C/1.95 V had +0.016 ns slack, so about 0.16 ns with no uncertainty. Under the default
+   0.25 ns it would fail by about 0.09 ns. A hold failure can't be fixed by slowing the clock, so the
+   firmware self-test and software fallback (§6) matter.
+4. **Placement density doesn't help.** Utilization after global placement is already 69.7 %, so
+   targets of 65 % and 70 % are both raised to the same floor (byte-identical placements). Global
+   routing came out at 74.6 %, worse than the 69.6 % at 75 %.
+5. **Status of signoff:** detailed routing, then DRC/LVS/STA, precheck and gl_test. *Pending, see §8.*
 
 ## 4. ML-KEM-512 speed (model)
 
@@ -138,12 +157,40 @@ public inputs only. That is a deployment decision, not a silicon one.
   ML-KEM gains little. The exchange goes from 3.09 to 2.56 ms with 1 core, and from 2.50 to 1.98 ms
   with 2 cores (**model**). With 2 cores, the software NTT is already as fast as any chip NTT.
   Recommendation: no cache this shuttle. Keep `ntt_blk` on its branch for a later chip.
+- **Latch-array Keccak, `keccak_lat`** (branch `sha3-latch`, **measured** unless marked; details in that
+  branch's `docs/keccak_lat.md`). The state sits in 1,600 `dlxtp` latches written through one clock
+  gate per lane, so there are no shift hops and no need for the custom hold SDC. pi is an address
+  rename: the 24 non-zero lanes form one pi cycle, so the mapping is the identity again after 24 rounds.
+  Same ports and commands as `keccak_ring`.
+  - Core tests and all 16 project tests pass, bit-exact against hashlib.
+  - 74.4k µm² plain synthesis (ring 47.0k); 1,464 clocks per permutation (ring 368).
+  - ML-KEM-512: 4.90 ms = 1.65× vs the RP2350 (**model**; ring 2.55×, software only 1.47×).
+  - Does not fit 3x2 next to the NTT. 4x2 with every TT default fails in placement (122.1k µm²
+    synthesized, 95.2 % utilization). 4x2 with the small-cell list and default hold settings is being
+    hardened (`exp_lat_4x2s`).
+  - The latches and their read port alone take about 35k µm², so a narrower datapath would not get
+    near the ring core. Worth it only if the custom hold SDC is ruled out, and then in 4x2 (paid).
+- **Splitting into two TT projects** (NTT 1x2 + Keccak 2x2) does not work. The NTT alone fills about
+  50 % of a 2x2 core (36.7k µm² placed), more than a 1x2 holds. Only one TT project is connected to the
+  pins at a time, so the two cores could not overlap and the host would switch the mux many times per
+  exchange. The hold issue is the same in a 2x2 Keccak project.
 - **Area trims if needed:** the θ-init parity tree and the 21:1 squeeze mux (about 2.5k), CLEAR gating (about 1k).
 
 ## 8. Signoff results
 
 *To be filled in from the finished runs: final metrics, DRC/LVS/antenna, setup/hold per corner,
-precheck, gl_test.*
+precheck, gl_test.* State on Oct 18:
+
+| Run | Setup | State |
+| --- | --- | --- |
+| `exp_k8_t2` (candidate) | 3x2, ring K = 8, small cells, 0.14 SDC, margins 0.03 / 0.02, new top | Detailed routing, violations 17,961 → 509 |
+| `exp_k8_hu05` (comparison) | 3x2, 0.05 margins, old top | Detailed routing, violations 15,197 → 249 |
+| `exp_k8_t2_d65` | as `exp_k8_t2`, density 65 | Detailed routing |
+| `exp_k8_t2_h16` | as `exp_k8_t2`, hold 0.16 | Detailed routing |
+| `exp_lat_4x2s` | 4x2, `keccak_lat`, small cells, default hold | Placement / CTS |
+
+After signoff, a hold audit on the final layout: rerun STA with the default 0.25 ns and with 0, and
+count the paths that depend on the custom value.
 
 ## 9. Spec changes needed (draft)
 
