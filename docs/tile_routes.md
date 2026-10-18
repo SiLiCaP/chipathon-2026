@@ -66,9 +66,9 @@ is. Core area: 2×2 = 72.6k µm², 3×2 = 110.9k µm².
 | SHA-only ring K = 8 | 2×2 | relaxed | 24/24 | 47.0k | **does not route**: 18,931 → 9,660 violations in 5 router iterations (60 min), stopped | | |
 | SHA-only ring K = 8 | 2×2 | default | 24/24 | 57.9k | **does not fit**: 82.7 % after placement, detailed placement fails | | |
 | SHA-only latch | 3×2 | small cells | 24/24 | | **stalls**: 75 min in post-CTS timing repair without progress, stopped | | |
-| **Hash-only chip K = 8 + CBD** (`sha3-only`) | 2×2 | relaxed | 4/4 tests (43 jobs) | 48.6k | routing (in progress); 83.6 % after CTS makes a clean route unlikely | 83.6 % after CTS | +12.1 ns (after CTS) |
+| **Hash-only chip K = 8 + CBD** (`sha3-only`) | 2×2 | relaxed | 4/4 tests (43 jobs) | 48.6k | **does not route**: global routing needed overflow passes, detailed routing started at 23,058 violations; stopped | 83.6 % after CTS | |
 | **Hash-only chip K = 8 + CBD** (`sha3-only`) | 3×2 | relaxed | 4/4 tests | 48.6k | **fits, clean** (0 DRC / LVS / antenna, hold +0.018 ns) | 55.5 % | +8.17 ns |
-| Hash-only chip K = 16 + CBD | 3×2 | relaxed | 4/4 tests (K = 16) | | harden in progress | | |
+| Hash-only chip K = 16 + CBD | 3×2 | relaxed | 4/4 tests (K = 16) | 60.8k | detailed routing in progress | 69.2 % after CTS | |
 | NTT + ring K = 8 | 3×2 | relaxed | team suite | | team run in progress | | |
 
 Notes:
