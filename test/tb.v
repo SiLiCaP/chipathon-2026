@@ -46,4 +46,10 @@ module tb ();
       .rst_n  (rst_n)     // not reset
   );
 
+`ifndef GL_TEST
+`ifdef HASH_K
+  defparam user_project.HASH_K = `HASH_K;
+`endif
+`endif
+
 endmodule

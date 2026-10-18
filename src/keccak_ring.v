@@ -10,7 +10,7 @@
  * mux per bit.
  *
  * Permutation: theta-only pass (M clocks), then 24 x [rho phase (M-1) + pass (M)] clocks:
- * K = 8: 368, K = 4: 760, K = 2: 1544. A pass reads K slices per clock (pi and the rho sub-ring
+ * K = 16: 172, K = 8: 368, K = 4: 760, K = 2: 1544. A pass reads K slices per clock (pi and the rho sub-ring
  * permutation are wiring), applies chi, iota and the next round's theta, and writes the result back
  * into the rings (in-loop).
  *
@@ -27,7 +27,7 @@
 `default_nettype none
 
 module keccak_ring #(
-    parameter K = 8,              // slices per clock = bits per I/O step: 2, 4 or 8
+    parameter K = 8,              // slices per clock = bits per I/O step: 2, 4, 8 or 16
     parameter CLOCK_GATING = 1    // 1: clock gate per ring group; 0: enable flip-flops (comparison)
 ) (
     input  wire         clk,
@@ -40,7 +40,7 @@ module keccak_ring #(
 );
 
   localparam M  = 64 / K;                  // flip-flops per sub-ring
-  localparam MW = (M == 8) ? 3 : (M == 16) ? 4 : 5;
+  localparam MW = (M <= 2) ? 1 : $clog2(M);  // counter width: K = 16: 2, K = 8: 3, K = 4: 4, K = 2: 5
   localparam PW = MW + 5;                  // byte/lane-step pointer
   localparam CMD_ABSORB = 3'd0, CMD_SQUEEZE = 3'd1, CMD_PERMUTE = 3'd2, CMD_CLEAR = 3'd3, CMD_SKIP = 3'd4;
   localparam S_IDLE = 3'd0, S_THI = 3'd1, S_RHO = 3'd2, S_PASS = 3'd3, S_CLR = 3'd4;
