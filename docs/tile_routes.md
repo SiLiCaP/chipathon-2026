@@ -15,8 +15,9 @@ the team, cited from the branch), **model** or **estimate**. Tools: tt-viktor-ch
   Every hash, burst and CBD job is bit-exact in RTL simulation (K = 8 and K = 16), and the rig wiring is
   verified. Model: **3.18 ms per ML-KEM-512 exchange, 2.54×** the RP2350 alone (K = 16: 2.82 ms, 2.82×).
 - **K = 8 needs 3×2, not 2×2** (measured). At 2×2 both the SHA-only K = 8 core and the hash-only chip are too
-  congested (83.6 % after CTS; the router was still at 9,660 violations after an hour). At 3×2 the hash-only
-  chip sits at 55 %. 2×2 holds K = 2 (clean) and K = 4 [section 3].
+  congested (83.6 % after CTS; the router was still at 9,660 violations after an hour). **At 3×2 the hash-only
+  chip signs off clean**: 55.5 %, +8.17 ns setup at the slow corner, 0 DRC / LVS / antenna. 2×2 holds K = 2
+  and K = 4, both clean.
 - **A SHA-only chip fits 2×2.** The ring Keccak core at K = 2 hardens cleanly in 2×2 (measured): 65 %
   utilization, 0 DRC / LVS / antenna errors, +9.9 ns setup slack at the slow corner. [K = 4 and K = 8: section 3.]
 - **Cutting the NTT core makes ML-KEM faster, not slower.** The NTT core is pin-bound and slower than the
@@ -61,19 +62,20 @@ is. Core area: 2×2 = 72.6k µm², 3×2 = 110.9k µm².
 |---|---|---|---|---|---|---|---|
 | NTT only (`main`) | 2×2 | default | team CI | 31.8k | **fits, clean** | 52.5 % | +1.41 ns |
 | SHA-only ring K = 2 | 2×2 | relaxed | 24/24 hash jobs | 38.3k | **fits, clean** | 65.1 % | +9.93 ns |
-| SHA-only ring K = 4 | 2×2 | relaxed | 24/24 | 41.1k | routing: 1 violation left in detailed routing (in progress) | 71.2 % after CTS | +14.3 ns (after CTS) |
+| SHA-only ring K = 4 | 2×2 | relaxed | 24/24 | 41.1k | **fits, clean** (0 DRC / LVS / antenna, hold +0.024 ns) | 71.4 % | +7.11 ns |
 | SHA-only ring K = 8 | 2×2 | relaxed | 24/24 | 47.0k | **does not route**: 18,931 → 9,660 violations in 5 router iterations (60 min), stopped | | |
 | SHA-only ring K = 8 | 2×2 | default | 24/24 | 57.9k | **does not fit**: 82.7 % after placement, detailed placement fails | | |
 | SHA-only latch | 3×2 | small cells | 24/24 | | **stalls**: 75 min in post-CTS timing repair without progress, stopped | | |
 | **Hash-only chip K = 8 + CBD** (`sha3-only`) | 2×2 | relaxed | 4/4 tests (43 jobs) | 48.6k | routing (in progress); 83.6 % after CTS makes a clean route unlikely | 83.6 % after CTS | +12.1 ns (after CTS) |
-| **Hash-only chip K = 8 + CBD** (`sha3-only`) | 3×2 | relaxed | 4/4 tests | 48.6k | routing (in progress) | 55.5 % after CTS | +12.1 ns (after CTS) |
+| **Hash-only chip K = 8 + CBD** (`sha3-only`) | 3×2 | relaxed | 4/4 tests | 48.6k | **fits, clean** (0 DRC / LVS / antenna, hold +0.018 ns) | 55.5 % | +8.17 ns |
+| Hash-only chip K = 16 + CBD | 3×2 | relaxed | 4/4 tests (K = 16) | | harden in progress | | |
 | NTT + ring K = 8 | 3×2 | relaxed | team suite | | team run in progress | | |
 
 Notes:
 - **Pin tests:** the K-general hash test (`fpga/sim_variant`) runs all four SHA-3 / SHAKE functions at lengths
   0, 1, rate−1, rate, rate+1 and 200, with and without SKIP, through the pins. All 24 jobs are bit-exact
   against hashlib for every variant. The team's own `test_hash.py` assumes K = 8, so it can't check K = 4 / 2.
-- **Slew:** every finished run reports max-slew warnings at the slow corner (`main` 1,242, SHA K = 2 598).
+- **Slew:** every finished run reports max-slew warnings at the slow corner (`main` 1,242, SHA K = 2 598, SHA K = 4 1,008).
   They don't stop the flow, but they're worth a look before tapeout.
 - **Memory:** a 15 GB machine runs at most three hardens at once. Two runs crashed in detailed routing when
   eight ran together and were repeated.
@@ -150,7 +152,7 @@ function that does the work), one exchange run under an instruction-level emulat
    project.** Every ring-core route depends on it. Without it, only the latch core hardens, and the latch
    core doesn't fit 2×2.
 2. **Pick the route.**
-   - Fastest overall: the hash-only chip (`sha3-only`), K = 8 + CBD, in **3×2**. K = 16 would be faster still
+   - Fastest overall: the hash-only chip (`sha3-only`), K = 8 + CBD, in **3×2**, hardened clean. K = 16 would be faster still
      (2.87 ms) if it fits 3×2 [section 7].
    - In 2×2 only the slower cores fit: K = 2 (clean) and K = 4 [section 3].
    - Keeping the NTT core next to a hash engine needs 3×2 or 4×2, and it is slower.
@@ -181,7 +183,7 @@ plus two new ones:
   times change (PERMUTE 172, CLEAR 4). `keccak_ring`'s step counter was generalized for K = 16. The core test
   passes at K = 16 (permutation + every algorithm, measured).
 - **Config.** `src/config.json` carries the team's relaxed recipe (0.14 ns hold SDC, small cells, no
-  `clkdlybuf`). `info.yaml` is set to 2×2. **Change it to 3×2 for K = 8** (section 3). The top module keeps the
+  `clkdlybuf`). `info.yaml` is set to 3×2, where it signs off clean (section 3). The top module keeps the
   name `tt_um_NTT_Core` until the team picks a new one.
 - **Tests (measured, RTL).** `test/test_hash_only.py` uses `test/hash_jobs.py` (the same file the FPGA host
   tools use):
@@ -218,12 +220,14 @@ stream-out. Times come from LibreLane's per-step `runtime.txt` (`tools/harden_ti
 |---|---|---|---|---|---|---|---|
 | NTT only (`main`), 2×2 | 0.3 min | 0.1 min | 0.5 min | 0.4 min | 2.6 min | 1.4 min | **5.4 min** |
 | SHA-only K = 2, 2×2 | 0.2 min | 0.1 min | 0.3 min | 0.3 min | 3.8 min | 1.1 min | **5.8 min** |
-| Hash-only K = 8 + CBD, 3×2 | 0.8 min | 0.1 min | 0.9 min | 0.7 min | in progress | | |
+| Hash-only K = 8 + CBD, 3×2 | 0.8 min | 0.1 min | 0.9 min | 0.7 min | 41.1 min | 1.1 min | **44.8 min** |
+| SHA-only K = 4, 2×2 (long routing) | 0.2 min | 0.1 min | 0.4 min | 0.4 min | 82.9 min | 0.8 min | **84.9 min** |
 | SHA-only K = 8, 2×2 (does not route) | 0.6 min | 0.1 min | 0.5 min | 0.5 min | > 60 min, stopped | – | – |
 
-- **Clean designs finish in 5–6 minutes**, with routing and signoff taking most of it. A GitHub Actions GDS
+- **Uncongested designs finish in 5–6 minutes**, with routing and signoff taking most of it. A GitHub Actions GDS
   run of the same flow took about 12 hours per run in our experience.
-- **Congested designs** can sit in detailed routing for an hour or more, and memory sets the limit: at most
+- **Fuller designs spend most of their time in detailed routing**: 41 min for the hash-only chip at 3×2,
+  83 min for K = 4 at 2×2. Too-congested ones never converge, and memory sets the limit: at most
   three runs at once on 15 GB, with `DRT_THREADS=6`.
 
 ## Reproduce (tt-viktor-chiptor)
