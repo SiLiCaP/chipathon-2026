@@ -1,0 +1,8 @@
+read_liberty -lib /home/papart/.cache/tt-local-ci/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+read_verilog -sv ../../src/io_in_capture.v ../../src/io_out_pack.v ../../src/modq_acc.v ../../src/modq_addsub.v ../../src/modq_mul.v ../../src/ntt_core.v ../../src/ntt_ctrl.v ../../src/ntt_delay.v ../../src/ntt_sched.v ../../src/ntt_twiddle.v ../../src/tt_um_NTT_Core.v ../../src/zeta_rom.v
+
+synth -flatten -top tt_um_NTT_Core
+dfflibmap -liberty /home/papart/.cache/tt-local-ci/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+abc -liberty /home/papart/.cache/tt-local-ci/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+opt_clean
+stat -liberty /home/papart/.cache/tt-local-ci/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib

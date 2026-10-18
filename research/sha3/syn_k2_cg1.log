@@ -1,0 +1,2234 @@
+
+ /----------------------------------------------------------------------------\
+ |  yosys -- Yosys Open SYnthesis Suite                                       |
+ |  Copyright (C) 2012 - 2026  Claire Xenia Wolf <claire@yosyshq.com>         |
+ |  Distributed under an ISC-like license, type "license" to see terms        |
+ \----------------------------------------------------------------------------/
+ Yosys 0.62 (git sha1 7326bb7d6641500ecb285c291a54a662cb1e76cf, clang++ 21.1.2 -fPIC -O3)
+
+-- Executing script file `syn_k2_cg1.ys' --
+
+1. Executing Liberty frontend: /home/papart/.cache/tt-local-ci/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+Imported 428 cell types from liberty file.
+
+2. Executing Verilog-2005 frontend: keccak_ring.v
+Parsing SystemVerilog input from `keccak_ring.v' to AST representation.
+Generating RTLIL representation for module `\keccak_ring'.
+Generating RTLIL representation for module `\kc_icg'.
+Successfully finished Verilog frontend.
+Parameter \K = 2
+Parameter \CLOCK_GATING = 1
+
+3. Executing AST frontend in derive mode using pre-parsed AST for module `\keccak_ring'.
+Parameter \K = 2
+Parameter \CLOCK_GATING = 1
+Generating RTLIL representation for module `$paramod$93aa306681bf850b397327728ee2ed5aa2637835\keccak_ring'.
+
+4. Executing SYNTH pass.
+
+4.1. Executing HIERARCHY pass (managing design hierarchy).
+
+4.1.1. Analyzing design hierarchy..
+Top module:  \keccak_ring
+Used module:     \kc_icg
+
+4.1.2. Analyzing design hierarchy..
+Top module:  \keccak_ring
+Used module:     \kc_icg
+Removed 0 unused modules.
+
+4.2. Executing PROC pass (convert processes to netlists).
+
+4.2.1. Executing PROC_CLEAN pass (remove empty switches from decision trees).
+Cleaned up 0 empty switches.
+
+4.2.2. Executing PROC_RMDEAD pass (remove dead branches from decision trees).
+Marked 4 switch rules as full_case in process $proc$keccak_ring.v:109$5827 in module keccak_ring.
+Marked 1 switch rules as full_case in process $proc$keccak_ring.v:156$5838 in module keccak_ring.
+Marked 21 switch rules as full_case in process $proc$keccak_ring.v:300$5844 in module keccak_ring.
+Marked 2 switch rules as full_case in process $proc$keccak_ring.v:305$5866 in module keccak_ring.
+Removed a total of 0 dead cases.
+
+4.2.3. Executing PROC_PRUNE pass (remove redundant assignments in processes).
+Removed 2 redundant assignments.
+Promoted 264 assignments to connections.
+
+4.2.4. Executing PROC_INIT pass (extract init attributes).
+
+4.2.5. Executing PROC_ARST pass (detect async resets in processes).
+
+4.2.6. Executing PROC_ROM pass (convert switches to ROMs).
+Converted 1 switch.
+<suppressed ~32 debug messages>
+
+4.2.7. Executing PROC_MUX pass (convert decision trees to multiplexers).
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:109$5827'.
+     1/4: $0\cnt[4:0]
+     2/4: $0\ptr[9:0]
+     3/4: $0\rnd[4:0]
+     4/4: $0\st[2:0]
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:156$5838'.
+     1/1: $1\rc7[6:0]
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:251$5839'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:300$5844'.
+     1/21: $21\sq[1:0]
+     2/21: $20\sq[1:0]
+     3/21: $19\sq[1:0]
+     4/21: $18\sq[1:0]
+     5/21: $17\sq[1:0]
+     6/21: $16\sq[1:0]
+     7/21: $15\sq[1:0]
+     8/21: $14\sq[1:0]
+     9/21: $13\sq[1:0]
+    10/21: $12\sq[1:0]
+    11/21: $11\sq[1:0]
+    12/21: $10\sq[1:0]
+    13/21: $9\sq[1:0]
+    14/21: $8\sq[1:0]
+    15/21: $7\sq[1:0]
+    16/21: $6\sq[1:0]
+    17/21: $5\sq[1:0]
+    18/21: $4\sq[1:0]
+    19/21: $3\sq[1:0]
+    20/21: $2\sq[1:0]
+    21/21: $1\sq[1:0]
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:305$5866'.
+     1/1: $0\dout[1:0]
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6152'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6162'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6172'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6182'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6192'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6202'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6212'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6222'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6232'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6242'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6252'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6262'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6272'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6282'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6292'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6302'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6312'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6322'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6332'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6342'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6352'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6362'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6372'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6382'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6392'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6402'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6412'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6422'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6432'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6442'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6452'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6462'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6472'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6482'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6492'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6502'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6512'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6522'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6532'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6542'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6552'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6562'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6572'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6582'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6592'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6602'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6612'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6622'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6632'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:288$6642'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6643'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6644'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6645'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6646'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6647'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6648'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6649'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6650'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6651'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6652'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6653'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6654'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6655'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6656'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6657'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6658'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6659'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6660'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6661'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6662'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6663'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6664'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6665'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6666'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6667'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6668'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6669'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6670'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6671'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6672'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6673'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6674'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6675'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6676'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6677'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6678'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6679'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6680'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6681'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6682'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6683'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6684'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6685'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6686'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6687'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6688'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6689'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6690'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6691'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6692'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6693'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6694'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6695'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6696'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6697'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6698'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6699'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6700'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6701'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6702'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6703'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6704'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6705'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6706'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6707'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6708'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6709'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6710'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6711'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6712'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6713'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6714'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6715'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6716'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6717'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6718'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6719'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6720'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6721'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6722'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6723'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6724'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6725'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6726'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6727'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6728'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6729'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6730'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6731'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6732'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6733'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6734'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6735'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6736'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6737'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6738'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6739'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6740'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:195$6741'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:196$6742'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6743'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6744'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6745'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6746'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6747'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6748'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6749'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6750'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6751'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6752'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6753'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6754'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6755'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6756'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6757'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6758'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6759'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6760'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6761'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6762'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6763'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6764'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6765'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6766'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6767'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6768'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6769'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6770'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6771'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6772'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6773'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6774'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6775'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6776'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6777'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6778'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6779'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6780'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6781'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6782'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6783'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6784'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6785'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6786'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6787'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6788'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6789'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6790'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6791'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:209$6792'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:216$6793'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6798'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6802'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6806'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6810'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6814'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6818'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6822'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6826'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6830'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6834'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6838'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6842'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6846'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6850'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6854'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6858'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6862'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6866'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6870'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6874'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6878'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6882'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6886'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:219$6890'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:239$6894'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:239$6896'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:239$6898'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:239$6900'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:239$6902'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:246$6904'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:246$6906'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:246$6908'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:246$6910'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:246$6912'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6914'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6916'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6918'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6920'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6922'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6924'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6926'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6928'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6930'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6932'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6934'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6936'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6938'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6940'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6942'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6944'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6946'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6948'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6950'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6952'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6954'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6956'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6958'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6960'.
+Creating decoders for process `\keccak_ring.$proc$keccak_ring.v:266$6962'.
+
+4.2.8. Executing PROC_DLATCH pass (convert process syncs to latches).
+No latch inferred for signal `\keccak_ring.\rc7' from process `\keccak_ring.$proc$keccak_ring.v:156$5838'.
+No latch inferred for signal `\keccak_ring.\sq' from process `\keccak_ring.$proc$keccak_ring.v:300$5844'.
+No latch inferred for signal `\keccak_ring.\l' from process `\keccak_ring.$proc$keccak_ring.v:300$5844'.
+No latch inferred for signal `\keccak_ring.\ex[0] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6643'.
+No latch inferred for signal `\keccak_ring.\tapl[0] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6644'.
+No latch inferred for signal `\keccak_ring.\ex[0] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6645'.
+No latch inferred for signal `\keccak_ring.\tapl[0] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6646'.
+No latch inferred for signal `\keccak_ring.\ex[1] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6647'.
+No latch inferred for signal `\keccak_ring.\tapl[1] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6648'.
+No latch inferred for signal `\keccak_ring.\ex[1] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6649'.
+No latch inferred for signal `\keccak_ring.\tapl[1] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6650'.
+No latch inferred for signal `\keccak_ring.\ex[2] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6651'.
+No latch inferred for signal `\keccak_ring.\tapl[2] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6652'.
+No latch inferred for signal `\keccak_ring.\ex[2] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6653'.
+No latch inferred for signal `\keccak_ring.\tapl[2] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6654'.
+No latch inferred for signal `\keccak_ring.\ex[3] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6655'.
+No latch inferred for signal `\keccak_ring.\tapl[3] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6656'.
+No latch inferred for signal `\keccak_ring.\ex[3] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6657'.
+No latch inferred for signal `\keccak_ring.\tapl[3] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6658'.
+No latch inferred for signal `\keccak_ring.\ex[4] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6659'.
+No latch inferred for signal `\keccak_ring.\tapl[4] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6660'.
+No latch inferred for signal `\keccak_ring.\ex[4] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6661'.
+No latch inferred for signal `\keccak_ring.\tapl[4] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6662'.
+No latch inferred for signal `\keccak_ring.\ex[5] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6663'.
+No latch inferred for signal `\keccak_ring.\tapl[5] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6664'.
+No latch inferred for signal `\keccak_ring.\ex[5] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6665'.
+No latch inferred for signal `\keccak_ring.\tapl[5] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6666'.
+No latch inferred for signal `\keccak_ring.\ex[6] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6667'.
+No latch inferred for signal `\keccak_ring.\tapl[6] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6668'.
+No latch inferred for signal `\keccak_ring.\ex[6] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6669'.
+No latch inferred for signal `\keccak_ring.\tapl[6] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6670'.
+No latch inferred for signal `\keccak_ring.\ex[7] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6671'.
+No latch inferred for signal `\keccak_ring.\tapl[7] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6672'.
+No latch inferred for signal `\keccak_ring.\ex[7] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6673'.
+No latch inferred for signal `\keccak_ring.\tapl[7] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6674'.
+No latch inferred for signal `\keccak_ring.\ex[8] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6675'.
+No latch inferred for signal `\keccak_ring.\tapl[8] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6676'.
+No latch inferred for signal `\keccak_ring.\ex[8] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6677'.
+No latch inferred for signal `\keccak_ring.\tapl[8] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6678'.
+No latch inferred for signal `\keccak_ring.\ex[9] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6679'.
+No latch inferred for signal `\keccak_ring.\tapl[9] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6680'.
+No latch inferred for signal `\keccak_ring.\ex[9] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6681'.
+No latch inferred for signal `\keccak_ring.\tapl[9] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6682'.
+No latch inferred for signal `\keccak_ring.\ex[10] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6683'.
+No latch inferred for signal `\keccak_ring.\tapl[10] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6684'.
+No latch inferred for signal `\keccak_ring.\ex[10] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6685'.
+No latch inferred for signal `\keccak_ring.\tapl[10] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6686'.
+No latch inferred for signal `\keccak_ring.\ex[11] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6687'.
+No latch inferred for signal `\keccak_ring.\tapl[11] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6688'.
+No latch inferred for signal `\keccak_ring.\ex[11] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6689'.
+No latch inferred for signal `\keccak_ring.\tapl[11] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6690'.
+No latch inferred for signal `\keccak_ring.\ex[12] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6691'.
+No latch inferred for signal `\keccak_ring.\tapl[12] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6692'.
+No latch inferred for signal `\keccak_ring.\ex[12] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6693'.
+No latch inferred for signal `\keccak_ring.\tapl[12] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6694'.
+No latch inferred for signal `\keccak_ring.\ex[13] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6695'.
+No latch inferred for signal `\keccak_ring.\tapl[13] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6696'.
+No latch inferred for signal `\keccak_ring.\ex[13] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6697'.
+No latch inferred for signal `\keccak_ring.\tapl[13] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6698'.
+No latch inferred for signal `\keccak_ring.\ex[14] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6699'.
+No latch inferred for signal `\keccak_ring.\tapl[14] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6700'.
+No latch inferred for signal `\keccak_ring.\ex[14] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6701'.
+No latch inferred for signal `\keccak_ring.\tapl[14] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6702'.
+No latch inferred for signal `\keccak_ring.\ex[15] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6703'.
+No latch inferred for signal `\keccak_ring.\tapl[15] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6704'.
+No latch inferred for signal `\keccak_ring.\ex[15] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6705'.
+No latch inferred for signal `\keccak_ring.\tapl[15] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6706'.
+No latch inferred for signal `\keccak_ring.\ex[16] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6707'.
+No latch inferred for signal `\keccak_ring.\tapl[16] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6708'.
+No latch inferred for signal `\keccak_ring.\ex[16] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6709'.
+No latch inferred for signal `\keccak_ring.\tapl[16] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6710'.
+No latch inferred for signal `\keccak_ring.\ex[17] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6711'.
+No latch inferred for signal `\keccak_ring.\tapl[17] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6712'.
+No latch inferred for signal `\keccak_ring.\ex[17] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6713'.
+No latch inferred for signal `\keccak_ring.\tapl[17] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6714'.
+No latch inferred for signal `\keccak_ring.\ex[18] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6715'.
+No latch inferred for signal `\keccak_ring.\tapl[18] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6716'.
+No latch inferred for signal `\keccak_ring.\ex[18] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6717'.
+No latch inferred for signal `\keccak_ring.\tapl[18] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6718'.
+No latch inferred for signal `\keccak_ring.\ex[19] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6719'.
+No latch inferred for signal `\keccak_ring.\tapl[19] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6720'.
+No latch inferred for signal `\keccak_ring.\ex[19] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6721'.
+No latch inferred for signal `\keccak_ring.\tapl[19] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6722'.
+No latch inferred for signal `\keccak_ring.\ex[20] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6723'.
+No latch inferred for signal `\keccak_ring.\tapl[20] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6724'.
+No latch inferred for signal `\keccak_ring.\ex[20] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6725'.
+No latch inferred for signal `\keccak_ring.\tapl[20] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6726'.
+No latch inferred for signal `\keccak_ring.\ex[21] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6727'.
+No latch inferred for signal `\keccak_ring.\tapl[21] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6728'.
+No latch inferred for signal `\keccak_ring.\ex[21] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6729'.
+No latch inferred for signal `\keccak_ring.\tapl[21] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6730'.
+No latch inferred for signal `\keccak_ring.\ex[22] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6731'.
+No latch inferred for signal `\keccak_ring.\tapl[22] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6732'.
+No latch inferred for signal `\keccak_ring.\ex[22] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6733'.
+No latch inferred for signal `\keccak_ring.\tapl[22] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6734'.
+No latch inferred for signal `\keccak_ring.\ex[23] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6735'.
+No latch inferred for signal `\keccak_ring.\tapl[23] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6736'.
+No latch inferred for signal `\keccak_ring.\ex[23] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6737'.
+No latch inferred for signal `\keccak_ring.\tapl[23] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6738'.
+No latch inferred for signal `\keccak_ring.\ex[24] [0]' from process `\keccak_ring.$proc$keccak_ring.v:195$6739'.
+No latch inferred for signal `\keccak_ring.\tapl[24] [0]' from process `\keccak_ring.$proc$keccak_ring.v:196$6740'.
+No latch inferred for signal `\keccak_ring.\ex[24] [1]' from process `\keccak_ring.$proc$keccak_ring.v:195$6741'.
+No latch inferred for signal `\keccak_ring.\tapl[24] [1]' from process `\keccak_ring.$proc$keccak_ring.v:196$6742'.
+No latch inferred for signal `\keccak_ring.\bpi[0] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6743'.
+No latch inferred for signal `\keccak_ring.\bpi[0] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6744'.
+No latch inferred for signal `\keccak_ring.\bpi[1] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6745'.
+No latch inferred for signal `\keccak_ring.\bpi[1] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6746'.
+No latch inferred for signal `\keccak_ring.\bpi[2] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6747'.
+No latch inferred for signal `\keccak_ring.\bpi[2] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6748'.
+No latch inferred for signal `\keccak_ring.\bpi[3] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6749'.
+No latch inferred for signal `\keccak_ring.\bpi[3] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6750'.
+No latch inferred for signal `\keccak_ring.\bpi[4] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6751'.
+No latch inferred for signal `\keccak_ring.\bpi[4] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6752'.
+No latch inferred for signal `\keccak_ring.\bpi[5] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6753'.
+No latch inferred for signal `\keccak_ring.\bpi[5] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6754'.
+No latch inferred for signal `\keccak_ring.\bpi[6] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6755'.
+No latch inferred for signal `\keccak_ring.\bpi[6] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6756'.
+No latch inferred for signal `\keccak_ring.\bpi[7] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6757'.
+No latch inferred for signal `\keccak_ring.\bpi[7] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6758'.
+No latch inferred for signal `\keccak_ring.\bpi[8] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6759'.
+No latch inferred for signal `\keccak_ring.\bpi[8] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6760'.
+No latch inferred for signal `\keccak_ring.\bpi[9] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6761'.
+No latch inferred for signal `\keccak_ring.\bpi[9] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6762'.
+No latch inferred for signal `\keccak_ring.\bpi[10] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6763'.
+No latch inferred for signal `\keccak_ring.\bpi[10] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6764'.
+No latch inferred for signal `\keccak_ring.\bpi[11] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6765'.
+No latch inferred for signal `\keccak_ring.\bpi[11] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6766'.
+No latch inferred for signal `\keccak_ring.\bpi[12] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6767'.
+No latch inferred for signal `\keccak_ring.\bpi[12] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6768'.
+No latch inferred for signal `\keccak_ring.\bpi[13] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6769'.
+No latch inferred for signal `\keccak_ring.\bpi[13] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6770'.
+No latch inferred for signal `\keccak_ring.\bpi[14] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6771'.
+No latch inferred for signal `\keccak_ring.\bpi[14] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6772'.
+No latch inferred for signal `\keccak_ring.\bpi[15] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6773'.
+No latch inferred for signal `\keccak_ring.\bpi[15] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6774'.
+No latch inferred for signal `\keccak_ring.\bpi[16] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6775'.
+No latch inferred for signal `\keccak_ring.\bpi[16] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6776'.
+No latch inferred for signal `\keccak_ring.\bpi[17] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6777'.
+No latch inferred for signal `\keccak_ring.\bpi[17] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6778'.
+No latch inferred for signal `\keccak_ring.\bpi[18] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6779'.
+No latch inferred for signal `\keccak_ring.\bpi[18] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6780'.
+No latch inferred for signal `\keccak_ring.\bpi[19] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6781'.
+No latch inferred for signal `\keccak_ring.\bpi[19] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6782'.
+No latch inferred for signal `\keccak_ring.\bpi[20] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6783'.
+No latch inferred for signal `\keccak_ring.\bpi[20] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6784'.
+No latch inferred for signal `\keccak_ring.\bpi[21] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6785'.
+No latch inferred for signal `\keccak_ring.\bpi[21] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6786'.
+No latch inferred for signal `\keccak_ring.\bpi[22] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6787'.
+No latch inferred for signal `\keccak_ring.\bpi[22] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6788'.
+No latch inferred for signal `\keccak_ring.\bpi[23] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6789'.
+No latch inferred for signal `\keccak_ring.\bpi[23] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6790'.
+No latch inferred for signal `\keccak_ring.\bpi[24] [0]' from process `\keccak_ring.$proc$keccak_ring.v:209$6791'.
+No latch inferred for signal `\keccak_ring.\bpi[24] [1]' from process `\keccak_ring.$proc$keccak_ring.v:209$6792'.
+No latch inferred for signal `\keccak_ring.\e[0]' from process `\keccak_ring.$proc$keccak_ring.v:216$6793'.
+No latch inferred for signal `\keccak_ring.\e[1]' from process `\keccak_ring.$proc$keccak_ring.v:219$6798'.
+No latch inferred for signal `\keccak_ring.\e[2]' from process `\keccak_ring.$proc$keccak_ring.v:219$6802'.
+No latch inferred for signal `\keccak_ring.\e[3]' from process `\keccak_ring.$proc$keccak_ring.v:219$6806'.
+No latch inferred for signal `\keccak_ring.\e[4]' from process `\keccak_ring.$proc$keccak_ring.v:219$6810'.
+No latch inferred for signal `\keccak_ring.\e[5]' from process `\keccak_ring.$proc$keccak_ring.v:219$6814'.
+No latch inferred for signal `\keccak_ring.\e[6]' from process `\keccak_ring.$proc$keccak_ring.v:219$6818'.
+No latch inferred for signal `\keccak_ring.\e[7]' from process `\keccak_ring.$proc$keccak_ring.v:219$6822'.
+No latch inferred for signal `\keccak_ring.\e[8]' from process `\keccak_ring.$proc$keccak_ring.v:219$6826'.
+No latch inferred for signal `\keccak_ring.\e[9]' from process `\keccak_ring.$proc$keccak_ring.v:219$6830'.
+No latch inferred for signal `\keccak_ring.\e[10]' from process `\keccak_ring.$proc$keccak_ring.v:219$6834'.
+No latch inferred for signal `\keccak_ring.\e[11]' from process `\keccak_ring.$proc$keccak_ring.v:219$6838'.
+No latch inferred for signal `\keccak_ring.\e[12]' from process `\keccak_ring.$proc$keccak_ring.v:219$6842'.
+No latch inferred for signal `\keccak_ring.\e[13]' from process `\keccak_ring.$proc$keccak_ring.v:219$6846'.
+No latch inferred for signal `\keccak_ring.\e[14]' from process `\keccak_ring.$proc$keccak_ring.v:219$6850'.
+No latch inferred for signal `\keccak_ring.\e[15]' from process `\keccak_ring.$proc$keccak_ring.v:219$6854'.
+No latch inferred for signal `\keccak_ring.\e[16]' from process `\keccak_ring.$proc$keccak_ring.v:219$6858'.
+No latch inferred for signal `\keccak_ring.\e[17]' from process `\keccak_ring.$proc$keccak_ring.v:219$6862'.
+No latch inferred for signal `\keccak_ring.\e[18]' from process `\keccak_ring.$proc$keccak_ring.v:219$6866'.
+No latch inferred for signal `\keccak_ring.\e[19]' from process `\keccak_ring.$proc$keccak_ring.v:219$6870'.
+No latch inferred for signal `\keccak_ring.\e[20]' from process `\keccak_ring.$proc$keccak_ring.v:219$6874'.
+No latch inferred for signal `\keccak_ring.\e[21]' from process `\keccak_ring.$proc$keccak_ring.v:219$6878'.
+No latch inferred for signal `\keccak_ring.\e[22]' from process `\keccak_ring.$proc$keccak_ring.v:219$6882'.
+No latch inferred for signal `\keccak_ring.\e[23]' from process `\keccak_ring.$proc$keccak_ring.v:219$6886'.
+No latch inferred for signal `\keccak_ring.\e[24]' from process `\keccak_ring.$proc$keccak_ring.v:219$6890'.
+No latch inferred for signal `\keccak_ring.\cc[0]' from process `\keccak_ring.$proc$keccak_ring.v:239$6894'.
+No latch inferred for signal `\keccak_ring.\cc[1]' from process `\keccak_ring.$proc$keccak_ring.v:239$6896'.
+No latch inferred for signal `\keccak_ring.\cc[2]' from process `\keccak_ring.$proc$keccak_ring.v:239$6898'.
+No latch inferred for signal `\keccak_ring.\cc[3]' from process `\keccak_ring.$proc$keccak_ring.v:239$6900'.
+No latch inferred for signal `\keccak_ring.\cc[4]' from process `\keccak_ring.$proc$keccak_ring.v:239$6902'.
+No latch inferred for signal `\keccak_ring.\dd[0]' from process `\keccak_ring.$proc$keccak_ring.v:246$6904'.
+No latch inferred for signal `\keccak_ring.\dd[1]' from process `\keccak_ring.$proc$keccak_ring.v:246$6906'.
+No latch inferred for signal `\keccak_ring.\dd[2]' from process `\keccak_ring.$proc$keccak_ring.v:246$6908'.
+No latch inferred for signal `\keccak_ring.\dd[3]' from process `\keccak_ring.$proc$keccak_ring.v:246$6910'.
+No latch inferred for signal `\keccak_ring.\dd[4]' from process `\keccak_ring.$proc$keccak_ring.v:246$6912'.
+No latch inferred for signal `\keccak_ring.\cl[0]' from process `\keccak_ring.$proc$keccak_ring.v:266$6914'.
+No latch inferred for signal `\keccak_ring.\cl[5]' from process `\keccak_ring.$proc$keccak_ring.v:266$6916'.
+No latch inferred for signal `\keccak_ring.\cl[10]' from process `\keccak_ring.$proc$keccak_ring.v:266$6918'.
+No latch inferred for signal `\keccak_ring.\cl[15]' from process `\keccak_ring.$proc$keccak_ring.v:266$6920'.
+No latch inferred for signal `\keccak_ring.\cl[20]' from process `\keccak_ring.$proc$keccak_ring.v:266$6922'.
+No latch inferred for signal `\keccak_ring.\cl[1]' from process `\keccak_ring.$proc$keccak_ring.v:266$6924'.
+No latch inferred for signal `\keccak_ring.\cl[6]' from process `\keccak_ring.$proc$keccak_ring.v:266$6926'.
+No latch inferred for signal `\keccak_ring.\cl[11]' from process `\keccak_ring.$proc$keccak_ring.v:266$6928'.
+No latch inferred for signal `\keccak_ring.\cl[16]' from process `\keccak_ring.$proc$keccak_ring.v:266$6930'.
+No latch inferred for signal `\keccak_ring.\cl[21]' from process `\keccak_ring.$proc$keccak_ring.v:266$6932'.
+No latch inferred for signal `\keccak_ring.\cl[2]' from process `\keccak_ring.$proc$keccak_ring.v:266$6934'.
+No latch inferred for signal `\keccak_ring.\cl[7]' from process `\keccak_ring.$proc$keccak_ring.v:266$6936'.
+No latch inferred for signal `\keccak_ring.\cl[12]' from process `\keccak_ring.$proc$keccak_ring.v:266$6938'.
+No latch inferred for signal `\keccak_ring.\cl[17]' from process `\keccak_ring.$proc$keccak_ring.v:266$6940'.
+No latch inferred for signal `\keccak_ring.\cl[22]' from process `\keccak_ring.$proc$keccak_ring.v:266$6942'.
+No latch inferred for signal `\keccak_ring.\cl[3]' from process `\keccak_ring.$proc$keccak_ring.v:266$6944'.
+No latch inferred for signal `\keccak_ring.\cl[8]' from process `\keccak_ring.$proc$keccak_ring.v:266$6946'.
+No latch inferred for signal `\keccak_ring.\cl[13]' from process `\keccak_ring.$proc$keccak_ring.v:266$6948'.
+No latch inferred for signal `\keccak_ring.\cl[18]' from process `\keccak_ring.$proc$keccak_ring.v:266$6950'.
+No latch inferred for signal `\keccak_ring.\cl[23]' from process `\keccak_ring.$proc$keccak_ring.v:266$6952'.
+No latch inferred for signal `\keccak_ring.\cl[4]' from process `\keccak_ring.$proc$keccak_ring.v:266$6954'.
+No latch inferred for signal `\keccak_ring.\cl[9]' from process `\keccak_ring.$proc$keccak_ring.v:266$6956'.
+No latch inferred for signal `\keccak_ring.\cl[14]' from process `\keccak_ring.$proc$keccak_ring.v:266$6958'.
+No latch inferred for signal `\keccak_ring.\cl[19]' from process `\keccak_ring.$proc$keccak_ring.v:266$6960'.
+No latch inferred for signal `\keccak_ring.\cl[24]' from process `\keccak_ring.$proc$keccak_ring.v:266$6962'.
+
+4.2.9. Executing PROC_DFF pass (convert process syncs to FFs).
+Creating register for signal `\keccak_ring.\st' using process `\keccak_ring.$proc$keccak_ring.v:109$5827'.
+  created $dff cell `$procdff$7100' with positive edge clock.
+Creating register for signal `\keccak_ring.\cnt' using process `\keccak_ring.$proc$keccak_ring.v:109$5827'.
+  created $dff cell `$procdff$7101' with positive edge clock.
+Creating register for signal `\keccak_ring.\rnd' using process `\keccak_ring.$proc$keccak_ring.v:109$5827'.
+  created $dff cell `$procdff$7102' with positive edge clock.
+Creating register for signal `\keccak_ring.\ptr' using process `\keccak_ring.$proc$keccak_ring.v:109$5827'.
+  created $dff cell `$procdff$7103' with positive edge clock.
+Creating register for signal `\keccak_ring.\creg' using process `\keccak_ring.$proc$keccak_ring.v:251$5839'.
+  created $dff cell `$procdff$7104' with positive edge clock.
+Creating register for signal `\keccak_ring.\dout' using process `\keccak_ring.$proc$keccak_ring.v:305$5866'.
+  created $dff cell `$procdff$7105' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[0].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6152'.
+  created $dff cell `$procdff$7106' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[0].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6162'.
+  created $dff cell `$procdff$7107' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[1].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6172'.
+  created $dff cell `$procdff$7108' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[1].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6182'.
+  created $dff cell `$procdff$7109' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[2].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6192'.
+  created $dff cell `$procdff$7110' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[2].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6202'.
+  created $dff cell `$procdff$7111' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[3].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6212'.
+  created $dff cell `$procdff$7112' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[3].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6222'.
+  created $dff cell `$procdff$7113' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[4].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6232'.
+  created $dff cell `$procdff$7114' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[4].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6242'.
+  created $dff cell `$procdff$7115' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[5].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6252'.
+  created $dff cell `$procdff$7116' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[5].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6262'.
+  created $dff cell `$procdff$7117' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[6].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6272'.
+  created $dff cell `$procdff$7118' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[6].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6282'.
+  created $dff cell `$procdff$7119' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[7].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6292'.
+  created $dff cell `$procdff$7120' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[7].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6302'.
+  created $dff cell `$procdff$7121' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[8].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6312'.
+  created $dff cell `$procdff$7122' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[8].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6322'.
+  created $dff cell `$procdff$7123' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[9].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6332'.
+  created $dff cell `$procdff$7124' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[9].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6342'.
+  created $dff cell `$procdff$7125' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[10].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6352'.
+  created $dff cell `$procdff$7126' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[10].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6362'.
+  created $dff cell `$procdff$7127' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[11].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6372'.
+  created $dff cell `$procdff$7128' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[11].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6382'.
+  created $dff cell `$procdff$7129' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[12].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6392'.
+  created $dff cell `$procdff$7130' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[12].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6402'.
+  created $dff cell `$procdff$7131' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[13].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6412'.
+  created $dff cell `$procdff$7132' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[13].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6422'.
+  created $dff cell `$procdff$7133' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[14].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6432'.
+  created $dff cell `$procdff$7134' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[14].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6442'.
+  created $dff cell `$procdff$7135' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[15].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6452'.
+  created $dff cell `$procdff$7136' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[15].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6462'.
+  created $dff cell `$procdff$7137' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[16].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6472'.
+  created $dff cell `$procdff$7138' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[16].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6482'.
+  created $dff cell `$procdff$7139' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[17].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6492'.
+  created $dff cell `$procdff$7140' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[17].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6502'.
+  created $dff cell `$procdff$7141' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[18].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6512'.
+  created $dff cell `$procdff$7142' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[18].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6522'.
+  created $dff cell `$procdff$7143' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[19].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6532'.
+  created $dff cell `$procdff$7144' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[19].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6542'.
+  created $dff cell `$procdff$7145' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[20].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6552'.
+  created $dff cell `$procdff$7146' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[20].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6562'.
+  created $dff cell `$procdff$7147' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[21].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6572'.
+  created $dff cell `$procdff$7148' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[21].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6582'.
+  created $dff cell `$procdff$7149' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[22].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6592'.
+  created $dff cell `$procdff$7150' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[22].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6602'.
+  created $dff cell `$procdff$7151' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[23].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6612'.
+  created $dff cell `$procdff$7152' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[23].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6622'.
+  created $dff cell `$procdff$7153' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[24].g_ring[0].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6632'.
+  created $dff cell `$procdff$7154' with positive edge clock.
+Creating register for signal `\keccak_ring.\g_ck[24].g_ring[1].r' using process `\keccak_ring.$proc$keccak_ring.v:288$6642'.
+  created $dff cell `$procdff$7155' with positive edge clock.
+
+4.2.10. Executing PROC_MEMWR pass (convert process memory writes to cells).
+
+4.2.11. Executing PROC_CLEAN pass (remove empty switches from decision trees).
+Found and cleaned up 9 empty switches in `\keccak_ring.$proc$keccak_ring.v:109$5827'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:109$5827'.
+Found and cleaned up 1 empty switch in `\keccak_ring.$proc$keccak_ring.v:156$5838'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:156$5838'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:251$5839'.
+Found and cleaned up 21 empty switches in `\keccak_ring.$proc$keccak_ring.v:300$5844'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:300$5844'.
+Found and cleaned up 2 empty switches in `\keccak_ring.$proc$keccak_ring.v:305$5866'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:305$5866'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6152'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6162'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6172'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6182'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6192'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6202'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6212'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6222'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6232'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6242'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6252'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6262'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6272'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6282'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6292'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6302'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6312'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6322'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6332'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6342'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6352'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6362'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6372'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6382'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6392'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6402'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6412'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6422'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6432'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6442'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6452'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6462'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6472'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6482'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6492'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6502'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6512'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6522'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6532'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6542'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6552'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6562'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6572'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6582'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6592'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6602'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6612'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6622'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6632'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:288$6642'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6643'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6644'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6645'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6646'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6647'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6648'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6649'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6650'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6651'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6652'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6653'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6654'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6655'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6656'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6657'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6658'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6659'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6660'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6661'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6662'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6663'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6664'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6665'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6666'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6667'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6668'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6669'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6670'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6671'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6672'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6673'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6674'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6675'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6676'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6677'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6678'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6679'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6680'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6681'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6682'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6683'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6684'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6685'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6686'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6687'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6688'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6689'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6690'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6691'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6692'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6693'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6694'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6695'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6696'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6697'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6698'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6699'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6700'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6701'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6702'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6703'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6704'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6705'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6706'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6707'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6708'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6709'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6710'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6711'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6712'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6713'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6714'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6715'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6716'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6717'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6718'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6719'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6720'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6721'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6722'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6723'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6724'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6725'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6726'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6727'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6728'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6729'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6730'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6731'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6732'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6733'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6734'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6735'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6736'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6737'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6738'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6739'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6740'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:195$6741'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:196$6742'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6743'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6744'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6745'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6746'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6747'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6748'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6749'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6750'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6751'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6752'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6753'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6754'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6755'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6756'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6757'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6758'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6759'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6760'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6761'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6762'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6763'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6764'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6765'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6766'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6767'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6768'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6769'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6770'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6771'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6772'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6773'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6774'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6775'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6776'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6777'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6778'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6779'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6780'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6781'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6782'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6783'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6784'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6785'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6786'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6787'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6788'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6789'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6790'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6791'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:209$6792'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:216$6793'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6798'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6802'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6806'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6810'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6814'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6818'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6822'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6826'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6830'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6834'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6838'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6842'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6846'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6850'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6854'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6858'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6862'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6866'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6870'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6874'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6878'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6882'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6886'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:219$6890'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:239$6894'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:239$6896'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:239$6898'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:239$6900'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:239$6902'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:246$6904'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:246$6906'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:246$6908'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:246$6910'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:246$6912'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6914'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6916'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6918'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6920'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6922'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6924'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6926'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6928'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6930'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6932'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6934'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6936'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6938'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6940'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6942'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6944'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6946'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6948'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6950'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6952'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6954'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6956'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6958'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6960'.
+Removing empty process `keccak_ring.$proc$keccak_ring.v:266$6962'.
+Cleaned up 33 empty switches.
+
+4.2.12. Executing OPT_EXPR pass (perform const folding).
+Optimizing module kc_icg.
+Optimizing module keccak_ring.
+<suppressed ~90 debug messages>
+
+4.3. Executing FLATTEN pass (flatten design).
+Deleting now unused module kc_icg.
+<suppressed ~37 debug messages>
+
+4.4. Executing OPT_EXPR pass (perform const folding).
+Optimizing module keccak_ring.
+
+4.5. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \keccak_ring..
+Removed 105 unused cells and 723 unused wires.
+<suppressed ~119 debug messages>
+
+4.6. Executing CHECK pass (checking for obvious problems).
+Checking module keccak_ring...
+Found and reported 0 problems.
+
+4.7. Executing OPT pass (performing simple optimizations).
+
+4.7.1. Executing OPT_EXPR pass (perform const folding).
+Optimizing module keccak_ring.
+
+4.7.2. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\keccak_ring'.
+Computing hashes of 903 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Computing hashes of 774 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Computing hashes of 714 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Computing hashes of 701 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+<suppressed ~606 debug messages>
+Removed a total of 202 cells.
+
+4.7.3. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \keccak_ring..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~135 debug messages>
+
+4.7.4. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \keccak_ring.
+    New input vector for $reduce_or cell $reduce_or$keccak_ring.v:181$5886: \g_rc[1].hit [6:1]
+    New ctrl vector for $pmux cell $procmux$6969: { \idle \in_rho }
+    New ctrl vector for $pmux cell $procmux$6982: $auto$opt_reduce.cc:137:opt_pmux$7194
+  Optimizing cells in module \keccak_ring.
+Performed a total of 3 changes.
+
+4.7.5. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\keccak_ring'.
+Computing hashes of 702 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Removed a total of 0 cells.
+
+4.7.6. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.7.7. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \keccak_ring..
+Removed 0 unused cells and 202 unused wires.
+<suppressed ~1 debug messages>
+
+4.7.8. Executing OPT_EXPR pass (perform const folding).
+Optimizing module keccak_ring.
+
+4.7.9. Rerunning OPT passes. (Maybe there is more to do..)
+
+4.7.10. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \keccak_ring..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~135 debug messages>
+
+4.7.11. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \keccak_ring.
+Performed a total of 0 changes.
+
+4.7.12. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\keccak_ring'.
+Computing hashes of 702 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Removed a total of 0 cells.
+
+4.7.13. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.7.14. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \keccak_ring..
+
+4.7.15. Executing OPT_EXPR pass (perform const folding).
+Optimizing module keccak_ring.
+
+4.7.16. Finished fast OPT passes. (There is nothing left to do.)
+
+4.8. Executing FSM pass (extract and optimize FSM).
+
+4.8.1. Executing FSM_DETECT pass (finding FSMs in design).
+Found FSM state register keccak_ring.st.
+
+4.8.2. Executing FSM_EXTRACT pass (extracting FSM from design).
+Extracting FSM `\st' from module `\keccak_ring'.
+  found $dff cell for state register: $procdff$7100
+  root of input selection tree: $0\st[2:0]
+  found reset state: 3'000 (guessed from mux tree)
+  found ctrl input: \rst_n
+  found state code: 3'000
+  found ctrl input: \in_pass
+  found ctrl input: \in_rho
+  found ctrl input: \in_thi
+  found ctrl input: \idle
+  found ctrl input: \cnt_end
+  found ctrl input: \last
+  found state code: 3'010
+  found ctrl input: $eq$keccak_ring.v:133$5831_Y
+  found state code: 3'011
+  found ctrl input: \go
+  found ctrl input: $procmux$6983_CMP
+  found ctrl input: $procmux$6984_CMP
+  found state code: 3'100
+  found state code: 3'001
+  found ctrl output: \idle
+  found ctrl output: \in_pass
+  found ctrl output: \in_thi
+  found ctrl output: \in_rho
+  found ctrl output: \in_clr
+  ctrl inputs: { $procmux$6984_CMP $procmux$6983_CMP $eq$keccak_ring.v:133$5831_Y \cnt_end \last \go \rst_n }
+  ctrl outputs: { $0\st[2:0] \in_clr \in_rho \in_thi \in_pass \idle }
+  transition:      3'000 7'------0 ->      3'000 8'00000001
+  transition:      3'000 7'-----01 ->      3'000 8'00000001
+  transition:      3'000 7'00---11 ->      3'000 8'00000001
+  transition:      3'000 7'1----11 ->      3'001 8'00100001
+  transition:      3'000 7'-1---11 ->      3'100 8'10000001
+  transition:      3'100 7'------0 ->      3'000 8'00010000
+  transition:      3'100 7'---0--1 ->      3'100 8'10010000
+  transition:      3'100 7'---1--1 ->      3'000 8'00010000
+  transition:      3'010 7'------0 ->      3'000 8'00001000
+  transition:      3'010 7'--0---1 ->      3'010 8'01001000
+  transition:      3'010 7'--1---1 ->      3'011 8'01101000
+  transition:      3'001 7'------0 ->      3'000 8'00000100
+  transition:      3'001 7'---0--1 ->      3'001 8'00100100
+  transition:      3'001 7'---1--1 ->      3'010 8'01000100
+  transition:      3'011 7'------0 ->      3'000 8'00000010
+  transition:      3'011 7'---0--1 ->      3'011 8'01100010
+  transition:      3'011 7'---10-1 ->      3'010 8'01000010
+  transition:      3'011 7'---11-1 ->      3'000 8'00000010
+
+4.8.3. Executing FSM_OPT pass (simple optimizations of FSMs).
+Optimizing FSM `$fsm$\st$7195' from module `\keccak_ring'.
+
+4.8.4. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \keccak_ring..
+Removed 15 unused cells and 15 unused wires.
+<suppressed ~16 debug messages>
+
+4.8.5. Executing FSM_OPT pass (simple optimizations of FSMs).
+Optimizing FSM `$fsm$\st$7195' from module `\keccak_ring'.
+  Removing unused output signal $0\st[2:0] [0].
+  Removing unused output signal $0\st[2:0] [1].
+  Removing unused output signal $0\st[2:0] [2].
+
+4.8.6. Executing FSM_RECODE pass (re-assigning FSM state encoding).
+Recoding FSM `$fsm$\st$7195' from module `\keccak_ring' using `auto' encoding:
+  mapping auto encoding to `one-hot` for this FSM.
+  000 -> ----1
+  100 -> ---1-
+  010 -> --1--
+  001 -> -1---
+  011 -> 1----
+
+4.8.7. Executing FSM_INFO pass (dumping all available information on FSM cells).
+
+FSM `$fsm$\st$7195' from module `keccak_ring':
+-------------------------------------
+
+  Information on FSM $fsm$\st$7195 (\st):
+
+  Number of input signals:    7
+  Number of output signals:   5
+  Number of state bits:       5
+
+  Input signals:
+    0: \rst_n
+    1: \go
+    2: \last
+    3: \cnt_end
+    4: $eq$keccak_ring.v:133$5831_Y
+    5: $procmux$6983_CMP
+    6: $procmux$6984_CMP
+
+  Output signals:
+    0: \idle
+    1: \in_pass
+    2: \in_thi
+    3: \in_rho
+    4: \in_clr
+
+  State encoding:
+    0:    5'----1  <RESET STATE>
+    1:    5'---1-
+    2:    5'--1--
+    3:    5'-1---
+    4:    5'1----
+
+  Transition Table (state_in, ctrl_in, state_out, ctrl_out):
+      0:     0 7'------0   ->     0 5'00001
+      1:     0 7'-----01   ->     0 5'00001
+      2:     0 7'00---11   ->     0 5'00001
+      3:     0 7'-1---11   ->     1 5'00001
+      4:     0 7'1----11   ->     3 5'00001
+      5:     1 7'------0   ->     0 5'10000
+      6:     1 7'---1--1   ->     0 5'10000
+      7:     1 7'---0--1   ->     1 5'10000
+      8:     2 7'------0   ->     0 5'01000
+      9:     2 7'--0---1   ->     2 5'01000
+     10:     2 7'--1---1   ->     4 5'01000
+     11:     3 7'------0   ->     0 5'00100
+     12:     3 7'---1--1   ->     2 5'00100
+     13:     3 7'---0--1   ->     3 5'00100
+     14:     4 7'------0   ->     0 5'00010
+     15:     4 7'---11-1   ->     0 5'00010
+     16:     4 7'---10-1   ->     2 5'00010
+     17:     4 7'---0--1   ->     4 5'00010
+
+-------------------------------------
+
+4.8.8. Executing FSM_MAP pass (mapping FSMs to basic logic).
+Mapping FSM `$fsm$\st$7195' from module `\keccak_ring'.
+
+4.9. Executing OPT pass (performing simple optimizations).
+
+4.9.1. Executing OPT_EXPR pass (perform const folding).
+Optimizing module keccak_ring.
+<suppressed ~1 debug messages>
+
+4.9.2. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\keccak_ring'.
+Computing hashes of 720 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Computing hashes of 717 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+<suppressed ~9 debug messages>
+Removed a total of 3 cells.
+
+4.9.3. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \keccak_ring..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~125 debug messages>
+
+4.9.4. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \keccak_ring.
+Performed a total of 0 changes.
+
+4.9.5. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\keccak_ring'.
+Computing hashes of 717 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Removed a total of 0 cells.
+
+4.9.6. Executing OPT_DFF pass (perform DFF optimizations).
+Adding SRST signal on $procdff$7105 ($dff) from module keccak_ring (D = \sq, Q = \dout, rval = 2'00).
+Adding SRST signal on $procdff$7103 ($dff) from module keccak_ring (D = $procmux$6987_Y, Q = \ptr, rval = 10'0000000000).
+Adding EN signal on $auto$ff.cc:337:slice$7268 ($sdff) from module keccak_ring (D = $procmux$6982_Y, Q = \ptr).
+Adding SRST signal on $procdff$7102 ($dff) from module keccak_ring (D = $procmux$6998_Y, Q = \rnd, rval = 5'00000).
+Adding EN signal on $auto$ff.cc:337:slice$7272 ($sdff) from module keccak_ring (D = $procmux$6998_Y, Q = \rnd).
+Adding SRST signal on $procdff$7101 ($dff) from module keccak_ring (D = $procmux$6969_Y, Q = \cnt, rval = 5'00000).
+
+4.9.7. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \keccak_ring..
+Removed 7 unused cells and 13 unused wires.
+<suppressed ~8 debug messages>
+
+4.9.8. Executing OPT_EXPR pass (perform const folding).
+Optimizing module keccak_ring.
+<suppressed ~1 debug messages>
+
+4.9.9. Rerunning OPT passes. (Maybe there is more to do..)
+
+4.9.10. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \keccak_ring..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~118 debug messages>
+
+4.9.11. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \keccak_ring.
+Performed a total of 0 changes.
+
+4.9.12. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\keccak_ring'.
+Computing hashes of 716 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Removed a total of 0 cells.
+
+4.9.13. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.9.14. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \keccak_ring..
+
+4.9.15. Executing OPT_EXPR pass (perform const folding).
+Optimizing module keccak_ring.
+
+4.9.16. Finished fast OPT passes. (There is nothing left to do.)
+
+4.10. Executing WREDUCE pass (reducing word size of cells).
+Removed top 27 address bits (of 32) from memory init port keccak_ring.$auto$mem.cc:351:emit$6967 ($auto$proc_rom.cc:155:do_switch$6965).
+Removed top 1 bits (of 2) from port B of cell keccak_ring.$auto$opt_dff.cc:235:make_patterns_logic$7279 ($ne).
+Removed top 1 bits (of 2) from port B of cell keccak_ring.$auto$fsm_map.cc:77:implement_pattern_cache$7257 ($eq).
+Removed top 1 bits (of 2) from port B of cell keccak_ring.$auto$fsm_map.cc:77:implement_pattern_cache$7243 ($eq).
+Removed top 2 bits (of 4) from port B of cell keccak_ring.$auto$fsm_map.cc:77:implement_pattern_cache$7213 ($eq).
+Removed top 1 bits (of 2) from port B of cell keccak_ring.$auto$fsm_map.cc:77:implement_pattern_cache$7209 ($eq).
+Removed top 26 bits (of 32) from port Y of cell keccak_ring.$add$keccak_ring.v:133$5832 ($add).
+Removed top 27 bits (of 32) from mux cell keccak_ring.$ternary$keccak_ring.v:133$5833 ($mux).
+Removed top 4 bits (of 5) from port B of cell keccak_ring.$add$keccak_ring.v:142$5836 ($add).
+Removed top 1 bits (of 2) from port B of cell keccak_ring.$eq$keccak_ring.v:307$5868 ($eq).
+Removed top 4 bits (of 5) from port B of cell keccak_ring.$eq$keccak_ring.v:176$5876 ($eq).
+Removed top 3 bits (of 5) from port B of cell keccak_ring.$eq$keccak_ring.v:176$5878 ($eq).
+Removed top 2 bits (of 5) from port B of cell keccak_ring.$eq$keccak_ring.v:176$5880 ($eq).
+Removed top 1 bits (of 5) from port B of cell keccak_ring.$eq$keccak_ring.v:176$5882 ($eq).
+Removed top 31 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6145 ($lt).
+Removed top 4 bits (of 5) from port B of cell keccak_ring.$eq$keccak_ring.v:278$6169 ($eq).
+Removed top 27 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6175 ($lt).
+Removed top 31 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6185 ($lt).
+Removed top 3 bits (of 5) from port B of cell keccak_ring.$eq$keccak_ring.v:278$6189 ($eq).
+Removed top 27 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6205 ($lt).
+Removed top 3 bits (of 5) from port B of cell keccak_ring.$eq$keccak_ring.v:278$6209 ($eq).
+Removed top 27 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6225 ($lt).
+Removed top 2 bits (of 5) from port B of cell keccak_ring.$eq$keccak_ring.v:278$6229 ($eq).
+Removed top 28 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6245 ($lt).
+Removed top 2 bits (of 5) from port B of cell keccak_ring.$eq$keccak_ring.v:278$6249 ($eq).
+Removed top 28 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6265 ($lt).
+Removed top 2 bits (of 5) from port B of cell keccak_ring.$eq$keccak_ring.v:278$6269 ($eq).
+Removed top 27 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6285 ($lt).
+Removed top 2 bits (of 5) from port B of cell keccak_ring.$eq$keccak_ring.v:278$6289 ($eq).
+Removed top 29 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6305 ($lt).
+Removed top 1 bits (of 5) from port B of cell keccak_ring.$eq$keccak_ring.v:278$6309 ($eq).
+Removed top 29 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6315 ($lt).
+Removed top 27 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6325 ($lt).
+Removed top 1 bits (of 5) from port B of cell keccak_ring.$eq$keccak_ring.v:278$6329 ($eq).
+Removed top 1 bits (of 5) from port B of cell keccak_ring.$eq$keccak_ring.v:278$6349 ($eq).
+Removed top 27 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6355 ($lt).
+Removed top 27 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6365 ($lt).
+Removed top 1 bits (of 5) from port B of cell keccak_ring.$eq$keccak_ring.v:278$6369 ($eq).
+Removed top 28 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6385 ($lt).
+Removed top 1 bits (of 5) from port B of cell keccak_ring.$eq$keccak_ring.v:278$6389 ($eq).
+Removed top 27 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6405 ($lt).
+Removed top 1 bits (of 5) from port B of cell keccak_ring.$eq$keccak_ring.v:278$6409 ($eq).
+Removed top 28 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6425 ($lt).
+Removed top 1 bits (of 5) from port B of cell keccak_ring.$eq$keccak_ring.v:278$6429 ($eq).
+Removed top 28 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6435 ($lt).
+Removed top 1 bits (of 5) from port B of cell keccak_ring.$eq$keccak_ring.v:278$6449 ($eq).
+Removed top 28 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6475 ($lt).
+Removed top 27 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6485 ($lt).
+Removed top 27 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6495 ($lt).
+Removed top 27 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6515 ($lt).
+Removed top 27 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6525 ($lt).
+Removed top 27 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6545 ($lt).
+Removed top 30 bits (of 32) from port B of cell keccak_ring.$lt$keccak_ring.v:277$6585 ($lt).
+Removed top 1 bits (of 6) from port Y of cell keccak_ring.$add$keccak_ring.v:133$5832 ($add).
+Removed top 27 bits (of 32) from wire keccak_ring.$add$keccak_ring.v:133$5832_Y.
+Removed top 27 bits (of 32) from wire keccak_ring.$ternary$keccak_ring.v:133$5833_Y.
+Removed top 6 bits (of 7) from wire keccak_ring.g_rc[0].hit.
+
+4.11. Executing PEEPOPT pass (run peephole optimizers).
+
+4.12. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \keccak_ring..
+Removed 0 unused cells and 3 unused wires.
+<suppressed ~1 debug messages>
+
+4.13. Executing ALUMACC pass (create $alu and $macc cells).
+Extracting $alu and $macc cells in module keccak_ring:
+  creating $macc model for $add$keccak_ring.v:124$5829 ($add).
+  creating $macc model for $add$keccak_ring.v:129$5830 ($add).
+  creating $macc model for $add$keccak_ring.v:133$5832 ($add).
+  creating $macc model for $add$keccak_ring.v:142$5836 ($add).
+  creating $alu model for $macc $add$keccak_ring.v:142$5836.
+  creating $alu model for $macc $add$keccak_ring.v:133$5832.
+  creating $alu model for $macc $add$keccak_ring.v:129$5830.
+  creating $alu model for $macc $add$keccak_ring.v:124$5829.
+  creating $alu model for $lt$keccak_ring.v:277$6145 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6175 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6185 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6205 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6225 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6245 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6265 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6285 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6305 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6315 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6325 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6355 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6365 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6385 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6405 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6425 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6435 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6475 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6485 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6495 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6515 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6525 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6545 ($lt): new $alu
+  creating $alu model for $lt$keccak_ring.v:277$6585 ($lt): new $alu
+  creating $alu model for $eq$keccak_ring.v:106$5825 ($eq): merged with $lt$keccak_ring.v:277$6175.
+  creating $alu model for $eq$keccak_ring.v:133$5831 ($eq): merged with $lt$keccak_ring.v:277$6355.
+  creating $alu model for $eq$keccak_ring.v:176$5876 ($eq): merged with $lt$keccak_ring.v:277$6185.
+  creating $alu cell for $lt$keccak_ring.v:277$6585: $auto$alumacc.cc:512:replace_alu$7310
+  creating $alu cell for $lt$keccak_ring.v:277$6545: $auto$alumacc.cc:512:replace_alu$7315
+  creating $alu cell for $lt$keccak_ring.v:277$6525: $auto$alumacc.cc:512:replace_alu$7320
+  creating $alu cell for $lt$keccak_ring.v:277$6515: $auto$alumacc.cc:512:replace_alu$7325
+  creating $alu cell for $lt$keccak_ring.v:277$6495: $auto$alumacc.cc:512:replace_alu$7330
+  creating $alu cell for $lt$keccak_ring.v:277$6485: $auto$alumacc.cc:512:replace_alu$7335
+  creating $alu cell for $lt$keccak_ring.v:277$6475: $auto$alumacc.cc:512:replace_alu$7340
+  creating $alu cell for $lt$keccak_ring.v:277$6435: $auto$alumacc.cc:512:replace_alu$7345
+  creating $alu cell for $lt$keccak_ring.v:277$6425: $auto$alumacc.cc:512:replace_alu$7350
+  creating $alu cell for $lt$keccak_ring.v:277$6405: $auto$alumacc.cc:512:replace_alu$7355
+  creating $alu cell for $lt$keccak_ring.v:277$6385: $auto$alumacc.cc:512:replace_alu$7360
+  creating $alu cell for $lt$keccak_ring.v:277$6365: $auto$alumacc.cc:512:replace_alu$7365
+  creating $alu cell for $lt$keccak_ring.v:277$6355, $eq$keccak_ring.v:133$5831: $auto$alumacc.cc:512:replace_alu$7370
+  creating $alu cell for $lt$keccak_ring.v:277$6325: $auto$alumacc.cc:512:replace_alu$7377
+  creating $alu cell for $lt$keccak_ring.v:277$6315: $auto$alumacc.cc:512:replace_alu$7382
+  creating $alu cell for $lt$keccak_ring.v:277$6305: $auto$alumacc.cc:512:replace_alu$7387
+  creating $alu cell for $lt$keccak_ring.v:277$6285: $auto$alumacc.cc:512:replace_alu$7392
+  creating $alu cell for $lt$keccak_ring.v:277$6265: $auto$alumacc.cc:512:replace_alu$7397
+  creating $alu cell for $lt$keccak_ring.v:277$6245: $auto$alumacc.cc:512:replace_alu$7402
+  creating $alu cell for $lt$keccak_ring.v:277$6225: $auto$alumacc.cc:512:replace_alu$7407
+  creating $alu cell for $lt$keccak_ring.v:277$6205: $auto$alumacc.cc:512:replace_alu$7412
+  creating $alu cell for $lt$keccak_ring.v:277$6185, $eq$keccak_ring.v:176$5876: $auto$alumacc.cc:512:replace_alu$7417
+  creating $alu cell for $lt$keccak_ring.v:277$6175, $eq$keccak_ring.v:106$5825: $auto$alumacc.cc:512:replace_alu$7424
+  creating $alu cell for $lt$keccak_ring.v:277$6145: $auto$alumacc.cc:512:replace_alu$7431
+  creating $alu cell for $add$keccak_ring.v:124$5829: $auto$alumacc.cc:512:replace_alu$7436
+  creating $alu cell for $add$keccak_ring.v:129$5830: $auto$alumacc.cc:512:replace_alu$7439
+  creating $alu cell for $add$keccak_ring.v:133$5832: $auto$alumacc.cc:512:replace_alu$7442
+  creating $alu cell for $add$keccak_ring.v:142$5836: $auto$alumacc.cc:512:replace_alu$7445
+  created 28 $alu and 0 $macc cells.
+
+4.14. Executing SHARE pass (SAT-based resource sharing).
+
+4.15. Executing OPT pass (performing simple optimizations).
+
+4.15.1. Executing OPT_EXPR pass (perform const folding).
+Optimizing module keccak_ring.
+<suppressed ~4 debug messages>
+
+4.15.2. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\keccak_ring'.
+Computing hashes of 738 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Computing hashes of 737 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+<suppressed ~5 debug messages>
+Removed a total of 1 cells.
+
+4.15.3. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \keccak_ring..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~118 debug messages>
+
+4.15.4. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \keccak_ring.
+Performed a total of 0 changes.
+
+4.15.5. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\keccak_ring'.
+Computing hashes of 737 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Removed a total of 0 cells.
+
+4.15.6. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.15.7. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \keccak_ring..
+Removed 1 unused cells and 37 unused wires.
+<suppressed ~3 debug messages>
+
+4.15.8. Executing OPT_EXPR pass (perform const folding).
+Optimizing module keccak_ring.
+
+4.15.9. Rerunning OPT passes. (Maybe there is more to do..)
+
+4.15.10. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \keccak_ring..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~118 debug messages>
+
+4.15.11. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \keccak_ring.
+Performed a total of 0 changes.
+
+4.15.12. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\keccak_ring'.
+Computing hashes of 735 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Removed a total of 0 cells.
+
+4.15.13. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.15.14. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \keccak_ring..
+
+4.15.15. Executing OPT_EXPR pass (perform const folding).
+Optimizing module keccak_ring.
+
+4.15.16. Finished fast OPT passes. (There is nothing left to do.)
+
+4.16. Executing MEMORY pass.
+
+4.16.1. Executing OPT_MEM pass (optimize memories).
+Performed a total of 0 transformations.
+
+4.16.2. Executing OPT_MEM_PRIORITY pass (removing unnecessary memory write priority relations).
+Performed a total of 0 transformations.
+
+4.16.3. Executing OPT_MEM_FEEDBACK pass (finding memory read-to-write feedback paths).
+
+4.16.4. Executing MEMORY_BMUX2ROM pass (converting muxes to ROMs).
+
+4.16.5. Executing MEMORY_DFF pass (merging $dff cells to $memrd).
+Checking read port `$auto$proc_rom.cc:155:do_switch$6965'[0] in module `\keccak_ring': no output FF found.
+Checking read port address `$auto$proc_rom.cc:155:do_switch$6965'[0] in module `\keccak_ring': merged address FF to cell.
+
+4.16.6. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \keccak_ring..
+
+4.16.7. Executing MEMORY_SHARE pass (consolidating $memrd/$memwr cells).
+
+4.16.8. Executing OPT_MEM_WIDEN pass (optimize memories where all ports are wide).
+Performed a total of 0 transformations.
+
+4.16.9. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \keccak_ring..
+
+4.16.10. Executing MEMORY_COLLECT pass (generating $mem cells).
+
+4.17. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \keccak_ring..
+
+4.18. Executing OPT pass (performing simple optimizations).
+
+4.18.1. Executing OPT_EXPR pass (perform const folding).
+Optimizing module keccak_ring.
+<suppressed ~14 debug messages>
+
+4.18.2. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\keccak_ring'.
+Computing hashes of 751 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Computing hashes of 737 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+<suppressed ~42 debug messages>
+Removed a total of 14 cells.
+
+4.18.3. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.18.4. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \keccak_ring..
+Removed 2 unused cells and 19 unused wires.
+<suppressed ~3 debug messages>
+
+4.18.5. Finished fast OPT passes.
+
+4.19. Executing MEMORY_MAP pass (converting memories to logic and flip-flops).
+Mapping memory $auto$proc_rom.cc:155:do_switch$6965 in module \keccak_ring:
+  created 32 $dff cells and 0 static cells of width 7.
+Extracted data FF from read port 0 of keccak_ring.$auto$proc_rom.cc:155:do_switch$6965: $$auto$proc_rom.cc:155:do_switch$6965$rdreg[0]
+  read interface: 1 $dff and 31 $mux cells.
+  write interface: 0 write mux blocks.
+
+4.20. Executing OPT pass (performing simple optimizations).
+
+4.20.1. Executing OPT_EXPR pass (perform const folding).
+Optimizing module keccak_ring.
+<suppressed ~7 debug messages>
+
+4.20.2. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\keccak_ring'.
+Computing hashes of 759 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Removed a total of 0 cells.
+
+4.20.3. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \keccak_ring..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~144 debug messages>
+
+4.20.4. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \keccak_ring.
+    Consolidated identical input bits for $mux cell $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][4][7]$7556:
+      Old ports: A=7'1011101, B=7'1010011, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][3]$b$7522
+      New ports: A=2'10, B=2'01, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][3]$b$7522 [2:1]
+      New connections: { $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][3]$b$7522 [6:3] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][3]$b$7522 [0] } = { 3'101 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][3]$b$7522 [2] 1'1 }
+    Consolidated identical input bits for $mux cell $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][4][6]$7553:
+      Old ports: A=7'0111111, B=7'1001111, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][3]$a$7521
+      New ports: A=2'01, B=2'10, Y={ $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][3]$a$7521 [6] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][3]$a$7521 [4] }
+      New connections: { $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][3]$a$7521 [5] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][3]$a$7521 [3:0] } = { $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][3]$a$7521 [4] 4'1111 }
+    Consolidated identical input bits for $mux cell $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][4][5]$7550:
+      Old ports: A=7'0110101, B=7'0100110, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][2]$b$7519
+      New ports: A=2'01, B=2'10, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][2]$b$7519 [1:0]
+      New connections: $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][2]$b$7519 [6:2] = { 2'01 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][2]$b$7519 [0] 2'01 }
+    Consolidated identical input bits for $mux cell $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][4][4]$7547:
+      Old ports: A=7'0001110, B=7'0001100, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][2]$a$7518
+      New ports: A=1'1, B=1'0, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][2]$a$7518 [1]
+      New connections: { $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][2]$a$7518 [6:2] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][2]$a$7518 [0] } = 6'000110
+    Consolidated identical input bits for $mux cell $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][4][3]$7544:
+      Old ports: A=7'1111001, B=7'1010101, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$b$7516
+      New ports: A=2'10, B=2'01, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$b$7516 [3:2]
+      New connections: { $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$b$7516 [6:4] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$b$7516 [1:0] } = { 1'1 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$b$7516 [3] 3'101 }
+    Consolidated identical input bits for $mux cell $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][4][2]$7541:
+      Old ports: A=7'0011111, B=7'0100001, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$a$7515
+      New ports: A=2'01, B=2'10, Y={ $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$a$7515 [5] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$a$7515 [1] }
+      New connections: { $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$a$7515 [6] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$a$7515 [4:2] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$a$7515 [0] } = { 1'0 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$a$7515 [1] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$a$7515 [1] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$a$7515 [1] 1'1 }
+    Consolidated identical input bits for $mux cell $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][4][1]$7538:
+      Old ports: A=7'1011110, B=7'1110000, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$b$7513
+      New ports: A=2'01, B=2'10, Y={ $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$b$7513 [5] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$b$7513 [1] }
+      New connections: { $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$b$7513 [6] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$b$7513 [4:2] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$b$7513 [0] } = { 2'11 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$b$7513 [1] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$b$7513 [1] 1'0 }
+    Consolidated identical input bits for $mux cell $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][4][0]$7535:
+      Old ports: A=7'0000001, B=7'0011010, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$a$7512
+      New ports: A=2'01, B=2'10, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$a$7512 [1:0]
+      New connections: $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$a$7512 [6:2] = { 2'00 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$a$7512 [1] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$a$7512 [1] 1'0 }
+    Consolidated identical input bits for $mux cell $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][4][11]$7568:
+      Old ports: A=7'0100001, B=7'1110100, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][5]$b$7528
+      New ports: A=2'01, B=2'10, Y={ $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][5]$b$7528 [2] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][5]$b$7528 [0] }
+      New connections: { $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][5]$b$7528 [6:3] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][5]$b$7528 [1] } = { $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][5]$b$7528 [2] 1'1 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][5]$b$7528 [2] 2'00 }
+    Consolidated identical input bits for $mux cell $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][4][9]$7562:
+      Old ports: A=7'0010110, B=7'1100110, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$b$7525
+      New ports: A=2'01, B=2'10, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$b$7525 [5:4]
+      New connections: { $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$b$7525 [6] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$b$7525 [3:0] } = { $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$b$7525 [5] 4'0110 }
+    Consolidated identical input bits for $mux cell $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][4][8]$7559:
+      Old ports: A=7'1010010, B=7'1001000, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$a$7524
+      New ports: A=2'01, B=2'10, Y={ $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$a$7524 [3] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$a$7524 [1] }
+      New connections: { $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$a$7524 [6:4] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$a$7524 [2] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$a$7524 [0] } = { 2'10 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$a$7524 [1] 2'00 }
+    Consolidated identical input bits for $mux cell $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][4][10]$7565:
+      Old ports: A=7'1111001, B=7'1011000, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][5]$a$7527
+      New ports: A=1'1, B=1'0, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][5]$a$7527 [0]
+      New connections: $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][5]$a$7527 [6:1] = { 1'1 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][5]$a$7527 [0] 4'1100 }
+  Optimizing cells in module \keccak_ring.
+    Consolidated identical input bits for $mux cell $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][5]$7526:
+      Old ports: A=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][5]$a$7527, B=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][5]$b$7528, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][2]$b$7507
+      New ports: A={ $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][5]$a$7527 [0] 3'110 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][5]$a$7527 [0] }, B={ 1'1 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][5]$b$7528 [2] 1'0 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][5]$b$7528 [2] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][5]$b$7528 [0] }, Y={ $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][2]$b$7507 [5:2] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][2]$b$7507 [0] }
+      New connections: { $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][2]$b$7507 [6] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][2]$b$7507 [1] } = { $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][2]$b$7507 [4] 1'0 }
+    Consolidated identical input bits for $mux cell $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$7523:
+      Old ports: A=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$a$7524, B=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$b$7525, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][2]$a$7506
+      New ports: A={ 2'10 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$a$7524 [1] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$a$7524 [3] 1'0 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$a$7524 [1] }, B={ $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$b$7525 [5] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$b$7525 [5:4] 3'011 }, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][2]$a$7506 [6:1]
+      New connections: $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][2]$a$7506 [0] = 1'0
+    Consolidated identical input bits for $mux cell $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][3]$7520:
+      Old ports: A=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][3]$a$7521, B=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][3]$b$7522, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][1]$b$7504
+      New ports: A={ $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][3]$a$7521 [6] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][3]$a$7521 [4] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][3]$a$7521 [4] 2'11 }, B={ 3'101 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][3]$b$7522 [2:1] }, Y={ $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][1]$b$7504 [6:4] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][1]$b$7504 [2:1] }
+      New connections: { $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][1]$b$7504 [3] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][1]$b$7504 [0] } = { $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][1]$b$7504 [2] 1'1 }
+    Consolidated identical input bits for $mux cell $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][2]$7517:
+      Old ports: A=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][2]$a$7518, B=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][2]$b$7519, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][1]$a$7503
+      New ports: A={ 2'01 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][2]$a$7518 [1] 1'0 }, B={ 2'10 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][2]$b$7519 [1:0] }, Y={ $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][1]$a$7503 [5] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][1]$a$7503 [3] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][1]$a$7503 [1:0] }
+      New connections: { $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][1]$a$7503 [6] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][1]$a$7503 [4] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][1]$a$7503 [2] } = { 1'0 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][1]$a$7503 [0] 1'1 }
+    Consolidated identical input bits for $mux cell $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$7514:
+      Old ports: A=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$a$7515, B=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$b$7516, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][0]$b$7501
+      New ports: A={ 1'0 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$a$7515 [5] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$a$7515 [1] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$a$7515 [1] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$a$7515 [1] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$a$7515 [1] }, B={ 1'1 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$b$7516 [3] 1'1 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][1]$b$7516 [3:2] 1'0 }, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][0]$b$7501 [6:1]
+      New connections: $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][0]$b$7501 [0] = 1'1
+    Consolidated identical input bits for $mux cell $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$7511:
+      Old ports: A=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$a$7512, B=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$b$7513, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][0]$a$7500
+      New ports: A={ 2'00 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$a$7512 [1] 1'0 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$a$7512 [1:0] }, B={ 1'1 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$b$7513 [5] 1'1 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$b$7513 [1] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$b$7513 [1] 1'0 }, Y={ $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][0]$a$7500 [6:4] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][0]$a$7500 [2:0] }
+      New connections: $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][0]$a$7500 [3] = $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][0]$a$7500 [1]
+  Optimizing cells in module \keccak_ring.
+Performed a total of 18 changes.
+
+4.20.5. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\keccak_ring'.
+Computing hashes of 759 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Computing hashes of 750 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+<suppressed ~27 debug messages>
+Removed a total of 9 cells.
+
+4.20.6. Executing OPT_SHARE pass.
+
+4.20.7. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.20.8. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \keccak_ring..
+Removed 0 unused cells and 48 unused wires.
+<suppressed ~1 debug messages>
+
+4.20.9. Executing OPT_EXPR pass (perform const folding).
+Optimizing module keccak_ring.
+<suppressed ~1 debug messages>
+
+4.20.10. Rerunning OPT passes. (Maybe there is more to do..)
+
+4.20.11. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \keccak_ring..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~146 debug messages>
+
+4.20.12. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \keccak_ring.
+    Consolidated identical input bits for $mux cell $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][4]$7523:
+      Old ports: A={ 2'10 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$a$7512 [0] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$a$7512 [4] 1'0 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$a$7512 [0] }, B={ $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$a$7512 [4] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$a$7512 [4] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$a$7512 [0] 3'011 }, Y=$memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][2]$a$7506 [6:1]
+      New ports: A={ 2'10 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$a$7512 [4] 1'0 $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$a$7512 [0] }, B={ $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$a$7512 [4] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$a$7512 [4] 3'011 }, Y={ $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][2]$a$7506 [6:5] $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][2]$a$7506 [3:1] }
+      New connections: $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][2][2]$a$7506 [4] = $memory$auto$proc_rom.cc:155:do_switch$6965$rdmux[0][3][0]$a$7512 [0]
+  Optimizing cells in module \keccak_ring.
+Performed a total of 1 changes.
+
+4.20.13. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\keccak_ring'.
+Computing hashes of 750 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Removed a total of 0 cells.
+
+4.20.14. Executing OPT_SHARE pass.
+
+4.20.15. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.20.16. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \keccak_ring..
+
+4.20.17. Executing OPT_EXPR pass (perform const folding).
+Optimizing module keccak_ring.
+
+4.20.18. Rerunning OPT passes. (Maybe there is more to do..)
+
+4.20.19. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \keccak_ring..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~145 debug messages>
+
+4.20.20. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \keccak_ring.
+Performed a total of 0 changes.
+
+4.20.21. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\keccak_ring'.
+Computing hashes of 750 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Removed a total of 0 cells.
+
+4.20.22. Executing OPT_SHARE pass.
+
+4.20.23. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.20.24. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \keccak_ring..
+
+4.20.25. Executing OPT_EXPR pass (perform const folding).
+Optimizing module keccak_ring.
+
+4.20.26. Finished fast OPT passes. (There is nothing left to do.)
+
+4.21. Executing TECHMAP pass (map to technology primitives).
+
+4.21.1. Executing Verilog-2005 frontend: /nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/techmap.v
+Parsing Verilog input from `/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/techmap.v' to AST representation.
+Generating RTLIL representation for module `\_90_simplemap_bool_ops'.
+Generating RTLIL representation for module `\_90_simplemap_reduce_ops'.
+Generating RTLIL representation for module `\_90_simplemap_logic_ops'.
+Generating RTLIL representation for module `\_90_simplemap_compare_ops'.
+Generating RTLIL representation for module `\_90_simplemap_various'.
+Generating RTLIL representation for module `\_90_simplemap_registers'.
+Generating RTLIL representation for module `\_90_shift_ops_shr_shl_sshl_sshr'.
+Generating RTLIL representation for module `\_90_shift_shiftx'.
+Generating RTLIL representation for module `\_90_fa'.
+Generating RTLIL representation for module `\_90_lcu_brent_kung'.
+Generating RTLIL representation for module `\_90_alu'.
+Generating RTLIL representation for module `\_90_macc'.
+Generating RTLIL representation for module `\_90_alumacc'.
+Generating RTLIL representation for module `$__div_mod_u'.
+Generating RTLIL representation for module `$__div_mod_trunc'.
+Generating RTLIL representation for module `\_90_div'.
+Generating RTLIL representation for module `\_90_mod'.
+Generating RTLIL representation for module `$__div_mod_floor'.
+Generating RTLIL representation for module `\_90_divfloor'.
+Generating RTLIL representation for module `\_90_modfloor'.
+Generating RTLIL representation for module `\_90_pow'.
+Generating RTLIL representation for module `\_90_pmux'.
+Generating RTLIL representation for module `\_90_demux'.
+Generating RTLIL representation for module `\_90_lut'.
+Generating RTLIL representation for module `$connect'.
+Generating RTLIL representation for module `$input_port'.
+Successfully finished Verilog frontend.
+
+4.21.2. Continuing TECHMAP pass.
+Using extmapper simplemap for cells of type $not.
+Using extmapper simplemap for cells of type $mux.
+Using template $paramod$672a140277c71df8314410f22acc08d55222c3c7\_90_alu for cells of type $alu.
+Using template $paramod$754650b284649a026620fc6856e5b6886cbfe794\_90_alu for cells of type $alu.
+Using extmapper simplemap for cells of type $reduce_and.
+Using template $paramod$b18e16801adf491a64caa0542270798e5d4ac6b6\_90_alu for cells of type $alu.
+Using template $paramod$dc04b7d98e503a7bab16fce2df70e6e2c5ca34d6\_90_alu for cells of type $alu.
+Using template $paramod$740b056ede97228d3eae64ea2fdc81f0a33e0fe7\_90_alu for cells of type $alu.
+Using template $paramod$f956edc9fe4df758d9fdb10bfc518a364c99e75e\_90_alu for cells of type $alu.
+Using template $paramod$8b1a36ab2238111d2a0f4cb4ef2e14f2a55fc1f9\_90_alu for cells of type $alu.
+Using template $paramod$b8c0a997bce700f23568a5ada79cc6781d1f5ca0\_90_alu for cells of type $alu.
+Using template $paramod$dad13a281fa6a9ffd6dd427a87dc9a952e80e9ea\_90_alu for cells of type $alu.
+Using template $paramod$78e969f2586efcf3a5b0b0440bcca0db83d5cca2\_90_alu for cells of type $alu.
+Using template $paramod$2116a631f856d4d4902c2618dca73dafa3b8c9c0\_90_alu for cells of type $alu.
+Using template $paramod$7e708ae28ab761f11d0fb59d3ffc72f6a4baf5d9\_90_alu for cells of type $alu.
+Using template $paramod$8742280fdebca84e1c87f2a86ed84f62d558f4cc\_90_alu for cells of type $alu.
+Using extmapper simplemap for cells of type $sdff.
+Using extmapper simplemap for cells of type $ne.
+Using extmapper simplemap for cells of type $reduce_bool.
+Using extmapper simplemap for cells of type $sdffe.
+Using extmapper simplemap for cells of type $reduce_or.
+Using extmapper simplemap for cells of type $and.
+Using extmapper simplemap for cells of type $eq.
+Using extmapper simplemap for cells of type $dff.
+Using extmapper simplemap for cells of type $or.
+Using extmapper simplemap for cells of type $logic_not.
+Using extmapper simplemap for cells of type $logic_and.
+Using extmapper simplemap for cells of type $xor.
+Using template $paramod$70d30c21ff772b34d0d1da2801fbd781dc3c70e4\_90_pmux for cells of type $pmux.
+Using extmapper simplemap for cells of type $pos.
+Using template $paramod\_90_fa\WIDTH=32'00000000000000000000000000000100 for cells of type $fa.
+Using template $paramod\_90_lcu_brent_kung\WIDTH=32'00000000000000000000000000000100 for cells of type $lcu.
+Using template $paramod\_90_fa\WIDTH=32'00000000000000000000000000000101 for cells of type $fa.
+Using template $paramod\_90_lcu_brent_kung\WIDTH=32'00000000000000000000000000000101 for cells of type $lcu.
+Using template $paramod\_90_fa\WIDTH=32'00000000000000000000000000001010 for cells of type $fa.
+Using template $paramod\_90_lcu_brent_kung\WIDTH=32'00000000000000000000000000001010 for cells of type $lcu.
+Using template $paramod\_90_fa\WIDTH=32'00000000000000000000000000000011 for cells of type $fa.
+Using template $paramod\_90_lcu_brent_kung\WIDTH=32'00000000000000000000000000000011 for cells of type $lcu.
+Using template $paramod\_90_fa\WIDTH=32'00000000000000000000000000000010 for cells of type $fa.
+Using template $paramod\_90_lcu_brent_kung\WIDTH=32'00000000000000000000000000000010 for cells of type $lcu.
+No more expansions possible.
+<suppressed ~2259 debug messages>
+
+4.22. Executing OPT pass (performing simple optimizations).
+
+4.22.1. Executing OPT_EXPR pass (perform const folding).
+Optimizing module keccak_ring.
+<suppressed ~1218 debug messages>
+
+4.22.2. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\keccak_ring'.
+Computing hashes of 3197 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Computing hashes of 3000 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Computing hashes of 2925 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Computing hashes of 2902 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Computing hashes of 2884 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Computing hashes of 2877 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Computing hashes of 2876 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+<suppressed ~963 debug messages>
+Removed a total of 321 cells.
+
+4.22.3. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.22.4. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \keccak_ring..
+Removed 60 unused cells and 1505 unused wires.
+<suppressed ~61 debug messages>
+
+4.22.5. Finished fast OPT passes.
+
+4.23. Executing ABC pass (technology mapping using ABC).
+
+4.23.1. Extracting gate netlist of module `\keccak_ring' to `<abc-temp-dir>/input.blif'..
+
+4.23.1.1. Executed ABC.
+Extracted 1103 gates and 1235 wires to a netlist network with 130 inputs and 130 outputs.
+Running ABC script: <abc-temp-dir>/abc.script
+ABC: ======== ABC command line "source <abc-temp-dir>/abc.script"
+ABC: + read_blif <abc-temp-dir>/input.blif 
+ABC: + read_library /tmp/yosys-abc-1XnEuW/stdcells.genlib 
+ABC: + strash 
+ABC: + dretime 
+ABC: + map 
+ABC: + write_blif <abc-temp-dir>/output.blif 
+
+4.23.1.2. Re-integrating ABC results.
+ABC RESULTS:               AND cells:       38
+ABC RESULTS:            ANDNOT cells:      156
+ABC RESULTS:               MUX cells:      147
+ABC RESULTS:              NAND cells:       31
+ABC RESULTS:               NOR cells:       21
+ABC RESULTS:               NOT cells:       32
+ABC RESULTS:                OR cells:      119
+ABC RESULTS:             ORNOT cells:      129
+ABC RESULTS:              XNOR cells:       71
+ABC RESULTS:               XOR cells:      214
+ABC RESULTS:        internal signals:      975
+ABC RESULTS:           input signals:      130
+ABC RESULTS:          output signals:      130
+Removing temp directory.
+Removing global temp directory.
+
+4.24. Executing OPT pass (performing simple optimizations).
+
+4.24.1. Executing OPT_EXPR pass (perform const folding).
+Optimizing module keccak_ring.
+<suppressed ~20 debug messages>
+
+4.24.2. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\keccak_ring'.
+Computing hashes of 2671 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+Computing hashes of 2664 cells of `\keccak_ring'.
+Finding duplicate cells in `\keccak_ring'.
+<suppressed ~21 debug messages>
+Removed a total of 7 cells.
+
+4.24.3. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.24.4. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \keccak_ring..
+Removed 0 unused cells and 877 unused wires.
+<suppressed ~98 debug messages>
+
+4.24.5. Finished fast OPT passes.
+
+4.25. Executing HIERARCHY pass (managing design hierarchy).
+Attribute `top' found on module `keccak_ring'. Setting top module to keccak_ring.
+
+4.25.1. Analyzing design hierarchy..
+Top module:  \keccak_ring
+
+4.25.2. Analyzing design hierarchy..
+Top module:  \keccak_ring
+Removed 0 unused modules.
+
+4.26. Printing statistics.
+
+=== keccak_ring ===
+
+        +----------Local Count, excluding submodules.
+        | 
+     1175 wires
+     4588 wire bits
+      329 public wires
+     3732 public wire bits
+        7 ports
+       10 port bits
+     2664 cells
+      155   $_ANDNOT_
+       36   $_AND_
+     1617   $_DFF_P_
+      147   $_MUX_
+       30   $_NAND_
+       19   $_NOR_
+       32   $_NOT_
+      129   $_ORNOT_
+      118   $_OR_
+       15   $_SDFFE_PN0P_
+        7   $_SDFF_PN0_
+       71   $_XNOR_
+      214   $_XOR_
+       37   $scopeinfo
+       37   sky130_fd_sc_hd__dlclkp_1
+
+4.27. Executing CHECK pass (checking for obvious problems).
+Checking module keccak_ring...
+Found and reported 0 problems.
+
+5. Executing DFFLIBMAP pass (mapping DFF cells to sequential cells from liberty file).
+  cell sky130_fd_sc_hd__dfxtp_1 (noninv, pins=3, area=20.02) is a direct match for cell type $_DFF_P_.
+  cell sky130_fd_sc_hd__dfrtn_1 (noninv, pins=4, area=25.02) is a direct match for cell type $_DFF_NN0_.
+  cell sky130_fd_sc_hd__dfrtp_1 (noninv, pins=4, area=25.02) is a direct match for cell type $_DFF_PN0_.
+  cell sky130_fd_sc_hd__dfstp_2 (noninv, pins=4, area=26.28) is a direct match for cell type $_DFF_PN1_.
+  cell sky130_fd_sc_hd__edfxtp_1 (noninv, pins=4, area=30.03) is a direct match for cell type $_DFFE_PP_.
+  cell sky130_fd_sc_hd__dfbbn_1 (noninv, pins=6, area=32.53) is a direct match for cell type $_DFFSR_NNN_.
+  cell sky130_fd_sc_hd__dfbbp_1 (noninv, pins=6, area=32.53) is a direct match for cell type $_DFFSR_PNN_.
+  final dff cell mappings:
+    unmapped dff cell: $_DFF_N_
+    \sky130_fd_sc_hd__dfxtp_1 _DFF_P_ (.CLK( C), .D( D), .Q( Q));
+    \sky130_fd_sc_hd__dfrtn_1 _DFF_NN0_ (.CLK_N( C), .D( D), .Q( Q), .RESET_B( R));
+    unmapped dff cell: $_DFF_NN1_
+    unmapped dff cell: $_DFF_NP0_
+    unmapped dff cell: $_DFF_NP1_
+    \sky130_fd_sc_hd__dfrtp_1 _DFF_PN0_ (.CLK( C), .D( D), .Q( Q), .RESET_B( R));
+    \sky130_fd_sc_hd__dfstp_2 _DFF_PN1_ (.CLK( C), .D( D), .Q( Q), .SET_B( R));
+    unmapped dff cell: $_DFF_PP0_
+    unmapped dff cell: $_DFF_PP1_
+    unmapped dff cell: $_DFFE_NN_
+    unmapped dff cell: $_DFFE_NP_
+    unmapped dff cell: $_DFFE_PN_
+    \sky130_fd_sc_hd__edfxtp_1 _DFFE_PP_ (.CLK( C), .D( D), .DE( E), .Q( Q));
+    \sky130_fd_sc_hd__dfbbn_1 _DFFSR_NNN_ (.CLK_N( C), .D( D), .Q( Q), .Q_N(~Q), .RESET_B( R), .SET_B( S));
+    unmapped dff cell: $_DFFSR_NNP_
+    unmapped dff cell: $_DFFSR_NPN_
+    unmapped dff cell: $_DFFSR_NPP_
+    \sky130_fd_sc_hd__dfbbp_1 _DFFSR_PNN_ (.CLK( C), .D( D), .Q( Q), .Q_N(~Q), .RESET_B( R), .SET_B( S));
+    unmapped dff cell: $_DFFSR_PNP_
+    unmapped dff cell: $_DFFSR_PPN_
+    unmapped dff cell: $_DFFSR_PPP_
+
+5.1. Executing DFFLEGALIZE pass (convert FFs to types supported by the target).
+<suppressed ~24 debug messages>
+Mapping DFF cells in module `\keccak_ring':
+  mapped 1639 $_DFF_P_ cells to \sky130_fd_sc_hd__dfxtp_1 cells.
+
+6. Executing ABC pass (technology mapping using ABC).
+
+6.1. Extracting gate netlist of module `\keccak_ring' to `<abc-temp-dir>/input.blif'..
+
+6.1.1. Executed ABC.
+Extracted 988 gates and 1119 wires to a netlist network with 130 inputs and 127 outputs.
+Running ABC script: <abc-temp-dir>/abc.script
+ABC: ======== ABC command line "source <abc-temp-dir>/abc.script"
+ABC: + read_blif <abc-temp-dir>/input.blif 
+ABC: + read_lib -w /home/papart/.cache/tt-local-ci/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib 
+ABC: Parsing finished successfully.  Parsing time =     0.13 sec
+ABC: Scl_LibertyReadGenlib() skipped cell "sky130_fd_sc_hd__decap_12" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "sky130_fd_sc_hd__decap_3" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "sky130_fd_sc_hd__decap_4" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "sky130_fd_sc_hd__decap_6" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "sky130_fd_sc_hd__decap_8" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dfbbn_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dfbbn_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dfbbp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dfrbp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dfrbp_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dfrtn_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dfrtp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dfrtp_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dfrtp_4".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dfsbp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dfsbp_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dfstp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dfstp_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dfstp_4".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dfxbp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dfxbp_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dfxtp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dfxtp_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dfxtp_4".
+ABC: Scl_LibertyReadGenlib() skipped cell "sky130_fd_sc_hd__diode_2" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "sky130_fd_sc_hd__dlclkp_1" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "sky130_fd_sc_hd__dlclkp_2" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "sky130_fd_sc_hd__dlclkp_4" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dlrbn_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dlrbn_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dlrbp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dlrbp_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dlrtn_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dlrtn_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dlrtn_4".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dlrtp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dlrtp_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dlrtp_4".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dlxbn_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dlxbn_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dlxbp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dlxtn_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dlxtn_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dlxtn_4".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__dlxtp_1".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "sky130_fd_sc_hd__ebufn_1".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "sky130_fd_sc_hd__ebufn_2".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "sky130_fd_sc_hd__ebufn_4".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "sky130_fd_sc_hd__ebufn_8".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__edfxbp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__edfxtp_1".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "sky130_fd_sc_hd__einvn_0".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "sky130_fd_sc_hd__einvn_1".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "sky130_fd_sc_hd__einvn_2".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "sky130_fd_sc_hd__einvn_4".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "sky130_fd_sc_hd__einvn_8".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "sky130_fd_sc_hd__einvp_1".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "sky130_fd_sc_hd__einvp_2".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "sky130_fd_sc_hd__einvp_4".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "sky130_fd_sc_hd__einvp_8".
+ABC: Scl_LibertyReadGenlib() skipped cell "sky130_fd_sc_hd__lpflow_bleeder_1" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "sky130_fd_sc_hd__lpflow_decapkapwr_12" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "sky130_fd_sc_hd__lpflow_decapkapwr_3" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "sky130_fd_sc_hd__lpflow_decapkapwr_4" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "sky130_fd_sc_hd__lpflow_decapkapwr_6" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "sky130_fd_sc_hd__lpflow_decapkapwr_8" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__lpflow_inputisolatch_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sdfbbn_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sdfbbn_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sdfbbp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sdfrbp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sdfrbp_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sdfrtn_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sdfrtp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sdfrtp_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sdfrtp_4".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sdfsbp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sdfsbp_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sdfstp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sdfstp_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sdfstp_4".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sdfxbp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sdfxbp_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sdfxtp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sdfxtp_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sdfxtp_4".
+ABC: Scl_LibertyReadGenlib() skipped cell "sky130_fd_sc_hd__sdlclkp_1" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "sky130_fd_sc_hd__sdlclkp_2" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "sky130_fd_sc_hd__sdlclkp_4" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sedfxbp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sedfxbp_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sedfxtp_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sedfxtp_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "sky130_fd_sc_hd__sedfxtp_4".
+ABC: Library "sky130_fd_sc_hd__tt_025C_1v80" from "/home/papart/.cache/tt-local-ci/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib" has 334 cells (94 skipped: 63 seq; 13 tri-state; 18 no func; 0 dont_use; 0 with 2 outputs; 0 with 3+ outputs).  Time =     0.24 sec
+ABC: Memory =   19.85 MB. Time =     0.24 sec
+ABC: Warning: Detected 9 multi-output cells (for example, "sky130_fd_sc_hd__fa_1").
+ABC: + strash 
+ABC: + &get -n 
+ABC: + &fraig -x 
+ABC: + &put 
+ABC: + scorr 
+ABC: Warning: The network is combinational (run "fraig" or "fraig_sweep").
+ABC: + dc2 
+ABC: + dretime 
+ABC: + strash 
+ABC: + &get -n 
+ABC: + &dch -f 
+ABC: + &nf 
+ABC: + &put 
+ABC: + write_blif <abc-temp-dir>/output.blif 
+
+6.1.2. Re-integrating ABC results.
+ABC RESULTS:   sky130_fd_sc_hd__a2111oi_0 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__a211o_1 cells:        3
+ABC RESULTS:   sky130_fd_sc_hd__a21boi_0 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__a21o_1 cells:        2
+ABC RESULTS:   sky130_fd_sc_hd__a21oi_1 cells:       42
+ABC RESULTS:   sky130_fd_sc_hd__a221o_1 cells:        2
+ABC RESULTS:   sky130_fd_sc_hd__a221oi_1 cells:        2
+ABC RESULTS:   sky130_fd_sc_hd__a22o_1 cells:        4
+ABC RESULTS:   sky130_fd_sc_hd__a22oi_1 cells:       48
+ABC RESULTS:   sky130_fd_sc_hd__a31oi_1 cells:        7
+ABC RESULTS:   sky130_fd_sc_hd__a32o_1 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__a32oi_1 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__and2_0 cells:        3
+ABC RESULTS:   sky130_fd_sc_hd__and3_1 cells:        6
+ABC RESULTS:   sky130_fd_sc_hd__and4_1 cells:        3
+ABC RESULTS:   sky130_fd_sc_hd__and4b_1 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__clkinv_1 cells:       16
+ABC RESULTS:   sky130_fd_sc_hd__lpflow_inputiso1p_1 cells:       12
+ABC RESULTS:   sky130_fd_sc_hd__lpflow_isobufsrc_1 cells:       39
+ABC RESULTS:   sky130_fd_sc_hd__mux2_1 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__nand2_1 cells:      112
+ABC RESULTS:   sky130_fd_sc_hd__nand2b_1 cells:       45
+ABC RESULTS:   sky130_fd_sc_hd__nand3_1 cells:       10
+ABC RESULTS:   sky130_fd_sc_hd__nand3b_1 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__nand4_1 cells:        9
+ABC RESULTS:   sky130_fd_sc_hd__nor2_1 cells:       56
+ABC RESULTS:   sky130_fd_sc_hd__nor3_1 cells:       11
+ABC RESULTS:   sky130_fd_sc_hd__nor3b_1 cells:        3
+ABC RESULTS:   sky130_fd_sc_hd__nor4b_1 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__o2111ai_1 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__o211a_1 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__o211ai_1 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__o21a_1 cells:        5
+ABC RESULTS:   sky130_fd_sc_hd__o21ai_0 cells:       80
+ABC RESULTS:   sky130_fd_sc_hd__o221ai_1 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__o22ai_1 cells:        7
+ABC RESULTS:   sky130_fd_sc_hd__o311ai_0 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__o31a_1 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__o31ai_1 cells:        2
+ABC RESULTS:   sky130_fd_sc_hd__o32ai_1 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__or3_1 cells:        6
+ABC RESULTS:   sky130_fd_sc_hd__or3b_1 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__or4b_1 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__xnor2_1 cells:      185
+ABC RESULTS:   sky130_fd_sc_hd__xnor3_1 cells:        3
+ABC RESULTS:   sky130_fd_sc_hd__xor2_1 cells:       51
+ABC RESULTS:   sky130_fd_sc_hd__xor3_1 cells:        2
+ABC RESULTS:        internal signals:      862
+ABC RESULTS:           input signals:      130
+ABC RESULTS:          output signals:      127
+Removing temp directory.
+Removing global temp directory.
+
+7. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \keccak_ring..
+Removed 0 unused cells and 1113 unused wires.
+<suppressed ~2 debug messages>
+
+8. Printing statistics.
+
+=== keccak_ring ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+     1022        - wires
+     4430        - wire bits
+      328        - public wires
+     3730        - public wire bits
+        7        - ports
+       10        - port bits
+     2506 3.86E+04 cells
+       37        -   $scopeinfo
+        1    8.758   sky130_fd_sc_hd__a2111oi_0
+        3   26.275   sky130_fd_sc_hd__a211o_1
+        1    7.507   sky130_fd_sc_hd__a21boi_0
+        2   15.014   sky130_fd_sc_hd__a21o_1
+       42  210.202   sky130_fd_sc_hd__a21oi_1
+        2   20.019   sky130_fd_sc_hd__a221o_1
+        2   17.517   sky130_fd_sc_hd__a221oi_1
+        4   35.034   sky130_fd_sc_hd__a22o_1
+       48  360.346   sky130_fd_sc_hd__a22oi_1
+        7   43.792   sky130_fd_sc_hd__a31oi_1
+        1    10.01   sky130_fd_sc_hd__a32o_1
+        1    8.758   sky130_fd_sc_hd__a32oi_1
+        3   18.768   sky130_fd_sc_hd__and2_0
+        6   37.536   sky130_fd_sc_hd__and3_1
+        3   26.275   sky130_fd_sc_hd__and4_1
+        1    10.01   sky130_fd_sc_hd__and4b_1
+       16   60.058   sky130_fd_sc_hd__clkinv_1
+     1639 3.28E+04   sky130_fd_sc_hd__dfxtp_1
+       37  648.122   sky130_fd_sc_hd__dlclkp_1
+       12   75.072   sky130_fd_sc_hd__lpflow_inputiso1p_1
+       39  243.984   sky130_fd_sc_hd__lpflow_isobufsrc_1
+        1   11.261   sky130_fd_sc_hd__mux2_1
+      112  420.403   sky130_fd_sc_hd__nand2_1
+       45   281.52   sky130_fd_sc_hd__nand2b_1
+       10   50.048   sky130_fd_sc_hd__nand3_1
+        1    7.507   sky130_fd_sc_hd__nand3b_1
+        9   56.304   sky130_fd_sc_hd__nand4_1
+       56  210.202   sky130_fd_sc_hd__nor2_1
+       11   55.053   sky130_fd_sc_hd__nor3_1
+        3   22.522   sky130_fd_sc_hd__nor3b_1
+        1    8.758   sky130_fd_sc_hd__nor4b_1
+        1    8.758   sky130_fd_sc_hd__o2111ai_1
+        1    10.01   sky130_fd_sc_hd__o211a_1
+        1    7.507   sky130_fd_sc_hd__o211ai_1
+        5   37.536   sky130_fd_sc_hd__o21a_1
+       80  400.384   sky130_fd_sc_hd__o21ai_0
+        1    8.758   sky130_fd_sc_hd__o221ai_1
+        7   43.792   sky130_fd_sc_hd__o22ai_1
+        1    8.758   sky130_fd_sc_hd__o311ai_0
+        1    8.758   sky130_fd_sc_hd__o31a_1
+        2   15.014   sky130_fd_sc_hd__o31ai_1
+        1    8.758   sky130_fd_sc_hd__o32ai_1
+        6   37.536   sky130_fd_sc_hd__or3_1
+        1    8.758   sky130_fd_sc_hd__or3b_1
+        1    10.01   sky130_fd_sc_hd__or4b_1
+      185 1.62E+03   sky130_fd_sc_hd__xnor2_1
+        3   67.565   sky130_fd_sc_hd__xnor3_1
+       51  446.678   sky130_fd_sc_hd__xor2_1
+        2   47.546   sky130_fd_sc_hd__xor3_1
+
+   Area for cell type $scopeinfo is unknown!
+
+   Chip area for module '\keccak_ring': 38614.534400
+     of which used for sequential elements: 32811.468800 (84.97%)
+
+End of script. Logfile hash: 67bcb88ca8, CPU: user 7.67s system 0.05s, MEM: 61.18 MB peak
+Yosys 0.62 (git sha1 7326bb7d6641500ecb285c291a54a662cb1e76cf, clang++ 21.1.2 -fPIC -O3)
+Time spent: 61% 3x read_verilog (5 sec), 10% 2x abc (0 sec), ...

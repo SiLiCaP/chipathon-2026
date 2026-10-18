@@ -1,0 +1,31 @@
+rm -f results_2_1.xml
+"make" -f Makefile results_2_1.xml
+make[1]: Entering directory '/home/papart/development/TT/chipathon-2026/research/sha3'
+mkdir -p sim_build_2_1
+/usr/bin/iverilog -o sim_build_2_1/sim.vvp -s keccak_ring -g2012 -DKC_BEHAV_ICG -Pkeccak_ring.CLOCK_GATING=1 -Pkeccak_ring.K=2 -f sim_build_2_1/cmds.f  /home/papart/development/TT/chipathon-2026/research/sha3/keccak_ring.v
+rm -f results_2_1.xml
+COCOTB_TEST_MODULES=test_keccak_ring COCOTB_TESTCASE= COCOTB_TEST_FILTER= COCOTB_TOPLEVEL=keccak_ring TOPLEVEL_LANG=verilog \
+         /usr/bin/vvp -M /opt/venv-test/lib/python3.12/site-packages/cocotb/libs -m libcocotbvpi_icarus   sim_build_2_1/sim.vvp   
+     -.--ns INFO     gpi                                ..mbed/gpi_embed.cpp:93   in _embed_init_python              Using Python 3.12.4 interpreter at /opt/venv-test/bin/python3
+     -.--ns INFO     gpi                                ../gpi/GpiCommon.cpp:79   in gpi_print_registered_impl       VPI registered
+     0.00ns INFO     cocotb                             Running on Icarus Verilog version 13.0 (stable)
+     0.00ns INFO     cocotb                             Seeding Python random module with 1792264599
+     0.00ns INFO     cocotb                             Initialized cocotb v2.0.1 from /opt/venv-test/lib/python3.12/site-packages/cocotb
+     0.00ns INFO     cocotb                             Running tests
+     0.00ns INFO     cocotb.regression                  running test_keccak_ring.test_permutation (1/2)
+233980.00ns INFO     cocotb.regression                  test_keccak_ring.test_permutation passed
+233980.00ns INFO     cocotb.regression                  running test_keccak_ring.test_hashes (2/2)
+841940.00ns INFO     cocotb.keccak_ring                 sha3_256: ok
+1616140.00ns INFO     cocotb.keccak_ring                 sha3_512: ok
+2912700.00ns INFO     cocotb.keccak_ring                 shake_128: ok
+3826620.00ns INFO     cocotb.keccak_ring                 shake_256: ok
+3826620.00ns INFO     cocotb.regression                  test_keccak_ring.test_hashes passed
+3826620.00ns INFO     cocotb.regression                  *******************************************************************************************
+                                                         ** TEST                               STATUS  SIM TIME (ns)  REAL TIME (s)  RATIO (ns/s) **
+                                                         *******************************************************************************************
+                                                         ** test_keccak_ring.test_permutation   PASS      233980.00           6.84      34218.85  **
+                                                         ** test_keccak_ring.test_hashes        PASS     3592640.00         170.85      21028.58  **
+                                                         *******************************************************************************************
+                                                         ** TESTS=2 PASS=2 FAIL=0 SKIP=0                 3826620.00         177.68      21535.99  **
+                                                         *******************************************************************************************
+make[1]: Leaving directory '/home/papart/development/TT/chipathon-2026/research/sha3'
