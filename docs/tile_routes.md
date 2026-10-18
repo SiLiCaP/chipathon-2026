@@ -224,6 +224,8 @@ stream-out. Times come from LibreLane's per-step `runtime.txt` (`tools/harden_ti
 | Hash-only K = 8 + CBD, 3×2 | 0.8 min | 0.1 min | 0.9 min | 0.7 min | 41.1 min | 1.1 min | **44.8 min** |
 | SHA-only K = 4, 2×2 (long routing) | 0.2 min | 0.1 min | 0.4 min | 0.4 min | 82.9 min | 0.8 min | **84.9 min** |
 | SHA-only K = 8, 2×2 (does not route) | 0.6 min | 0.1 min | 0.5 min | 0.5 min | > 60 min, stopped | – | – |
+| Hash-only K = 8 + CBD, 2×2 (does not route) | 0.8 min | 0.2 min | 0.9 min | 0.8 min | > 40 min, stopped | – | – |
+| Hash-only K = 16 + CBD, 3×2 (does not route) | 0.8 min | 0.1 min | 0.3 min | 0.3 min | > 1 h 40 min, stopped | – | – |
 
 - **Uncongested designs finish in 5–6 minutes**, with routing and signoff taking most of it. A GitHub Actions GDS
   run of the same flow took about 12 hours per run in our experience.
