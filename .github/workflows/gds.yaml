@@ -37,7 +37,7 @@ jobs:
             exit 0
           fi
           for i in $(seq 1 20); do
-            n=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/statuses" \
+            n=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/statuses?per_page=100" \
                   --jq '[.[] | select(.context == "host-ci/gds")] | length' || echo 0)
             if [ "${n:-0}" -gt 0 ]; then
               echo "The host acknowledged $GITHUB_SHA (host-ci/gds): skipping the GitHub build."
