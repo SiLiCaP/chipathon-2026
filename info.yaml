@@ -1,14 +1,18 @@
 # Tiny Tapeout project information
 project:
-  title:        "NTT Core"      # Project title
+  title:        "SHA-3 Engine"      # Project title
   author:       "Nikita"      # Your name
   discord:      ""      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  "ML-KEM NTT, inverse NTT, basemul and scale mod 3329, streamed by a host"      # One line description of what your project does
+  description:  "Keccak-f[1600] sponge for ML-KEM: SHA3-256/512, SHAKE128/256 at 368 clocks per permutation, burst squeeze and SamplePolyCBD"      # One line description of what your project does
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
-  clock_hz:     1000000 # Clock frequency in Hz (or 0 if not applicable)
+  clock_hz:     50000000 # Clock frequency in Hz (or 0 if not applicable)
 
   # How many tiles your design occupies? A single tile is about 167x108 uM.
-  tiles: "2x2"          # Valid values: 1x1, 1x2, 2x2, 3x2, 4x2, 6x2 or 8x2
+  tiles: "3x2"          # Valid values: 1x1, 1x2, 2x2, 3x2, 4x2, 6x2 or 8x2
+  # Fun fact: the host CI also hardened this chip "standing up", on a 2x3 die (2 tiles wide, 3 tall,
+  # 334.88 x 368.56 um), a shape Tiny Tapeout can't take (slots are at most 2 rows tall). It signed off
+  # clean anyway: 51.9 % utilization, 0 DRC / LVS / antenna, +7.57 ns setup at the slow corner, in 9.4 min.
+  # 3x2 for comparison: 55.5 %, +8.17 ns. (docs/host-ci.md, research dies)
 
   # Your top module name must start with "tt_um_". Make it unique by including your github username:
   top_module:  "tt_um_NTT_Core"
@@ -19,49 +23,41 @@ project:
   source_files:
     - "tt_um_NTT_Core.v"
     - "io_in_capture.v"
-    - "io_out_pack.v"
-    - "ntt_core.v"
-    - "ntt_ctrl.v"
-    - "ntt_sched.v"
-    - "ntt_twiddle.v"
-    - "ntt_delay.v"
-    - "zeta_rom.v"
-    - "modq_mul.v"
-    - "modq_addsub.v"
-    - "modq_acc.v"
+    - "hash_io.v"
+    - "keccak_ring.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).
 pinout:
   # Inputs
-  ui[0]: "coeff[0]"
-  ui[1]: "coeff[1]"
-  ui[2]: "coeff[2]"
-  ui[3]: "coeff[3]"
-  ui[4]: "coeff[4]"
-  ui[5]: "coeff[5]"
-  ui[6]: "coeff[6]"
-  ui[7]: "coeff[7]"
+  ui[0]: "data[0]"
+  ui[1]: "data[1]"
+  ui[2]: "data[2]"
+  ui[3]: "data[3]"
+  ui[4]: "data[4]"
+  ui[5]: "data[5]"
+  ui[6]: "data[6]"
+  ui[7]: "data[7]"
 
   # Outputs
-  uo[0]: "result[0]"
-  uo[1]: "result[1]"
-  uo[2]: "result[2]"
-  uo[3]: "result[3]"
-  uo[4]: "result[4]"
-  uo[5]: "result[5]"
-  uo[6]: "result[6]"
-  uo[7]: "result[7]"
+  uo[0]: "byte[0]"
+  uo[1]: "byte[1]"
+  uo[2]: "byte[2]"
+  uo[3]: "byte[3]"
+  uo[4]: "byte[4]"
+  uo[5]: "byte[5]"
+  uo[6]: "byte[6]"
+  uo[7]: "byte[7]"
 
   # Bidirectional pins
-  uio[0]: "coeff[8]"
-  uio[1]: "coeff[9]"
-  uio[2]: "coeff[10]"
-  uio[3]: "coeff[11]"
+  uio[0]: "tag[0] (1)"
+  uio[1]: "tag[1] (1)"
+  uio[2]: "tag[2] (1)"
+  uio[3]: "tag[3] (1)"
   uio[4]: "valid"
-  uio[5]: "sof"
-  uio[6]: "op[0]"
-  uio[7]: "op[1]"
+  uio[5]: "cmd[2]"
+  uio[6]: "cmd[0]"
+  uio[7]: "cmd[1]"
 
 # Do not change!
 yaml_version: 6

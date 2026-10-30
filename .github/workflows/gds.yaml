@@ -1,3 +1,15 @@
+# GDS build with a host fallback.
+#
+# The owner's home server ("the host") builds every push with local-ci/ and posts commit statuses
+# `host-ci/gds` (and `host-ci/rig` for the Pico + Tang Nano rig). To spare GitHub Actions minutes, the jobs below
+# only run when the host did NOT pick the commit up:
+#
+#   - on `push`, `wait-host` polls the commit's statuses every 30 s for up to 10 minutes. As soon as any state
+#     (pending, success, failure, error) of the context `host-ci/gds` appears, the host owns this commit and
+#     every job here is skipped. If nothing appears (host down or offline), the jobs build on GitHub as before.
+#   - on `workflow_dispatch` (a manual run) `wait-host` answers "no" at once: a manual run always builds on GitHub.
+#
+# local-ci reads the `pdk:` line of the gds job below: keep it.
 name: gds
 
 on:
@@ -5,7 +17,42 @@ on:
   workflow_dispatch:
 
 jobs:
+  wait-host:
+    runs-on: ubuntu-24.04
+    permissions:
+      statuses: read
+      contents: read
+    outputs:
+      host: ${{ steps.poll.outputs.host }}
+    steps:
+      - name: Wait for the host to acknowledge (host-ci/gds)
+        id: poll
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" != "push" ]; then
+            echo "Manual or non-push run: building on GitHub."
+            echo "host=no" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          for i in $(seq 1 20); do
+            n=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/statuses?per_page=100" \
+                  --jq '[.[] | select(.context == "host-ci/gds")] | length' || echo 0)
+            if [ "${n:-0}" -gt 0 ]; then
+              echo "The host acknowledged $GITHUB_SHA (host-ci/gds): skipping the GitHub build."
+              echo "host=yes" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "No host-ci/gds status yet ($i/20)"
+            if [ "$i" -lt 20 ]; then sleep 30; fi
+          done
+          echo "The host did not acknowledge within 10 minutes: building on GitHub."
+          echo "host=no" >> "$GITHUB_OUTPUT"
+
   gds:
+    needs: [wait-host]
+    if: needs.wait-host.outputs.host != 'yes'
     runs-on: ubuntu-24.04
     steps:
       - name: checkout repo
@@ -19,14 +66,16 @@ jobs:
           pdk: sky130A
 
   precheck:
-    needs: gds
+    needs: [wait-host, gds]
+    if: needs.wait-host.outputs.host != 'yes'
     runs-on: ubuntu-24.04
     steps:
       - name: Run Tiny Tapeout Precheck
         uses: TinyTapeout/tt-gds-action/precheck@ttsky26d
 
   gl_test:
-    needs: gds
+    needs: [wait-host, gds]
+    if: needs.wait-host.outputs.host != 'yes'
     runs-on: ubuntu-24.04
     steps:
       - name: checkout repo
@@ -38,7 +87,8 @@ jobs:
         uses: TinyTapeout/tt-gds-action/gl_test@ttsky26d
 
   viewer:
-    needs: gds
+    needs: [wait-host, gds]
+    if: needs.wait-host.outputs.host != 'yes'
     runs-on: ubuntu-24.04
     permissions:
       pages: write      # to deploy to Pages

@@ -9,56 +9,51 @@ You can also include images in this folder and reference them in the markdown. E
 
 ## How it works
 
-The chip computes the polynomial arithmetic of ML-KEM (FIPS 203, q = 3329) in four modes:
-forward NTT, inverse NTT, basemul (pointwise multiply in the NTT domain) and scale by
-128^-1. It has no storage. A host streams 12-bit coefficients in on fixed clocks, and
-results come back as bytes on `uo_out` after a fixed delay, with no handshake.
+The chip is a Keccak-f[1600] sponge engine for the hash calls of ML-KEM (FIPS 203): SHA3-256 (H),
+SHA3-512 (G), SHAKE128 (XOF, matrix A) and SHAKE256 (PRF, J). On a microcontroller these calls are
+about 57 % of ML-KEM-512's work; the polynomial arithmetic stays in software. The 1600-bit state
+lives in clock-gated shift rings (`keccak_ring`) and moves 8 slices per clock: one permutation takes
+368 clocks, 7.4 us at 50 MHz. The host pads the message and absorbs and squeezes whole 8-byte lanes.
 
-Inside the chip, one modular multiplier is shared by all modes, together with modular
-adders and two accumulators. The multiplier is pipelined with three rounds of K-RED
-reduction and returns 2197 x a x b. `ntt_core` latches the op on the start-of-frame clock,
-counts butterflies and basemul pieces, and picks every constant itself. A 128-entry ROM
-holds the twiddles scaled by 2197^-1, which cancels the factor: zeta for the NTT layers,
-gamma for basemul, and 304 for scale. The NTT outputs are plain FIPS 203 values. Basemul
-outputs carry a factor 2197, which the scale step removes, so forward, basemul,
-inverse and scale together give the exact product. The host only sends coefficients in
-order.
+On the way out the chip can also run SamplePolyCBD (FIPS 203 Algorithm 8), so a PRF call returns
+ML-KEM's secret and noise coefficients directly instead of raw bytes.
 
-| op (`uio[7:6]`) | Mode | Inputs per job | Result pairs |
+A word on the pins with `uio[4]` = 1 and `uio[3:0]` = 0xF is a command; the command number is
+{`uio[5]`, `uio[7:6]`} and the data byte is `ui[7:0]`.
+
+| cmd | Command | Data (`ui[7:0]`) | Busy afterwards |
 | --- | --- | --- | --- |
-| 00 | Forward NTT, 7 layers | 1792 (b then a per butterfly) | 896 |
-| 01 | Inverse NTT, 7 layers | 1792 (b then a per butterfly) | 896 |
-| 10 | Basemul | 512 (g1, f1, g0, f0 per piece) | 128 |
-| 11 | Scale (x 304 x 2197 = x 3303 x 2197^-1) | 256 | 128 |
+| 0 | Absorb: XOR the byte into the next state byte | byte | - |
+| 1 | Squeeze: the next state byte on `uo_out` 2 clocks later | - | - |
+| 2 | Permute, rewinds the byte pointer | - | 368 clocks |
+| 3 | Clear the state, rewinds the byte pointer | - | 8 clocks |
+| 4 | Skip: the pointer moves to the next lane, which stays untouched (only at a lane boundary) | - | - |
+| 5 | Burst: the next 8n state bytes on `uo_out`, one per clock, the first 2 clocks later | n (1..21) | 8n clocks |
+| 6 | Burst CBD: like Burst, each byte as SamplePolyCBD coefficients | {eta3, 2'b0, n} | 8n clocks |
+| 7 | Reserved, no-op | - | - |
 
-Each result pair (r0, r1) leaves as three bytes on consecutive clocks (ByteEncode12):
-`r0[7:0]`, `{r1[3:0], r0[11:8]}`, `r1[11:4]`. Between results `uo_out` is 0x00.
+Burst CBD output (4-bit two's complement coefficients f[i] in -eta..eta): for eta = 2 each byte
+gives `{f[2i+1], f[2i]}`; for eta = 3 every three bytes give `{0, f[4j]}`, `{0, f[4j+1]}`,
+`{f[4j+3], f[4j+2]}`. The eta = 3 grouping carries on across a Permute and restarts at Clear, so
+PRF_3 (192 bytes, more than SHAKE256's 136-byte rate) is two bursts with a Permute between them.
 
 ## How to test
 
 | Pin | Direction | Function |
 | --- | --- | --- |
-| `ui[7:0]` | in | Coefficient bits 7:0 |
-| `uio[3:0]` | in | Coefficient bits 11:8 |
-| `uio[4]` | in | valid: the data pins hold a coefficient this clock |
-| `uio[5]` | in | sof: with valid, the first coefficient of a job |
-| `uio[7:6]` | in | op: 00 forward NTT, 01 inverse NTT, 10 basemul, 11 scale (read on the sof clock) |
-| `uo[7:0]` | out | Result bytes at a fixed delay, 0x00 otherwise |
+| `ui[7:0]` | in | Data byte |
+| `uio[3:0]` | in | 0xF: marks a command word |
+| `uio[4]` | in | valid: a command this clock |
+| `uio[5]`, `uio[7:6]` | in | command bit 2, bits 1:0 |
+| `uo[7:0]` | out | Squeezed bytes (or CBD coefficients) 2 clocks after the word that asked for them, 0x00 otherwise |
 
-Every `uio` pin is an input. Each result pair (r0, r1) leaves as three bytes on consecutive
-clocks: `r0[7:0]`, `{r1[3:0], r0[11:8]}`, `r1[11:4]`.
+Every `uio` pin is an input. The host drives `clk`, sets the input pins once per clock and
+samples `uo_out` every clock. It has no busy flag: it waits the busy clocks before the next
+command, and sends idle words (valid low) during a burst. Every command has a fixed length.
 
-The host drives `clk` and sets the input pins once per clock. Coefficients are 0..3328.
-Send one unit per period with valid low on the other clocks: an NTT butterfly (b at
-clock 0, a at clock 1) every 3 clocks, a basemul piece (g1, f1, g0, f0 at clocks 0..3)
-every 5 clocks, a scale pair (c at clock 0, c′ at clock 1) every 3 clocks. Read the first
-byte of each result D clocks after the unit's first coefficient: D = 6 (forward),
-8 (inverse), 12 (basemul) and 7 (scale). For the NTT modes, send each
-layer after the previous layer's results have come back; the chip keeps its counters while
-valid is low. A new sof cancels a running job.
-
-The cocotb tests in `test/` run a whole polynomial multiply (forward NTT of f and g, basemul,
-inverse NTT, scale) and compare it with a schoolbook product.
+The cocotb tests in `test/` check SHA3-256/512 and SHAKE128/256 against Python's `hashlib`
+(byte and burst squeeze, with and without Skip) and Burst CBD against FIPS 203 SamplePolyCBD
+for eta = 2 and 3. `test/hash_jobs.py` builds the pin words; the same file drives the FPGA rig.
 
 ## External hardware
 

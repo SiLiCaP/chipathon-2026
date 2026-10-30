@@ -6,17 +6,19 @@ SIM ?= icarus
 FST ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = tt_um_NTT_Core.v io_in_capture.v io_out_pack.v \
-                  ntt_core.v ntt_ctrl.v ntt_sched.v ntt_twiddle.v ntt_delay.v zeta_rom.v \
-                  modq_mul.v modq_addsub.v modq_acc.v
+PROJECT_SOURCES = tt_um_NTT_Core.v io_in_capture.v hash_io.v keccak_ring.v
 
 ifneq ($(GATES),yes)
 
 # RTL simulation:
 SIM_BUILD				= sim_build/rtl
 VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
-# ntt_core simulation assertions (start / pair_valid spacing, L_MUL, ranges)
-COMPILE_ARGS    += -DNTT_ASSERT
+# HASH_K=16 make: the K = 16 core (172 clocks per permutation)
+ifdef HASH_K
+COMPILE_ARGS    += -DHASH_K=$(HASH_K)
+endif
+# keccak_ring clock gates: behavioral model in RTL sim (GL uses the sky130 dlclkp cell model)
+COMPILE_ARGS    += -DKC_BEHAV_ICG
 
 else
 
@@ -43,7 +45,21 @@ VERILOG_SOURCES += $(PWD)/tb.v
 TOPLEVEL = tb
 
 # List test modules to run, separated by commas and without the .py suffix:
-COCOTB_TEST_MODULES = test
+COCOTB_TEST_MODULES = test_hash_only
+export HASH_K
 
 # include cocotb's make rules to take care of the simulator setup
 include $(shell cocotb-config --makefiles)/Makefile.sim
+
+# The RP2350 firmware's own pin stream (rp2350/core/hash_chip.c) through the RTL, against its software chip.
+#   make rp2350              K = 8 RTL; records the PC harness's `all` and `ci` (golden) runs, replays them
+RP2350_PC = $(abspath $(PWD)/../rp2350/pc)
+.PHONY: rp2350
+rp2350:
+	$(MAKE) -C $(RP2350_PC) hash_host ci-golden
+	cd $(RP2350_PC) && ./hash_host --sw --dump-words $(PWD)/stream_all.hwd all
+	cd $(RP2350_PC) && ./hash_host_ci --sw --dump-words $(PWD)/stream_ci.hwd ci
+	rm -f results.xml
+	# some icarus/cocotb builds segfault while tearing down after the test passed: judge by the result line
+	-$(MAKE) COCOTB_TEST_MODULES=test_driver_stream STREAM=$(PWD)/stream_all.hwd,$(PWD)/stream_ci.hwd 2>&1 | tee rp2350.log
+	@grep -q 'PASS=1 FAIL=0' rp2350.log && echo "rp2350: the C driver's pin stream is identical to the software chip on every clock"

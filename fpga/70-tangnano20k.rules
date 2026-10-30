@@ -1,0 +1,6 @@
+# Tang Nano 20K onboard BL616 debugger (emulates an FT2232: 0403:6010).
+# Gives the logged-in desktop user access to its serial ports and USB device without sudo/dialout.
+# Must sort before 73-seat-late.rules, which turns the uaccess tag into an ACL.
+# Install:  sudo cp fpga/70-tangnano20k.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6010", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6010", TAG+="uaccess"

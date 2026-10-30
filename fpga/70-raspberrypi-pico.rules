@@ -1,0 +1,5 @@
+# Raspberry Pi Pico 2 / Pico 2 W (RP2350) for the rig: USB serial console (/dev/ttyACM*) and picotool
+# (BOOTSEL mode) without root, for the logged-in user. The number must stay below 73 so uaccess applies.
+#   sudo cp fpga/70-raspberrypi-pico.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger
+SUBSYSTEM=="usb", ATTRS{idVendor}=="2e8a", TAG+="uaccess"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2e8a", TAG+="uaccess"

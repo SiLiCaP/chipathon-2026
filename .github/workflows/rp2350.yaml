@@ -7,11 +7,14 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v6
 
-      - name: timing.h matches test/timing.py
-        run: python3 rp2350/gen_timing.py && git diff --exit-code rp2350/core/timing.h
+      - name: CI emulator contract (docs/ci-emulator.md) is intact
+        run: python3 rp2350/ci/check_contract.py
 
-      - name: C harness against the software chip (selftest, demo, fuzz, matvec)
+      - name: C harness against the software chip (selftest, fuzz)
         run: make -C rp2350/pc test
+
+      - name: Golden ML-KEM hash jobs through the software chip
+        run: make -C rp2350/pc ci-golden
 
   firmware:
     runs-on: ubuntu-24.04
@@ -27,17 +30,13 @@ jobs:
           git clone --depth 1 -b 2.1.1 https://github.com/raspberrypi/pico-sdk.git $HOME/pico-sdk
           git -C $HOME/pico-sdk submodule update --init --depth 1 lib/tinyusb
 
-      - name: Build the firmware for both test environments
+      - name: Build the firmware
         run: |
-          for t in dbv3 pico2w_tang; do
-            cmake -S rp2350 -B rp2350/build_$t -G Ninja -DPICO_SDK_PATH=$HOME/pico-sdk -DTT_TARGET=$t
-            cmake --build rp2350/build_$t
-          done
+          cmake -S rp2350 -B rp2350/build -G Ninja -DPICO_SDK_PATH=$HOME/pico-sdk
+          cmake --build rp2350/build
 
-      - name: Upload the UF2 files
+      - name: Upload tt_hash_dbv3.uf2
         uses: actions/upload-artifact@v4
         with:
-          name: tt_ntt-firmware
-          path: |
-            rp2350/build_dbv3/tt_ntt_dbv3.uf2
-            rp2350/build_pico2w_tang/tt_ntt_pico2w_tang.uf2
+          name: tt_hash-firmware
+          path: rp2350/build/tt_hash_dbv3.uf2

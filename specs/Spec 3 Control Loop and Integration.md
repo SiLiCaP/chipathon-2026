@@ -35,7 +35,7 @@ Inside `ntt_core` you build: the op latch and job FSM, the counters, `zeta_rom` 
 | --- | --- | --- | --- |
 | `clk`, `rst_n` | in | 1 each | Clock and synchronous reset |
 | `coeff_q` | in | 12 | Captured coefficient, from `io_in_capture` |
-| `valid_q` | in | 1 | Captured valid |
+| `valid_q` | in | 1 | Captured valid. The shell masks hash words (coefficient bits 11:8 = 0xF, Spec 5) out of it and out of `sof_q` |
 | `sof_q` | in | 1 | High only when valid and sof were both high |
 | `op_q` | in | 2 | Captured op. Read only when `sof_q` is high |
 | `r0` | out | 12 | First result of a pair |
