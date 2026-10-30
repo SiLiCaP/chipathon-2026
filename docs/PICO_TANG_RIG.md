@@ -39,7 +39,7 @@ USB setup in [FPGA_DEMO.md](FPGA_DEMO.md)) checks every result byte, but its tim
 3. **Load the matching firmware before wiring, or wire with both unpowered.**
    - The FPGA drives 8 pins (`uo_out`) toward the Pico; the Pico drives the other 18.
    - The UART bitstream (`make -C fpga prog` without `TARGET=pico`) leaves all header pins unused, so it is safe.
-   - The demo-board firmware (`tt_ntt_dbv3.uf2`) refuses to touch any pin on a Pico 2 W: it checks the
+   - The demo-board firmware (`tt_hash_dbv3.uf2`) refuses to touch any pin on a Pico 2 W: it checks the
      package at boot. The rig firmware does the same on a demo board.
 4. **Leave the TF card slot and the HDMI connector empty.** Some of the wires share pins with them (see the notes).
 5. **Optional protection:** 220–330 Ω in series on the 8 `uo_out` wires limits the current if both sides ever
@@ -144,12 +144,12 @@ export PICO_SDK_PATH=~/tools/pico-sdk PICO_TOOLCHAIN_PATH=~/tools/arm-gnu-toolch
 export PATH=~/tools/cmake-venv/bin:~/tools/arm-gnu-toolchain/bin:$PATH
 cmake -S rp2350 -B rp2350/build_pico2w_tang -G Ninja -DTT_TARGET=pico2w_tang \
       -Dpioasm_DIR=$HOME/tools/pico-tools/pioasm -Dpicotool_DIR=$HOME/tools/pico-tools/picotool
-cmake --build rp2350/build_pico2w_tang      # -> tt_ntt_pico2w_tang.uf2
+cmake --build rp2350/build_pico2w_tang      # -> tt_hash_pico2w_tang.uf2
 ```
 
-The UF2 is also built by the team repo's CI (workflow `rp2350`, artifact `tt_ntt-firmware`). To flash it, hold
+The UF2 is also built by the team repo's CI (workflow `rp2350`, artifact `tt_hash-firmware`). To flash it, hold
 BOOTSEL while plugging the Pico in and copy the UF2 onto the drive that appears, or run
-`~/tools/pico-tools/picotool/picotool load -x tt_ntt_pico2w_tang.uf2 -f`. The Pico then shows up as
+`~/tools/pico-tools/picotool/picotool load -x tt_hash_pico2w_tang.uf2 -f`. The Pico then shows up as
 `/dev/ttyACM0`.
 
 ## Wiring check (before running the chip)
@@ -215,31 +215,21 @@ Open the console with `python3 -m serial.tools.miniterm /dev/ttyACM0` and type:
 | 2 | `selftest` | every line ok, at 1 MHz |
 | 3 | `sweep` | the known answers at 1–75 MHz, skew 0–2. Expect skew 0 at low clocks; the wires set the top end |
 | 4 | `clk <hz>` | a clock that passes `sweep` with margin on both sides, then `cal` |
-| 5 | `all` | selftest, demo, fuzz, matvec: PASS |
-| 6 | `bench 20` | time per call, where it goes, predicted at 50 MHz |
-
-Then, on the PC, with the console closed:
-
-```bash
-cd ~/Documents/Projects/Chipathon2026/tt-viktor-chiptor
-source ~/tools/oss-cad-suite/environment
-python3 tools/rp_log.py capture --port /dev/ttyACM0 --n 20    # benchmark, log, fit, save perf/rp_coeffs.json
-python3 tools/rp_log.py show                                  # the firmware costs now marked "measured"
-python3 sim/arch_explore.py                                   # every prediction updates from the measured costs
-```
+| 5 | `all` | selftest, fuzz: PASS |
+| 6 | `ci` | `ci: NOVECTORS` on a plain build; the host CI builds the firmware with the commit's ML-KEM hash jobs and checks the `CI-OUT` lines (docs/ci-emulator.md) |
 
 The PC tools written for the Tang Nano alone also run through the Pico, with the FPGA behind it: the full
 demo-board path, PC → RP2350 → wires → chip gates:
-- `python3 host/test_ntt.py --port /dev/ttyACM0 --seeds 3` runs 3 ML-KEM-512 exchanges, every byte checked.
-- `python3 host/showcase.py --port /dev/ttyACM0 --form "gate netlist via Pico 2 W"` runs the demo website.
+- `python3 host/test_variant.py --port /dev/ttyACM0 --hash 8 --hash-only` runs the hash chip's jobs (bursts, SKIP, SamplePolyCBD), every output checked against hashlib.
+- `python3 host/sha3_demo.py` runs the SHA-3 demo website (ML-KEM-512 with every hash call on the chip).
 
 ## Troubleshooting
 
 | Symptom | Likely cause |
 |---|---|
-| `status` says WRONG BOARD | the demo-board UF2 is on the Pico: flash `tt_ntt_pico2w_tang.uf2` |
+| `status` says WRONG BOARD | the demo-board UF2 is on the Pico: flash `tt_hash_pico2w_tang.uf2` |
 | LED1 never blinks during `selftest` | clock wire (GP21 → L5) |
 | LED2 stays on | reset wire (GP22 → R20), or the FPGA has the UART bitstream |
-| `selftest` fails at 1 MHz | a swapped or missing data wire. Run `fuzz`: zeros, all-3328 and single-one vectors point to the bit |
+| `selftest` fails at 1 MHz | a swapped or missing data wire. Run `fuzz` and `selftest`: the failing job kind and length point to the wire |
 | passes at low clocks, fails higher | wire length, ringing: shorten, twist clock with ground, series resistor on the clock |
 | LED5 on | the FPGA thinks it should drive `uio`: wrong bitstream or design |

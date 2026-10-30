@@ -102,7 +102,7 @@ void tt_rp_clock_phases(uint32_t *div, uint32_t *low, uint32_t *high) {
 }
 
 int tt_rp_init(void) {
-    // the CPU cycle counter for the operation log (oplog.h)
+    // the CPU cycle counter (timing the transport)
     m33_hw->demcr |= M33_DEMCR_TRCENA_BITS;
     m33_hw->dwt_ctrl |= M33_DWT_CTRL_CYCCNTENA_BITS;
     // Built for the other board? Its pin map would drive pins the FPGA (or the TT chip) drives: stop here.

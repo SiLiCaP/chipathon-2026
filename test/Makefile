@@ -50,3 +50,14 @@ export HASH_K
 
 # include cocotb's make rules to take care of the simulator setup
 include $(shell cocotb-config --makefiles)/Makefile.sim
+
+# The RP2350 firmware's own pin stream (rp2350/core/hash_chip.c) through the RTL, against its software chip.
+#   make rp2350              K = 8 RTL; records the PC harness's `all` and `ci` (golden) runs, replays them
+RP2350_PC = $(abspath $(PWD)/../rp2350/pc)
+.PHONY: rp2350
+rp2350:
+	$(MAKE) -C $(RP2350_PC) hash_host ci-golden
+	cd $(RP2350_PC) && ./hash_host --sw --dump-words $(PWD)/stream_all.hwd all
+	cd $(RP2350_PC) && ./hash_host_ci --sw --dump-words $(PWD)/stream_ci.hwd ci
+	rm -f results.xml
+	$(MAKE) COCOTB_TEST_MODULES=test_driver_stream STREAM=$(PWD)/stream_all.hwd,$(PWD)/stream_ci.hwd

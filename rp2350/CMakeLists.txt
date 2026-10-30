@@ -1,7 +1,7 @@
-# RP2350 firmware for the NTT chip (Spec 1 harness and demo).
+# RP2350 firmware for the hash-only chip (harness, self test, CI emulator check; docs/ci-emulator.md).
 #   cmake -S rp2350 -B rp2350/build [-DTT_TARGET=dbv3|pico2w_tang] [-DTT_PROJECT_ADDR=n]
-#   dbv3         Tiny Tapeout demo board v3 with the real chip (default) -> build/tt_ntt_dbv3.uf2
-#   pico2w_tang  Pico 2 W wired to a Tang Nano 20K running the chip      -> build/tt_ntt_pico2w_tang.uf2
+#   dbv3         Tiny Tapeout demo board v3 with the real chip (default) -> build/tt_hash_dbv3.uf2
+#   pico2w_tang  Pico 2 W wired to a Tang Nano 20K running the chip      -> build/tt_hash_pico2w_tang.uf2
 #                (wiring: tt-viktor-chiptor docs/PICO_TANG_RIG.md)
 # Use one build directory per target.
 cmake_minimum_required(VERSION 3.13)
@@ -21,22 +21,26 @@ set(PICO_BOARD_HEADER_DIRS ${CMAKE_CURRENT_LIST_DIR}/boards)
 set(TT_PROJECT_ADDR -1 CACHE STRING "our project's address on the TT mux (-1: select at run time; dbv3 only)")
 
 include(pico_sdk_import.cmake)
-project(tt_ntt C CXX ASM)
+project(tt_hash C CXX ASM)
 pico_sdk_init()
 
-set(APP tt_ntt_${TT_TARGET})
+set(APP tt_hash_${TT_TARGET})
 add_executable(${APP}
     rp/main.c
     rp/tt_rp.c
-    core/ntt_ref.c
-    core/ntt_chip.c
-    core/swchip.c
-    core/app.c
-    core/oplog.c
+    core/hash_chip.c
+    core/hash_swchip.c
+    core/hash_app.c
+    core/ci_app.c
     core/sha3_sw.c
 )
 pico_generate_pio_header(${APP} ${CMAKE_CURRENT_LIST_DIR}/rp/tt_lockstep.pio)
-target_include_directories(${APP} PRIVATE core rp)
+# CI emulator check: -DCI_VECTORS_DIR=<dir with a generated ci_vectors.h> wins over the committed stub in ci/
+set(CI_VECTORS_DIR "" CACHE PATH "directory holding a generated ci_vectors.h (docs/ci-emulator.md)")
+target_include_directories(${APP} PRIVATE core rp ci)
+if (CI_VECTORS_DIR)
+    target_include_directories(${APP} BEFORE PRIVATE ${CI_VECTORS_DIR})
+endif ()
 target_compile_options(${APP} PRIVATE -O2 -Wall -Wextra)
 target_compile_definitions(${APP} PRIVATE
     ${TT_TARGET_DEFINE}

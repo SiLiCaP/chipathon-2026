@@ -1,41 +1,38 @@
 // SPDX-License-Identifier: Apache-2.0
-// RP2350 firmware for the NTT chip (Spec 1 harness and demo), for the Tiny Tapeout demo board v3 or for the
+// RP2350 firmware for the hash-only chip (Keccak ring + hash_io + SamplePolyCBD): harness, self test and the
+// CI emulator check (docs/ci-emulator.md), for the Tiny Tapeout demo board v3 or for the
 // Pico 2 W + Tang Nano 20K rig (TT_TARGET, see rp/tt_rp.h).
 //
 // Over USB serial it offers two interfaces on the same port; the first byte of each command decides:
-//   text commands  (type `help`): selftest, demo, fuzz, matvec, bench, cal, sweep, clk, select, ...
+//   text commands  (type `help`): selftest, fuzz, ci, cal, sweep, clk, select, ...
 //   TTE1 binary    the Tang Nano emulator protocol (tt-viktor-chiptor fpga/PROTOCOL.md): PING, RESET,
 //                  SET_IN, STEP, SET_DIV, LOAD, RUN, READ_CAP. Its opcodes are non-printable bytes, so they
 //                  never clash with typed text. The PC tools written for the FPGA (host/tt_emu.py,
-//                  host/test_ntt.py, host/showcase.py) then drive the real chip through this board.
+//                  host/sha3_demo.py, host/hash_jobs.py) then drive the real chip through this board.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "app.h"
+#include "ci_app.h"
 #include "hardware/clocks.h"
 #include "hardware/structs/m33.h"
 #include "pico/rand.h"
 #include "pico/stdlib.h"
-#include "swchip.h"
+#include "hash_app.h"
+#include "hash_swchip.h"
 #include "tt_rp.h"
 
 #ifndef TT_PROJECT_ADDR
 #define TT_PROJECT_ADDR -1       // set at build time (cmake -DTT_PROJECT_ADDR=n) or with `select n`
 #endif
 
-static ntt_chip_t chip;
-static swchip_t sw;
+static hash_chip_t chip;
+static hash_swchip_t sw;
 static tt_io_t io_hw, io_sw;
 static int use_sw;
 static int wrong_board;                // firmware built for the other board: pins left alone, software chip only
 static int project = TT_PROJECT_ADDR;
 
-uint64_t plat_time_us(void) { return time_us_64(); }
-uint32_t plat_chip_hz(void) { return use_sw ? 0 : tt_rp_clock_hz(); }
-uint32_t plat_cycles(void) { return m33_hw->dwt_cyccnt; }
-uint32_t plat_cycles_hz(void) { return clock_get_hz(clk_sys); }
-uint32_t plat_rand32(void) { return get_rand_32(); }
 
 // ---------------- TTE1 binary protocol ----------------
 #define TTE_DEPTH 8192
@@ -57,7 +54,7 @@ static void reply(uint8_t status) { putchar_raw(0xA5); putchar_raw(status); }
 
 static uint8_t current_uo(void) {
     if (!use_sw) return tt_rp_read_uo();
-    return sw.out_clk[sw.clk & 63] == sw.clk ? sw.out[sw.clk & 63] : 0;
+    return sw.out_clk[sw.clk & 7] == sw.clk ? sw.out[sw.clk & 7] : 0;
 }
 
 static int run_repeat(uint16_t w, uint32_t n) {                 // n clocks of one input word
@@ -123,7 +120,7 @@ static void tte_command(int op) {
 static void status(void) {
     uint32_t div, lo, hi;
     tt_rp_clock_phases(&div, &lo, &hi);
-    printf("NTT chip harness on the %s, RP2350 at %lu MHz\n", TT_TARGET_NAME, (unsigned long)(clock_get_hz(clk_sys) / 1000000));
+    printf("Hash chip harness on the %s, RP2350 at %lu MHz\n", TT_TARGET_NAME, (unsigned long)(clock_get_hz(clk_sys) / 1000000));
     if (wrong_board)
         printf("  WRONG BOARD: this firmware is for the %s (RP2350%s); the pins are left alone, only `sw` works\n",
                TT_TARGET_NAME, TT_PACKAGE_QFN60 ? "A" : "B");
@@ -133,30 +130,29 @@ static void status(void) {
 #endif
     printf("  chip clock: %lu Hz (PIO div %lu, low %lu + high %lu cycles)\n", (unsigned long)tt_rp_clock_hz(),
            (unsigned long)div, (unsigned long)lo, (unsigned long)hi);
-    printf("  skew %d, calls %lu, faults %lu, clocks %llu, uo_out now 0x%02x, log %lu records\n", chip.skew,
+    printf("  skew %d, calls %lu, faults %lu, clocks %llu, uo_out now 0x%02x\n", chip.skew,
            (unsigned long)chip.calls, (unsigned long)chip.faults, (unsigned long long)chip.clocks_total,
-           wrong_board ? 0 : current_uo(), (unsigned long)oplog_count());
+           wrong_board ? 0 : current_uo());
     if (use_sw && sw.violations)
         printf("  software chip: %lu protocol violations, last: %s\n", (unsigned long)sw.violations, sw.last_violation);
 }
 
 static void sweep(void) {
     static const uint32_t mhz10[] = {10, 50, 100, 150, 200, 250, 300, 375, 500, 600, 750};   // MHz x 10
-    static uint16_t f[NTT_N], h[NTT_N];
-    static const uint16_t lo[8] = {2429, 2845, 425, 795, 1865, 1356, 624, 31};
+    static const uint8_t abc[3] = {'a', 'b', 'c'};
+    uint8_t want[32], got[32];
+    hash_ref(HASH_SHA3_256, abc, 3, want, 32);
     const uint32_t keep = tt_rp_clock_hz();
     const int keep_skew = chip.skew;
-    printf("clock sweep: forward NTT of the ramp at each clock and sample skew\n  %10s  skew 0  skew 1  skew 2\n", "clock");
+    printf("clock sweep: SHA3-256(abc) by burst at each clock and sample skew\n  %10s  skew 0  skew 1  skew 2\n", "clock");
     for (unsigned i = 0; i < sizeof mhz10 / sizeof mhz10[0]; i++) {
         uint32_t hz = tt_rp_set_clock(mhz10[i] * 100000u);
         printf("  %7.2f MHz", hz / 1e6);
         for (int k = 0; k <= 2; k++) {
             chip.skew = k;
             int ok = 1;
-            for (int r = 0; r < 3 && ok; r++) {
-                for (int j = 0; j < NTT_N; j++) f[j] = (uint16_t)j;
-                ok = ntt_chip_forward(&chip, f, h) == NTT_OK && !memcmp(h, lo, sizeof lo);
-            }
+            for (int r = 0; r < 3 && ok; r++)
+                ok = hash_chip_job(&chip, HASH_SHA3_256, abc, 3, got, 32, 0) == HASH_OK && !memcmp(got, want, 32);
             printf("  %6s", ok ? "pass" : "-");
         }
         printf("\n");
@@ -175,16 +171,12 @@ static void help(void) {
            "  sys <mhz>           RP2350 system clock (150 default; 200 gives 50 MHz with even phases)\n"
            "  reset               rst_n low for 10 clocks\n"
            "  hw | sw             use the real chip, or the software chip (works on any RP2350 board)\n"
-           "  selftest            reference + chip known answers (Spec 1 table)\n"
-           "  demo [seed]         Spec 1 demo: f * g on the chip vs schoolbook, clocks per step\n"
-           "  fuzz [n]            all four modes vs the chip-level model: edge vectors + n random\n"
-           "  matvec [seed]       stretch goal: t = A s for k = 2\n"
-           "  bench [n]           time the four calls; where the time goes; predicted at 50 MHz\n"
-           "  log [csv|clear]     operation log: per-call summary, every batch as CSV, or clear it\n"
-           "  predict <hz>        the logged calls re-predicted at chip clock <hz> (e.g. 50000000)\n"
+           "  selftest            known answers + SHA-3/SHAKE sweeps + PRF/CBD vs the C reference\n"
+           "  fuzz [n]            n random jobs of every kind vs the C reference (default 10)\n"
+           "  ci                  CI emulator check: the compiled-in per-commit ML-KEM hash jobs (docs/ci-emulator.md)\n"
            "  cal                 find the sample skew at the current clock\n"
            "  sweep               known answers across clocks and skews (bring-up)\n"
-           "  all                 selftest, demo, fuzz, matvec\n"
+           "  all                 selftest, fuzz\n"
            "binary TTE1 commands are accepted on the same port (host/tt_emu.py --port /dev/ttyACM0)\n");
 }
 
@@ -195,13 +187,8 @@ static void command(char *line) {
     if (!cmd) return;
     if (!strcmp(cmd, "help") || !strcmp(cmd, "?")) help();
     else if (!strcmp(cmd, "status")) status();
-    else if (!strcmp(cmd, "log")) {
-        if (arg && !strcmp(arg, "csv")) oplog_csv();
-        else if (arg && !strcmp(arg, "clear")) { oplog_clear(); printf("log cleared\n"); }
-        else oplog_summary(50000000);
-    } else if (!strcmp(cmd, "predict") && arg) oplog_summary(n);
-    else if (wrong_board && strcmp(cmd, "sw") && strcmp(cmd, "selftest") && strcmp(cmd, "demo") && strcmp(cmd, "fuzz") &&
-             strcmp(cmd, "matvec") && strcmp(cmd, "all") && strcmp(cmd, "bench"))
+    else if (wrong_board && strcmp(cmd, "sw") && strcmp(cmd, "selftest") && strcmp(cmd, "fuzz") &&
+             strcmp(cmd, "ci") && strcmp(cmd, "all"))
         printf("wrong board for this firmware: see `status`\n");
     else if (!strcmp(cmd, "select") && arg) {
         project = (int)n;
@@ -211,24 +198,21 @@ static void command(char *line) {
         uint32_t keep = tt_rp_clock_hz();
         if (!set_sys_clock_khz(n * 1000, false)) printf("sys %lu MHz not possible\n", (unsigned long)n);
         tt_rp_set_clock(keep);
-        oplog_clear();                                // the log's cycles are in units of the old clock
-        printf("RP2350 at %lu MHz, chip clock %lu Hz (log cleared)\n", (unsigned long)(clock_get_hz(clk_sys) / 1000000),
+        printf("RP2350 at %lu MHz, chip clock %lu Hz\n", (unsigned long)(clock_get_hz(clk_sys) / 1000000),
                (unsigned long)tt_rp_clock_hz());
-    } else if (!strcmp(cmd, "reset")) printf("reset: %s\n", ntt_chip_reset(&chip) ? "failed" : "done");
+    } else if (!strcmp(cmd, "reset")) printf("reset: %s\n", hash_chip_reset(&chip) ? "failed" : "done");
     else if (!strcmp(cmd, "hw")) {
         if (wrong_board) printf("wrong board for this firmware: see `status`\n");
         else { use_sw = 0; chip.io = &io_hw; printf("transport: %s\n", chip.io->name); }
     }
     else if (!strcmp(cmd, "sw")) { use_sw = 1; chip.io = &io_sw; printf("transport: %s\n", chip.io->name); }
     else if (!strcmp(cmd, "selftest")) app_selftest(&chip);
-    else if (!strcmp(cmd, "demo")) app_demo(&chip, n ? n : 1);
     else if (!strcmp(cmd, "fuzz")) app_fuzz(&chip, n ? n : 10, get_rand_32());
-    else if (!strcmp(cmd, "matvec")) app_matvec(&chip, n ? n : 1);
-    else if (!strcmp(cmd, "bench")) app_bench(&chip, n ? n : 20, 50000000);
     else if (!strcmp(cmd, "cal")) app_calibrate(&chip);
+    else if (!strcmp(cmd, "ci")) app_ci(&chip);
     else if (!strcmp(cmd, "sweep")) { if (use_sw) printf("sweep needs the real chip (hw)\n"); else sweep(); }
     else if (!strcmp(cmd, "all")) {
-        int fail = app_selftest(&chip) | app_demo(&chip, 1) | app_fuzz(&chip, 10, 1) | app_matvec(&chip, 1);
+        int fail = app_selftest(&chip) | app_fuzz(&chip, 10, 1);
         printf("all: %s\n", fail ? "FAIL" : "PASS");
     } else printf("unknown command '%s' (try help)\n", cmd);
 }
@@ -236,10 +220,10 @@ static void command(char *line) {
 int main(void) {
     stdio_init_all();
     wrong_board = tt_rp_init() != 0;
-    swchip_init(&sw);
-    io_sw = swchip_io(&sw);
+    hash_swchip_init(&sw);
+    io_sw = hash_swchip_io(&sw);
     io_hw = tt_rp_io();
-    ntt_chip_init(&chip, wrong_board ? &io_sw : &io_hw);
+    hash_chip_init(&chip, wrong_board ? &io_sw : &io_hw);
     use_sw = wrong_board;
 #if TT_HAS_MUX
     if (project >= 0 && !wrong_board) tt_rp_select(project);

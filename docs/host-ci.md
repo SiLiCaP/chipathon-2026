@@ -33,3 +33,10 @@ blocks a newer push).
 
 Ad hoc, without a commit (the host's owner): `docker exec d0b0-chipci python -m chipci.ctl variant <sha|branch> 3x2`.
 Details: `services/chipci/README.md` in the d0b0-domain repo. Background on the sizes: `docs/tile_routes.md`.
+
+## The FPGA emulator check (`host-ci/rig`)
+
+Every push is also run on the Tang Nano 20K emulator (the gate netlist) driven by the Pico 2 W running `rp2350/`:
+the chip does the hash sequence of an ML-KEM-512 exchange built from the commit's own sha. `fpga/` and `rp2350/` are
+required and must change together with the chip's pins or commands; the contract is in
+[ci-emulator.md](ci-emulator.md).

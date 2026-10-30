@@ -12,7 +12,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "ntt_chip.h"
+#include "tt_io.h"
 
 #if defined(TT_TARGET_PICO2W_TANG)
 // Pico 2 W: GPIO 0-22 and 26-28 reach the header (23-25 and 29 belong to the wireless chip), 26 pins for
@@ -58,6 +58,6 @@ uint32_t tt_rp_last_conv_cyc(void);       // cycles the last run spent reformatt
 int tt_rp_reset(uint32_t cycles);
 uint8_t tt_rp_read_uo(void);              // uo_out right now (clock is stopped low)
 
-tt_io_t tt_rp_io(void);                   // the transport for ntt_chip.c
+tt_io_t tt_rp_io(void);                   // the transport for hash_chip.c
 
 #endif

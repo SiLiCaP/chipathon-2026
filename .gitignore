@@ -32,5 +32,6 @@ test/adders/adders.vvp
 test/*.log
 # RP2350 firmware and PC harness builds
 rp2350/build*
-rp2350/pc/ntt_host
+rp2350/pc/hash_host
 rp2350/build
+test/*.hwd
