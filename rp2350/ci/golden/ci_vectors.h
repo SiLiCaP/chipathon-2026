@@ -4,7 +4,7 @@
 #define CI_VECTORS_H
 #include <stdint.h>
 #define CI_CONTRACT 1
-#define CI_VEC_HASH 0xa4acc29au
+#define CI_VEC_HASH 0x60d72424u
 #define CI_NPOLY 12
 #define CI_NJOB 9
 static const uint16_t ci_poly[CI_NPOLY][256] = {

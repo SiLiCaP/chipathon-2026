@@ -39,6 +39,7 @@ against the C schoolbook. Console output:
 ```
 CI-BEGIN contract=1 vec=<8 hex> jobs=<n>
 CI-OUT <j> <1024 hex chars>        256 coefficients, 4 hex digits each, big-endian
+CI-OUT <j> ERR                     the chip returned an error on job j (a functional failure)
 CI-END n=<n> fail=<k>
 ci: PASS | FAIL | NOVECTORS
 ```

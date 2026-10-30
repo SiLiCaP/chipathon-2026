@@ -31,7 +31,12 @@ int app_ci(ntt_chip_t *c) {
             for (int i = 0; i < NTT_N; i++) ref[i] = (uint16_t)((ref[i] + acc[i]) % NTT_Q);
         }
         if (!err) err = ntt_chip_inverse(c, t, t) || ntt_chip_scale(c, t, t);
-        if (err) { printf("ci: job %d: chip error %s\n", j, ntt_err_str(err)); fail++; continue; }
+        if (err) {                      // marked per job, so the host reports a chip fault, not truncation
+            printf("ci: job %d: chip error %s\n", j, ntt_err_str(err));
+            printf("CI-OUT %d ERR\n", j);
+            fail++; done++;
+            continue;
+        }
         if (memcmp(t, ref, sizeof t)) fail++;
         printf("CI-OUT %d ", j);
         for (int i = 0; i < NTT_N; i++) printf("%04x", t[i]);
