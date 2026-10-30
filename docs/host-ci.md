@@ -15,5 +15,21 @@ Sizes are width x height in tiles: 1x1, 1x2, 2x2, 3x2, 4x2, 6x2, 8x2. Tiny Tapeo
 rows, so a "vertical 3" (2x3) does not exist; 3x2 is three tiles across, two high. The design's own size and
 invalid values are skipped (the main status text says so).
 
+## Research dies: shapes Tiny Tapeout cannot take
+
+```yaml
+research_dies: ["2x3"]
+```
+
+`2x3` is two tiles wide and three tall, the vertical layout. The host hardens the design at that die size
+only to **measure** utilization, congestion and timing, for example whether more vertical space helps a
+vertically stuffed design. **It is research only and can never be taped out**: Tiny Tapeout slots are at
+most two rows tall, the pin template is a stretched copy of the stock one, and no precheck runs. The result is the
+informational status `host-ci/gds-2x3-research`, for example
+`2x3 research (never taped out): util 48.1% DRC 0 LVS 0 ant 0 setup +7.90 hold +0.021 ns 52m`, or
+`failed at: <step>` when the flow itself dies. The 2x3 die is 334.88 x 368.56 um, 7 % more area than 3x2
+(114,858 um2 in `docs/sha3_only_3x2.md`). Same rules as the tile variants (after the main build, never
+blocks a newer push).
+
 Ad hoc, without a commit (the host's owner): `docker exec d0b0-chipci python -m chipci.ctl variant <sha|branch> 3x2`.
 Details: `services/chipci/README.md` in the d0b0-domain repo. Background on the sizes: `docs/tile_routes.md`.
