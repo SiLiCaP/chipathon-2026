@@ -6,17 +6,19 @@ SIM ?= icarus
 FST ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = tt_um_NTT_Core.v io_in_capture.v io_out_pack.v \
-                  ntt_core.v ntt_ctrl.v ntt_sched.v ntt_twiddle.v ntt_delay.v zeta_rom.v \
-                  modq_mul.v modq_addsub.v modq_acc.v
+PROJECT_SOURCES = tt_um_NTT_Core.v io_in_capture.v hash_io.v keccak_ring.v
 
 ifneq ($(GATES),yes)
 
 # RTL simulation:
 SIM_BUILD				= sim_build/rtl
 VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
-# ntt_core simulation assertions (start / pair_valid spacing, L_MUL, ranges)
-COMPILE_ARGS    += -DNTT_ASSERT
+# HASH_K=16 make: the K = 16 core (172 clocks per permutation)
+ifdef HASH_K
+COMPILE_ARGS    += -DHASH_K=$(HASH_K)
+endif
+# keccak_ring clock gates: behavioral model in RTL sim (GL uses the sky130 dlclkp cell model)
+COMPILE_ARGS    += -DKC_BEHAV_ICG
 
 else
 
@@ -43,7 +45,8 @@ VERILOG_SOURCES += $(PWD)/tb.v
 TOPLEVEL = tb
 
 # List test modules to run, separated by commas and without the .py suffix:
-COCOTB_TEST_MODULES = test
+COCOTB_TEST_MODULES = test_hash_only
+export HASH_K
 
 # include cocotb's make rules to take care of the simulator setup
 include $(shell cocotb-config --makefiles)/Makefile.sim

@@ -1,5 +1,12 @@
 ![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/fpga/badge.svg)
 
+# Branch sha3-only: the NTT-free chip
+
+This branch is the hash-only variant: the NTT core is removed, and the chip is a Keccak-f[1600] sponge
+engine (`keccak_ring`, K = 8) with burst squeeze and on-chip SamplePolyCBD (`src/hash_io.v`). Datasheet:
+[docs/info.md](docs/info.md). Why and how it compares (tile fit, speed, rig results): `docs/tile_routes.md`
+on `main`. Tests: `cd test && make` (K = 8) or `HASH_K=16 make`. The specs below describe the NTT chip on `main`.
+
 # Specs and tools
 Specs for the five parts of the chip (the source of truth for every port and timing):
 - [Spec 1: Pi harness and demo](specs/Spec%201%20Pi%20Harness%20and%20Demo.md)

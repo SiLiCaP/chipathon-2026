@@ -33,6 +33,7 @@ add_executable(${APP}
     core/swchip.c
     core/app.c
     core/oplog.c
+    core/sha3_sw.c
 )
 pico_generate_pio_header(${APP} ${CMAKE_CURRENT_LIST_DIR}/rp/tt_lockstep.pio)
 target_include_directories(${APP} PRIVATE core rp)
