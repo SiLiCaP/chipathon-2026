@@ -26,12 +26,13 @@ only to **measure** utilization, congestion and timing, for example whether more
 vertically stuffed design. **It is research only and can never be taped out**: Tiny Tapeout slots are at
 most two rows tall, the pin template is a stretched copy of the stock one, and no precheck runs. The result is the
 informational status `host-ci/gds-2x3-research`, for example
-`2x3 research (never taped out): util 48.1% DRC 0 LVS 0 ant 0 setup +7.90 hold +0.021 ns 52m`, or
+`2x3 research (never taped out): util 51.9% DRC 0 LVS 0 ant 0 setup +7.57 hold +0.021 ns 10m`, or
 `failed at: <step>` when the flow itself dies. The 2x3 die is 334.88 x 368.56 um, 7 % more area than 3x2
 (114,858 um2 in `docs/sha3_only_3x2.md`). Same rules as the tile variants (after the main build, never
 blocks a newer push).
 
-Ad hoc, without a commit (the host's owner): `docker exec d0b0-chipci python -m chipci.ctl variant <sha|branch> 3x2`.
+Ad hoc, without a commit (the host's owner): `docker exec d0b0-chipci python -m chipci.ctl variant <sha|branch> 3x2`
+(research dies: `... ctl research <sha|branch> 2x3`).
 Details: `services/chipci/README.md` in the d0b0-domain repo. Background on the sizes: `docs/tile_routes.md`.
 
 ## The FPGA emulator check (`host-ci/rig`)
