@@ -60,4 +60,6 @@ rp2350:
 	cd $(RP2350_PC) && ./hash_host --sw --dump-words $(PWD)/stream_all.hwd all
 	cd $(RP2350_PC) && ./hash_host_ci --sw --dump-words $(PWD)/stream_ci.hwd ci
 	rm -f results.xml
-	$(MAKE) COCOTB_TEST_MODULES=test_driver_stream STREAM=$(PWD)/stream_all.hwd,$(PWD)/stream_ci.hwd
+	# some icarus/cocotb builds segfault while tearing down after the test passed: judge by the result line
+	-$(MAKE) COCOTB_TEST_MODULES=test_driver_stream STREAM=$(PWD)/stream_all.hwd,$(PWD)/stream_ci.hwd 2>&1 | tee rp2350.log
+	@grep -q 'PASS=1 FAIL=0' rp2350.log && echo "rp2350: the C driver's pin stream is identical to the software chip on every clock"

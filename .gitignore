@@ -35,3 +35,4 @@ rp2350/build*
 rp2350/pc/hash_host
 rp2350/build
 test/*.hwd
+test/rp2350.log
