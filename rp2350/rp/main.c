@@ -13,6 +13,7 @@
 #include <string.h>
 
 #include "app.h"
+#include "ci_app.h"
 #include "hardware/clocks.h"
 #include "hardware/structs/m33.h"
 #include "pico/rand.h"
@@ -179,6 +180,7 @@ static void help(void) {
            "  demo [seed]         Spec 1 demo: f * g on the chip vs schoolbook, clocks per step\n"
            "  fuzz [n]            all four modes vs the chip-level model: edge vectors + n random\n"
            "  matvec [seed]       stretch goal: t = A s for k = 2\n"
+           "  ci                  CI emulator check: the compiled-in per-commit vectors (docs/ci-emulator.md)\n"
            "  bench [n]           time the four calls; where the time goes; predicted at 50 MHz\n"
            "  log [csv|clear]     operation log: per-call summary, every batch as CSV, or clear it\n"
            "  predict <hz>        the logged calls re-predicted at chip clock <hz> (e.g. 50000000)\n"
@@ -201,7 +203,7 @@ static void command(char *line) {
         else oplog_summary(50000000);
     } else if (!strcmp(cmd, "predict") && arg) oplog_summary(n);
     else if (wrong_board && strcmp(cmd, "sw") && strcmp(cmd, "selftest") && strcmp(cmd, "demo") && strcmp(cmd, "fuzz") &&
-             strcmp(cmd, "matvec") && strcmp(cmd, "all") && strcmp(cmd, "bench"))
+             strcmp(cmd, "matvec") && strcmp(cmd, "ci") && strcmp(cmd, "all") && strcmp(cmd, "bench"))
         printf("wrong board for this firmware: see `status`\n");
     else if (!strcmp(cmd, "select") && arg) {
         project = (int)n;
@@ -226,6 +228,7 @@ static void command(char *line) {
     else if (!strcmp(cmd, "matvec")) app_matvec(&chip, n ? n : 1);
     else if (!strcmp(cmd, "bench")) app_bench(&chip, n ? n : 20, 50000000);
     else if (!strcmp(cmd, "cal")) app_calibrate(&chip);
+    else if (!strcmp(cmd, "ci")) app_ci(&chip);
     else if (!strcmp(cmd, "sweep")) { if (use_sw) printf("sweep needs the real chip (hw)\n"); else sweep(); }
     else if (!strcmp(cmd, "all")) {
         int fail = app_selftest(&chip) | app_demo(&chip, 1) | app_fuzz(&chip, 10, 1) | app_matvec(&chip, 1);

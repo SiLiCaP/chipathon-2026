@@ -33,9 +33,15 @@ add_executable(${APP}
     core/swchip.c
     core/app.c
     core/oplog.c
+    core/ci_app.c
 )
 pico_generate_pio_header(${APP} ${CMAKE_CURRENT_LIST_DIR}/rp/tt_lockstep.pio)
-target_include_directories(${APP} PRIVATE core rp)
+# CI emulator check: -DCI_VECTORS_DIR=<dir with a generated ci_vectors.h> wins over the committed stub in ci/
+set(CI_VECTORS_DIR "" CACHE PATH "directory holding a generated ci_vectors.h (docs/ci-emulator.md)")
+target_include_directories(${APP} PRIVATE core rp ci)
+if (CI_VECTORS_DIR)
+    target_include_directories(${APP} BEFORE PRIVATE ${CI_VECTORS_DIR})
+endif ()
 target_compile_options(${APP} PRIVATE -O2 -Wall -Wextra)
 target_compile_definitions(${APP} PRIVATE
     ${TT_TARGET_DEFINE}

@@ -5,7 +5,7 @@
 //                  in tt-viktor-chiptor), so the C harness is proven on real logic before silicon exists.
 //
 //   make -C rp2350/pc && rp2350/pc/ntt_host [--sw | --port /dev/ttyUSB1] all | selftest | demo [seed] |
-//                                     fuzz [n] | matvec [seed] | bench [n] | cal
+//                                     fuzz [n] | matvec [seed] | ci | bench [n] | cal
 //   --log summary|csv   after the command, print the operation log (oplog.h). On a PC the times are this PC's,
 //                       and with --port the transfer overhead is USB: use the RP2350 log for silicon estimates.
 #define _DEFAULT_SOURCE
@@ -19,6 +19,7 @@
 #include <unistd.h>
 
 #include "../core/app.h"
+#include "../core/ci_app.h"
 #include "../core/swchip.h"
 
 static uint32_t chip_hz;
@@ -154,6 +155,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(cmd, "matvec")) fail = app_matvec(&chip, arg ? arg : 1);
     else if (!strcmp(cmd, "bench")) fail = app_bench(&chip, arg ? arg : 5, 50000000);
     else if (!strcmp(cmd, "cal")) fail = app_calibrate(&chip);
+    else if (!strcmp(cmd, "ci")) fail = app_ci(&chip);
     else if (!strcmp(cmd, "all")) {
         fail |= app_selftest(&chip);
         fail |= app_demo(&chip, 1);

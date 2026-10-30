@@ -13,6 +13,12 @@ jobs:
       - name: C harness against the software chip (selftest, demo, fuzz, matvec)
         run: make -C rp2350/pc test
 
+      - name: CI emulator contract (docs/ci-emulator.md)
+        run: python3 rp2350/ci/check_contract.py
+
+      - name: Golden CI vectors on the software chip
+        run: make -C rp2350/pc ci-golden
+
   firmware:
     runs-on: ubuntu-24.04
     steps:
