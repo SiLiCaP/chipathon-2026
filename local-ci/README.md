@@ -42,3 +42,11 @@ downloads the LibreLane image and the PDKs (several GB).
 
 Differences from GitHub: Python 3.12 instead of 3.11, and the RTL test uses the
 iverilog 13 build from the `gl_test` action instead of Ubuntu's iverilog 12.
+
+## Host CI and the GitHub fallback
+
+The owner's home server (the host, d0b0) builds every push with this local CI and posts the commit statuses
+`host-ci/gds` and `host-ci/rig` (the Pico 2 W + Tang Nano rig stage). GitHub's `gds` workflow only builds if
+the host does not acknowledge the commit with a `host-ci/gds` status within 10 minutes (job `wait-host`); a manual
+`workflow_dispatch` run always builds on GitHub. `local-ci/summary.py <run-dir>` prints a run's jobs, durations,
+failures and (best effort) utilisation and warning count as JSON; test it with `python3 local-ci/test_summary.py`.
