@@ -11,8 +11,9 @@ Each size gets its own commit status `host-ci/gds-<tiles>` (for example `host-ci
 main build, whether that passed or not. These are informational only: nothing waits for them, and a newer
 push cancels the ones still pending. The value is read from the commit being built, so changing it needs a push.
 
-Sizes are width x height in tiles: 1x1, 1x2, 2x2, 3x2, 4x2, 6x2, 8x2. Tiny Tapeout allows at most two
-rows, so a "vertical 3" (2x3) does not exist; 3x2 is three tiles across, two high. The design's own size and
+Sizes are width x height in tiles: 1x1, 1x2, 2x2, 3x2, 3x4, 4x2, 4x4, 5x4, 6x2, 6x4, 8x2, 8x4. Block heights are
+1, 2 or 4 rows (tt-support-tools accepts only the sizes in its `tech/sky130A/tile_sizes.yaml`), so 3 and 6 rows do not exist and there is no 2x4; 3x2 is
+three tiles across, two high, 3x4 three across, four high (see host_ci_findings.md). The design's own size and
 invalid values are skipped (the main status text says so).
 
 ## Research dies: shapes Tiny Tapeout cannot take
@@ -23,8 +24,8 @@ research_dies: ["2x3"]
 
 `2x3` is two tiles wide and three tall, the vertical layout. The host hardens the design at that die size
 only to **measure** utilization, congestion and timing, for example whether more vertical space helps a
-vertically stuffed design. **It is research only and can never be taped out**: Tiny Tapeout slots are at
-most two rows tall, the pin template is a stretched copy of the stock one, and no precheck runs. The result is the
+vertically stuffed design. **It is research only and can never be taped out**: Tiny Tapeout block heights
+are 1, 2 or 4 rows (3 rows do not exist, and there is no 2x4 either), the pin template is a stretched copy of the stock one, and no precheck runs. The result is the
 informational status `host-ci/gds-2x3-research`, for example
 `2x3 research (never taped out): util 51.9% DRC 0 LVS 0 ant 0 setup +7.57 hold +0.021 ns 10m`, or
 `failed at: <step>` when the flow itself dies. The 2x3 die is 334.88 x 368.56 um, 7 % more area than 3x2

@@ -2,11 +2,11 @@
 #
 # tile_variants: besides the design's own tile size (info.yaml `tiles:`, 3x2), also run the GDS job at
 # these Tiny Tapeout sizes and post each as its own informational status, e.g. host-ci/gds-4x2.
-# Valid sizes (width x height): 1x1, 1x2, 2x2, 3x2, 4x2, 6x2, 8x2. They run after the main build (even
+# Valid sizes (width x height): 1x1, 1x2, 2x2, 3x2, 3x4, 4x2, 4x4, 5x4, 6x2, 6x4, 8x2, 8x4 (4-row heights exist). They run after the main build (even
 # if that failed) and never block newer commits. Not required for merging.
 tile_variants: ["4x2"]
 #
 # research_dies: die shapes Tiny Tapeout cannot take, hardened only to measure what the shape does
 # (utilization, congestion, timing). "2x3" = two tiles wide, three tall: the vertical layout. Tiny
-# Tapeout slots are at most two rows tall, so these can never be taped out. Status host-ci/gds-2x3-research.
+# Tapeout block heights are 1, 2 or 4 rows (never 3, 5, 6), and widths of 2x4 / 2x3 / 3x3 do not exist, so these can never be taped out. Status host-ci/gds-2x3-research.
 research_dies: ["2x3"]
