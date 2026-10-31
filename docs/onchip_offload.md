@@ -11,6 +11,24 @@ liberty, blocks alone, `research/offload/*.v`), **model** (`scripts/offload_budg
 words, same call list as tt-viktor-chiptor `sim/route_model.py`; the rig's measured 42,900 chip clocks per
 exchange in `docs/FPGA_DEMO.md` there matches the 42,432 here), **estimate**.
 
+## Options at a glance (per exchange, hash-only chip K = 8, vs today's 4.57 ms as written / 3.18 ms optimized)
+
+"As written" = 23 cycles per word, 15 per byte (the live NTT demo's `rp_fw` scenario); "optimized" = PIO/DMA 2 + 2 (what the hash demo
+`host/sha3_demo.py` uses). Section 5 explains why these two bracket "the demo's numbers". Area: yosys + abc, block alone.
+
+| Option | Saved, as written | Saved, optimized | Area | Fits 3x2 (free ~49k um2)? | Pin decision? |
+|---|---|---|---|---|---|
+| Firmware PIO/DMA feed | **~1.4 ms** (feed 1.56 -> 0.18) | 0 (is the baseline) | 0 | n/a | no |
+| A-cache in firmware | 0.84 ms (+0.19 rejection) | 0.33 ms (+0.07) | 0 | n/a | no |
+| FINISH auto-pad | 0.15 ms | 0.03 ms | 0.7k | yes | no |
+| On-chip SampleNTT + packing | 0.45 ms | 0.15 ms | 3.5k + a valid / sentinel path | yes | **yes** (valid pin, or 12-bit sentinel stream) |
+| Seeds + nonce on chip | 0.17 ms | 0.03 ms | 16.0k | yes | no |
+| K = 16 core | 0.31 ms | 0.31 ms | +12.2k | **no, 4x2** | no |
+| Compressed outputs (eta = 3 pack) | 0.06 ms | ~0.01 ms | small | yes | no (and output gaps) |
+| Framing M: mode register + uio[3:0] as outputs | enables the SampleNTT row; 12-bit wide read -1/3 output clocks: 0.06 ms pins | ~0.06 ms | 0.07k (+ ~5-10k read port for a wide read) | yes | **yes** (uio[3:0] become outputs in the new mode) |
+| Framing P: packet framing (strobe + header) | feed: absorb needs no word building, ~0.4-0.8 ms of the as-written 1.56; -0.1 ms of clocks lost (+~150 clocks) | ~ -0.01 ms (about neutral) | 0.66k | yes | **yes** (7 uio pins freed) |
+| DDR / ena / rst_n tricks | see section 6 | | | | |
+
 ## 1. Transfer budget, one exchange (keygen + encaps + decaps, 32 calls), burst squeeze + SKIP
 
 One pin word per clock in (a data byte), one byte per clock out.
@@ -132,3 +150,56 @@ Reproduce: `python3 scripts/offload_budget.py`; blocks: `research/offload/{sampl
 only, not wired into the chip, not simulated). Sources read: `docs/tile_routes.md`, `docs/sha3_report.md`,
 `docs/host_timing.md`, `docs/ntt_cache_study.md`, and from tt-viktor-chiptor (af81927) `docs/FPGA_DEMO.md`,
 `sim/route_model.py` (call list, feed costs 23/15 vs 2/2).
+
+## 5. Where the "10x" comes from: viktor's live demo (NTT chip, not the hash chip)
+
+`host/live_demo.py` runs the **NTT chip** (`sim/perf_model.py`; hashing and encoding run on the PC) on the Tang Nano rig
+and converts the measured times with `K_py` / `K_host` / `K_chip` to the planned sky130 chip at **f_chip = 50 MHz** (the
+timing target; limits: I/O 50, PIO lockstep 75, STA 105 MHz; `f_chip()` in `perf_model.py`) with the default scenario
+`rp_fw`, the firmware as written. Its "calculation" is the multiplier's busy time (`MULT_PRODUCTS`, 1 product per clock);
+"pins" is TX + RX words/bytes, plus the RP2350 pack / unpack. Reproduced offline with `silicon_breakdown()` (no rig needed),
+per call: NTT 17.9 us calc vs 35.8 us TX + 53.8 us RX (pins 5.0x) and 550 us pack + unpack as written (total 36x, with
+the optimized firmware 9x); basemul 10.6x, scale 17.8x as written. Per ML-KEM-512 exchange (all calls):
+
+| NTT chip, transfer / calculation | Ratio |
+|---|---|
+| pins only, TX + RX | 3.4x |
+| pins + optimized pack / unpack | **6.0x** |
+| pins + firmware as written | **24x** |
+
+So the owner's "~10x" is the NTT chip between the optimized (6x) and as-written (24x) feed, per-op values 9-11x. It
+is not the hash chip: the NTT chip does 0.9k multiplications per 4.5k words moved, the hash chip does a 368-clock
+permutation per 136 bytes. My `route_model.py` figures are for the hash chip: **0.45x ideal pins, 0.9x with the
+optimized feed, 3.2x as written (burst), 5.6x byte squeeze, ~11x only for K = 16 + as written + byte squeeze.**
+Design against **~1x (optimized feed, the hash demo's own setting) and keep 3x (as written) as the risk case**: transfers
+are as large as compute, not 10x. The ranking above does not change under the demo's numbers (they are the
+"as written" column, where the feed dominates and A / FINISH / SampleNTT gain most). Sources: `docs/FPGA_DEMO.md`,
+`host/live_demo.py` (`_measure` -> `PM.predict`), `sim/perf_model.py`, `sim/config.py`.
+
+## 6. Freeing uio pins: framing options
+
+Today (`src/tt_um_NTT_Core.v`, `hash_io.v`): `uio[3:0]` = 0xF is a marker the hash-only chip never needs (inherited from the NTT
+chip's coefficient words), `uio[4]` valid, `uio[5]`,`uio[7:6]` the command; all 8 `uio` are inputs, 8 data pins in, 8 out.
+Four of the eight uio pins carry a constant. Area from `research/offload/{frame_mode,packet_frame,mux2}.v` (yosys + abc, sky130 hd tt).
+
+| Option | Pins freed | Extra clocks per exchange | Area | Firmware / PIO | Compat | Enables valid (SampleNTT)? | Enables wide output? |
+|---|---|---|---|---|---|---|---|
+| **M. Mode register**: legacy cmd 7 with data[7] = 1 (today a no-op) switches framing; reset default = legacy | 4 (uio[3:0], marker dropped) | 1 per power-up | **66 um2** | PIO drops the marker bits (fewer bits to insert!), sets pin dirs once | full: legacy hosts never send cmd 7 | **yes**: uio[0] = valid, or 12-bit sentinel 0xFFF | 12-bit output (uo + uio[3:0]) if the core read widens |
+| **O. uio_oe per phase** (outputs only during a burst, host idle) | 4, only while bursting | 0 | ~0 | host must tri-state pins per burst: PIO side-set | **breaks legacy** (idle words drive the pins: contention) unless combined with M | yes | yes, same as M |
+| **P. Packet framing**: strobe on uio[4], header byte `{cmd, len}` on ui, then len+1 raw absorb bytes with no strobe | 7 (all uio but the strobe) | ~1.5 per packet: ~150 of 42k (0.4 %) | 0.66k | **big**: message memcpy straight to DMA, no per-word flag insertion; the 23 cycles per word as written fall to ~2 | via mode M | yes | 15 output bits (uo + 7 uio) |
+| C. Command byte on ui, one strobe | 7 | absorb 2 clocks per byte (+3.4k) | ~0.1k | simple | legacy via M | yes | yes, but input traffic doubles: rejected |
+| R. Mode from rst_n release (ui pattern latched while reset releases) | as M | 0 | ~0.05k | host holds a pattern at reset | legacy = pattern 0 | as M | as M |
+| D. DDR (both edges) | 0 | halves clocks | clock-tree and hold risk at 50 MHz; TT I/O limit is 50 MHz (`f_io_limit`, assumption) | PIO at 2x | no | no | no: rejected |
+| `ena` | none (it is the design-select, not a strobe) | | | | | no | no |
+
+A genuinely **wider output path** needs the core, not only pins: the ring reads 8 bits per clock (K = 8). A second read
+port (one more 168:1 x 8-bit mux, measured 10.5k um2 alone, perhaps 5-10k shared) lets the chip emit 12 bits (M) or 15 bits (P)
+per clock: output clocks 8,640 -> 5,760 (12 bit) or ~4,600 (15 bit); ideal pin time -0.06 / -0.08 ms, and the PIO / DMA handles
+fewer words. K = 16 (-0.31 ms) beats it per area.
+
+Ranking: **1. M** (66 um2, 4 pins, full backward compatibility, unlocks the valid pin and with it SampleNTT);
+**2. P** (0.66k, the largest firmware win when the feed is as written, 7 pins; needs M to coexist with legacy);
+**3. R** (a variant of M, no command word); **4. O** (only together with M); then C, D, ena (rejected).
+Decision for the owner: one `uio` pin (uio[0]) as a `valid` output in a mode-switched build costs 66 um2 and a firmware
+mode word; with it the sampler of section 2 (3.5k um2) saves 1,440 B of output and the CPU rejection loop. Still small
+(0.15-0.45 ms), so prototype only after the PIO/DMA feed and A-cache are in; the wide read port is not worth its area.
