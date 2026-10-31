@@ -8,9 +8,9 @@ project:
   clock_hz:     50000000 # Clock frequency in Hz (or 0 if not applicable)
 
   # How many tiles your design occupies? A single tile is about 167x108 uM.
-  tiles: "3x2"          # Valid values: 1x1, 1x2, 2x2, 3x2, 4x2, 6x2 or 8x2
+  tiles: "3x2"          # Valid values (WxH): 1x1, 1x2, 2x2, 3x2, 3x4, 4x2, 4x4, 5x4, 6x2, 6x4, 8x2, 8x4 (docs/host_ci_findings.md)
   # Fun fact: the host CI also hardened this chip "standing up", on a 2x3 die (2 tiles wide, 3 tall,
-  # 334.88 x 368.56 um), a shape Tiny Tapeout can't take (slots are at most 2 rows tall). It signed off
+  # 334.88 x 368.56 um), a shape Tiny Tapeout can't take (block heights are 1, 2 or 4 rows, never 3). It signed off
   # clean anyway: 51.9 % utilization, 0 DRC / LVS / antenna, +7.57 ns setup at the slow corner, in 9.4 min.
   # 3x2 for comparison: 55.5 %, +8.17 ns. (docs/host-ci.md, research dies)
 
