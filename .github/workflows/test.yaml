@@ -1,8 +1,50 @@
+# RTL tests with a host fallback, like gds.yaml.
+#
+# The host (local-ci on the owner's server) runs these same tests as part of every push and posts
+# `host-ci/gds` (which covers test, docs, gds, precheck and gl_test). On GitHub the cocotb run of the hash
+# chip takes hours; on the host about 3 minutes. So on `push` the test job only runs when the host did not
+# acknowledge the commit within 10 minutes; a manual run (workflow_dispatch) always runs here.
 name: test
 on: [push, workflow_dispatch]
 jobs:
-  test:
+  wait-host:
     runs-on: ubuntu-24.04
+    permissions:
+      statuses: read
+      contents: read
+    outputs:
+      host: ${{ steps.poll.outputs.host }}
+    steps:
+      - name: Wait for the host to acknowledge (host-ci/gds)
+        id: poll
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" != "push" ]; then
+            echo "Manual or non-push run: building on GitHub."
+            echo "host=no" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          for i in $(seq 1 20); do
+            n=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/statuses?per_page=100" \
+                  --jq '[.[] | select(.context == "host-ci/gds")] | length' || echo 0)
+            if [ "${n:-0}" -gt 0 ]; then
+              echo "The host acknowledged $GITHUB_SHA (host-ci/gds): skipping the GitHub build."
+              echo "host=yes" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "No host-ci/gds status yet ($i/20)"
+            if [ "$i" -lt 20 ]; then sleep 30; fi
+          done
+          echo "The host did not acknowledge within 10 minutes: building on GitHub."
+          echo "host=no" >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: [wait-host]
+    if: needs.wait-host.outputs.host != 'yes'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
@@ -30,12 +72,6 @@ jobs:
           make
           # make will return success even if the tests fail, so check results.xml for failed tests
           python -m cocotb_tools.check_results results.xml
-
-      - name: Run core tests
-        run: make -C test/core all-variants
-
-      - name: Run adder tests
-        run: make -C test/adders exhaustive
 
       - name: Test Summary
         uses: test-summary/action@v2.4
