@@ -1,9 +1,12 @@
 # Moving more ML-KEM steps into the chip: does it cut the pin traffic? (Oct 31, 2026)
 
 For the team. Question (owner): bigger tiles leave room; if a step is small and cuts transfers over the pins to the
-RP2350, put it on the chip. Answer in short: **the pins are not where the time goes, and the one big transfer item
-(the matrix A, 6,048 of 8,640 bytes out) is best removed in firmware, for 0 um2.** No RTL was prototyped; nothing
-in the list below is "clearly worth it and small". Tags: **measured** (yosys + abc on the sky130 hd tt_025C_1v80
+RP2350, put it on the chip. Answer in short: **transfers are the bottleneck once the RP2350 has to feed the chip
+(as written 3x the permutation time, up to ~10x in the worst case; section 1b), so transfer cuts weigh much more than
+raw pin clocks suggest.** The cheapest big cut is firmware (cache A, 0 um2); on the chip the only candidate with
+real weight is on-chip SampleNTT, and it is blocked by the missing `valid` pin. No RTL was prototyped.
+Method: tt-viktor-chiptor's own model (`sim/route_model.py` `hash_words`, `perms`, `FEED`, `CORES`, `SETUP_S`;
+`sim/config.py` fw_* costs; `docs/ESTIMATES.md`), run unchanged for the hash-only chip. Tags: **measured** (yosys + abc on the sky130 hd tt_025C_1v80
 liberty, blocks alone, `research/offload/*.v`), **model** (`scripts/offload_budget.py`, built on `test/hash_jobs.py`
 words, same call list as tt-viktor-chiptor `sim/route_model.py`; the rig's measured 42,900 chip clocks per
 exchange in `docs/FPGA_DEMO.md` there matches the 42,432 here), **estimate**.
@@ -22,6 +25,38 @@ One pin word per clock in (a data byte), one byte per clock out.
 | J(z, c) | 1 | 800 | 816 | 32 | 6 | 3,075 |
 | **Total** | 32 | **3,431** | 6,584 (SKIP sends ~4.3k words) | **8,640** | **79** | **42,432 (0.85 ms @ 50 MHz)** |
 
+### 1b. Corrected budget: viktor's model, hash-only chip, K = 8, burst + CBD, per exchange
+
+`route_model.py` (I/O clocks, permutation clocks, host words and bytes; 300 CPU cycles setup per call; RP2350 150 MHz):
+
+| Quantity | Value |
+|---|---|
+| Chip I/O (pin) clocks | 13,137 (4,561 host words in, 8,640 bytes out; with byte squeeze, no burst: 13,137 words) |
+| On-chip compute clocks (79 permutations x 368) | 29,072 |
+| Pin time / compute time at **any** f_chip (lockstep) | **0.45** (0.26 ms vs 0.58 ms at 50 MHz; 0.97 vs 2.15 ms at the rig's 13.5 MHz) |
+| RP2350 feed, firmware as written (23 cyc/word, 15/byte, 1/idle clock) | **1.56 ms** (burst), 2.88 ms (byte squeeze) |
+| RP2350 feed, optimized PIO/DMA (2 + 2) | 0.18 ms (burst), 0.29 ms (byte squeeze) |
+| Setup, 32 calls x 300 cycles | 0.064 ms |
+
+Pin + feed + setup against compute (0.58 ms):
+
+| Case | Transfer time | Ratio to compute |
+|---|---|---|
+| ideal lockstep, f_chip any | 0.26 ms | 0.45x |
+| optimized PIO/DMA feed, burst | 0.50 ms | 0.9x |
+| firmware as written, burst | 1.88 ms | **3.2x** |
+| firmware as written, byte squeeze | 3.2 ms | 5.6x |
+| K = 16 (compute 0.27 ms), as written, byte squeeze | 3.2 ms | **~11x** |
+
+So the "about 10x" reproduces only when the host feed is as written (in `docs/ESTIMATES.md` it is the NTT chip,
+"CPU-bound by about 10x") and the compute is made small; for the K = 8 hash chip with bursts it is ~3x as written and
+~1x with PIO/DMA. Because the chip has to be fed word by word, **the price of a byte over the pins is
+~120 ns (out) / ~170 ns (in) as written, ~33 ns optimized, against 20 ns ideal.** That price list is used below.
+With this budget the whole exchange, as written, is 4.57 ms: pins + feed 1.9 ms (41 %), compute 0.58 ms (13 %),
+the RP2350's NTT and polynomial work the rest. The earlier rule "pins are 8 % of the exchange" holds only for
+the ideal 1 B/clk feed.
+
+### 1a. Detail (ideal pin clocks, my count)
 Where the chip's time goes (model, 50 MHz): permutations 79 x 369 = 29.2k clocks (**69 %**, 0.58 ms), bytes out
 8.6k (20 %, 0.17 ms), words in ~4.3k (10 %, 0.09 ms), clears ~0.3k. **All pin traffic together is ~31 % of chip time,
 0.26 ms of the 3.18 ms exchange (8 %).** The hashing as a whole is 1.09 ms of 3.18; the other ~2.1 ms is the
@@ -47,8 +82,21 @@ Savings per exchange. "Feed" = RP2350 cycles at 23/15 (as written) and 2/2 (opti
 | D | FINISH command: the chip pads (domain byte, zeros, 0x80 at rate-1) | -~870 words of padding / SKIP | 0 | -19k as written / ~0 optimized | **0.7k** (measured, sequencer + rate compare; hookup into hash_io not counted) | yes |
 | E | K = 16 core (not a transfer cut: halves the permutation, the 69 %) | 0 | **-15.5k (0.31 ms)** | 0 | +12.2k synthesized (60.8k vs 48.6k) | **no, needs 4x2**; today 4x2 fails hold with the 0.14 ns SDC |
 
-Ranked by saving per um2: **A** (0 area, 0.27 ms chip + up to 0.57 ms feed), **D** (0.7k, 0.13 ms as written only),
-**B** (3.5k, 0.03 ms pins + 0.1-0.28 ms CPU), **E** (12.2k, 0.31 ms, needs 4x2), **C** (16k, 0.15 ms as written only).
+Saving per exchange in time, with viktor's byte prices (as written / optimized feed), including pins and permutations:
+
+| # | Candidate | Time saved as written | Optimized feed | Area | ms (as written) per 1k um2 |
+|---|---|---|---|---|---|
+| A | Keep A in firmware | 0.27 + 0.57 = **0.84 ms** (+ rejection 0.19 ms clean C) | **0.33 ms** (+ 0.07 ms) | 0 | inf |
+| D | FINISH (pad on chip) | 0.15 ms | 0.03 ms | 0.7k | 0.21 |
+| B | On-chip SampleNTT + packing | 1,440 B x 120 ns = 0.17 ms + rejection 0.28 ms (clean C) = **0.45 ms** | 0.05 + ~0.10 = **0.15 ms** | 3.5k | 0.13 |
+| E | K = 16 core | 0.31 ms | 0.31 ms | 12.2k | 0.025 |
+| C | Seeds + nonce counter on chip | 960 x 170 ns = 0.17 ms | 0.03 ms | 16.0k | 0.011 |
+
+Ranking: **A, D, B, E, C**. Under the corrected prices B and D move up, but each is still 1-5 % of the exchange.
+Compressed / smaller outputs: the CBD output is already 4 bits per coefficient (eta = 3 could pack 192 -> 128 B, 512 B
+in all, 0.06 ms as written, with output gaps); ByteEncode / compress act on host data and do not shrink what crosses the pins.
+A wider or valid-flag protocol: a `valid` output pin does not add bandwidth, it unlocks B (see below); a wider
+output has no pins (8 `uo`, all `uio` inputs).
 
 Why B is not a clean win. A rejection sampler's output rate depends on the data, and the chip has no valid / busy
 pin (`uio` are all inputs, `uo_out` is 0 when idle, and 0 is also a legal byte). Options: a tagged 2-byte
@@ -68,18 +116,18 @@ host data and are the floor.
 
 ## 3. Recommendation
 
-1. **Do not spend gates on transfer reduction in 3x2.** The best pin-side candidate (B) saves 0.03 ms of pin time.
-2. **Firmware first:** cache A (candidate A), and build the PIO/DMA feed; as written the feed costs ~1.8 ms of a 4.57 ms exchange,
-   the pins 0.26 ms. With A cached the model's exchange drops from 3.18 ms by roughly 0.3-0.4 ms (chip 0.27 + feed
-   + rejection); the cache holds only while keygen / encaps / decaps are on one device (decaps with a stored key
-   always profits: 4 of its 11 calls).
-3. **If a bigger tile is on the table, use it for K = 16** (-0.31 ms, 10 %), after 4x2 closes hold timing.
-4. **Candidate D** only if the firmware cannot be made to use PIO/DMA.
-5. Open: a `valid` output pin would unlock B; ask whether a `uio` pin may become an output.
+1. **Cache A in firmware and build the PIO/DMA feed first.** Together they remove ~1.5 ms of the as-written 4.57 ms
+   (feed 1.56 -> 0.18 ms; A cache another 0.3-0.8 ms); no gate does that.
+2. **Candidate B (3.5k um2, fits 3x2's free ~49k um2 with room to spare) is the only on-chip transfer cut worth a
+   prototype, and only after the pin question is settled:** it needs a `valid` output (one `uio` pin as output) or the
+   tagged 2-byte format. Without the pin its pin saving is ~0 and only the 0.1-0.28 ms of CPU remains.
+3. **D (0.7k um2)** is nearly free but only matters while the feed is as written; do it with the next RTL change, not alone.
+4. **E (K = 16) is the best use of 4x2** (-0.31 ms), after 4x2 closes hold timing. C is not worth its 16k um2.
+5. Nothing here needs 4x2 except E.
 
 ## 4. Prototype results
 
-None. No candidate met "clearly worth it and small"; no 3x2 harden was run (today's 55.5 % / +8.17 ns stands).
+None. Under the corrected budget no candidate met "clearly worth it and small"; no 3x2 harden was run (today's 55.5 % / +8.17 ns stands).
 Reproduce: `python3 scripts/offload_budget.py`; blocks: `research/offload/{sampler,seed_reg,autopad}.v` (area
 only, not wired into the chip, not simulated). Sources read: `docs/tile_routes.md`, `docs/sha3_report.md`,
 `docs/host_timing.md`, `docs/ntt_cache_study.md`, and from tt-viktor-chiptor (af81927) `docs/FPGA_DEMO.md`,
