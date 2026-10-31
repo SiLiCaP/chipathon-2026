@@ -15,6 +15,7 @@
 # Override the DUT:  make -C fpga TT_TOP=tt_um_other [EXTRA_SRCS=path/to/extra.v]
 # Self-test DUT:     make -C fpga prog TT_TOP=tt_um_emu_selftest EXTRA_SRCS=$(pwd)/fpga/sim/tt_um_emu_selftest.v
 
+PACK_FLAGS ?=
 FPGA_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 ROOT     := $(abspath $(FPGA_DIR)/..)
 DESIGN_ROOT ?= $(ROOT)
@@ -42,6 +43,10 @@ READ_CELLS :=
 BUILD     := $(FPGA_DIR)build/$(TT_TOP)$(BUILD_TAG)
 endif
 ifeq ($(TARGET),pico)
+# The rig pin file puts rst_n, uo_out[0,2,7] and uio[7] on pins 52-56, the GW2AR's SSPI configuration pins.
+# Without --sspi_as_gpio they stay configuration pins: a design driving them kills JTAG, and the Tang can only
+# be reprogrammed after a power cycle ("Erase SRAM TIMEOUT", 2026-10-31).
+PACK_FLAGS := --sspi_as_gpio
 WRAP_SRCS := $(FPGA_DIR)tangnano20k_pico_top.v
 WRAP_TOP  := tangnano20k_pico_top
 WRAP_PARAMS :=
@@ -78,7 +83,7 @@ $(BUILD)/pnr.json: $(BUILD)/top.json $(CST)
 	  --device $(DEVICE) --vopt family=$(FAMILY) --vopt cst=$(CST) --freq 27
 
 $(BUILD)/top.fs: $(BUILD)/pnr.json
-	gowin_pack -d $(FAMILY) -o $@ $<
+	gowin_pack -d $(FAMILY) $(PACK_FLAGS) -o $@ $<
 
 prog: $(BUILD)/top.fs
 	openFPGALoader -b tangnano20k $<
