@@ -33,10 +33,19 @@ HARDEN_DIR := $(FPGA_DIR)build/harden/$(TT_TOP)
 GL_NETLIST ?= $(firstword $(wildcard $(DESIGN_ROOT)/runs/wokwi/final/nl/$(TT_TOP).nl.v $(HARDEN_DIR)/runs/wokwi/final/nl/$(TT_TOP).nl.v))
 SKY130_LIB ?= $(firstword $(wildcard $(HOME)/.ciel/ciel/sky130/versions/*/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib))
 TARGET    ?= uart
+# GL_CE=1 (default): the netlist's clock gates (dlclkp) become clock enables before synthesis (gl_icg_to_ce.py),
+# because the fabric cannot gate a clock glitch-free (the negedge-flop model gave run-to-run wrong digests).
+# GL_CE=0 keeps the netlist as is.
+GL_CE     ?= 1
 ifeq ($(GL),1)
+ifeq ($(GL_CE),1)
+BUILD     := $(FPGA_DIR)build/$(TT_TOP)$(BUILD_TAG)_glce
+DUT_SRCS  = $(BUILD)/dut_ce.nl.v $(FPGA_DIR)sky130_phys_cells.v $(EXTRA_SRCS)
+else
 DUT_SRCS  := $(GL_NETLIST) $(FPGA_DIR)sky130_phys_cells.v $(EXTRA_SRCS)
-READ_CELLS := read_liberty -ignore_miss_func $(SKY130_LIB);
 BUILD     := $(FPGA_DIR)build/$(TT_TOP)$(BUILD_TAG)_gl
+endif
+READ_CELLS := read_liberty -ignore_miss_func $(SKY130_LIB);
 else
 DUT_SRCS  := $(addprefix $(DESIGN_ROOT)/src/,$(SRC_FILES)) $(EXTRA_SRCS)
 READ_CELLS :=
@@ -73,6 +82,9 @@ info:
 	@echo "GL       = $(GL)"
 	@echo "TARGET   = $(TARGET) ($(WRAP_TOP), $(notdir $(CST)))"
 	@echo "DUT_SRCS = $(DUT_SRCS)"
+
+$(BUILD)/dut_ce.nl.v: $(GL_NETLIST) $(FPGA_DIR)gl_icg_to_ce.py | $(BUILD)
+	python3 $(FPGA_DIR)gl_icg_to_ce.py $(GL_NETLIST) $@
 
 $(BUILD)/top.json: $(DUT_SRCS) $(WRAP_SRCS) $(DESIGN_ROOT)/info.yaml | check_netlist $(BUILD)
 	yosys -q -l $(BUILD)/yosys.log -D TT_TOP=$(TT_TOP) \
