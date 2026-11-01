@@ -180,6 +180,12 @@ static void help(void) {
            "binary TTE1 commands are accepted on the same port (host/tt_emu.py --port /dev/ttyACM0)\n");
 }
 
+// The FPGA is loaded after this firmware has booted (and reset the chip once), so its flops come up
+// unreset: every hardware check starts with a reset, or the chip answers all zeros.
+static void fresh_chip(void) {
+    if (!use_sw && !wrong_board) hash_chip_reset(&chip);
+}
+
 static void command(char *line) {
     char *cmd = strtok(line, " \t");
     char *arg = strtok(NULL, " \t");
@@ -206,12 +212,13 @@ static void command(char *line) {
         else { use_sw = 0; chip.io = &io_hw; printf("transport: %s\n", chip.io->name); }
     }
     else if (!strcmp(cmd, "sw")) { use_sw = 1; chip.io = &io_sw; printf("transport: %s\n", chip.io->name); }
-    else if (!strcmp(cmd, "selftest")) app_selftest(&chip);
-    else if (!strcmp(cmd, "fuzz")) app_fuzz(&chip, n ? n : 10, get_rand_32());
-    else if (!strcmp(cmd, "cal")) app_calibrate(&chip);
-    else if (!strcmp(cmd, "ci")) app_ci(&chip);
-    else if (!strcmp(cmd, "sweep")) { if (use_sw) printf("sweep needs the real chip (hw)\n"); else sweep(); }
+    else if (!strcmp(cmd, "selftest")) { fresh_chip(); app_selftest(&chip); }
+    else if (!strcmp(cmd, "fuzz")) { fresh_chip(); app_fuzz(&chip, n ? n : 10, get_rand_32()); }
+    else if (!strcmp(cmd, "cal")) { fresh_chip(); app_calibrate(&chip); }
+    else if (!strcmp(cmd, "ci")) { fresh_chip(); app_ci(&chip); }
+    else if (!strcmp(cmd, "sweep")) { if (use_sw) printf("sweep needs the real chip (hw)\n"); else { fresh_chip(); sweep(); } }
     else if (!strcmp(cmd, "all")) {
+        fresh_chip();
         int fail = app_selftest(&chip) | app_fuzz(&chip, 10, 1);
         printf("all: %s\n", fail ? "FAIL" : "PASS");
     } else printf("unknown command '%s' (try help)\n", cmd);
