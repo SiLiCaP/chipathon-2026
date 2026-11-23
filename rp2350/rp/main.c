@@ -62,7 +62,7 @@ static int run_repeat(uint16_t w, uint32_t n) {                 // n clocks of o
     static uint8_t sink[256];
     for (int i = 0; i < 256; i++) buf[i] = w;
     for (uint32_t done = 0; done < n; done += 256)
-        if (chip.io->run(chip.io, buf, n - done < 256 ? n - done : 256, sink)) return -1;
+        if (chip.io->run(chip.io, buf, n - done < 256 ? n - done : 256, sink, NULL)) return -1;
     return 0;
 }
 
@@ -103,7 +103,7 @@ static void tte_command(int op) {
     case 0x11:                                                                  // RUN len
         if ((n = rd16()) < 0) return;
         if (n > TTE_DEPTH) n = TTE_DEPTH;
-        reply(chip.io->run(chip.io, stim, (uint32_t)n, cap) ? 2 : 0);
+        reply(chip.io->run(chip.io, stim, (uint32_t)n, cap, NULL) ? 2 : 0);
         if (n) cur_in = stim[n - 1];                                            // inputs keep the last word
         break;
     case 0x12:                                                                  // READ_CAP addr len
@@ -171,7 +171,7 @@ static void help(void) {
            "  sys <mhz>           RP2350 system clock (150 default; 200 gives 50 MHz with even phases)\n"
            "  reset               rst_n low for 10 clocks\n"
            "  hw | sw             use the real chip, or the software chip (works on any RP2350 board)\n"
-           "  selftest            known answers + SHA-3/SHAKE sweeps + PRF/CBD vs the C reference\n"
+           "  selftest            known answers + SHA-3/SHAKE sweeps + PRF/CBD + framing mode 1 (SampleNTT) vs the C reference\n"
            "  fuzz [n]            n random jobs of every kind vs the C reference (default 10)\n"
            "  ci                  CI emulator check: the compiled-in per-commit ML-KEM hash jobs (docs/ci-emulator.md)\n"
            "  cal                 find the sample skew at the current clock\n"

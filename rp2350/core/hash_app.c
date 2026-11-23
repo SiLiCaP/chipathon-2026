@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Self test, fuzz and skew calibration for the hash chip. Mirrors test/test_hash_only.py: SHA3-256/512 and
-// SHAKE128/256 at the rate edges (with and without SKIP, byte and burst squeeze) and ML-KEM's PRF through
-// BURST_CBD, all against the software reference (sha3_sw.c), plus known answers that anchor the reference itself.
+// SHAKE128/256 at the rate edges (with and without SKIP, byte and burst squeeze), the chip's own padding (FINISH)
+// and packet absorb (ABSORB_N), and ML-KEM's PRF through BURST_CBD, all against the software reference
+// (sha3_sw.c), plus known answers that anchor the reference itself.
 #include "hash_app.h"
 
 #include <stdio.h>
@@ -12,6 +13,7 @@
 static const struct { unsigned rate; uint8_t dom; } PARAM[HASH_NKIND] = {
     [HASH_SHA3_256] = {136, 0x06}, [HASH_SHA3_512] = {72, 0x06}, [HASH_SHAKE128] = {168, 0x1F},
     [HASH_SHAKE256] = {136, 0x1F}, [HASH_PRF_CBD2] = {136, 0x1F}, [HASH_PRF_CBD3] = {136, 0x1F},
+    [HASH_XOF_NTT] = {168, 0x1F},
 };
 
 void hash_ref(hash_kind_t kind, const uint8_t *msg, uint32_t len, uint8_t *out, uint32_t outlen) {
@@ -20,6 +22,12 @@ void hash_ref(hash_kind_t kind, const uint8_t *msg, uint32_t len, uint8_t *out, 
         uint8_t prf[192];
         sha3_sponge(PARAM[kind].rate, PARAM[kind].dom, msg, len, prf, 64u * eta);
         cbd_pack(prf, eta, out);
+        return;
+    }
+    if (kind == HASH_XOF_NTT) {                       // 8 blocks: a polynomial needs 3, now and then 4
+        static uint8_t xof[8 * 168];
+        sha3_sponge(PARAM[kind].rate, PARAM[kind].dom, msg, len, xof, sizeof xof);
+        if (!sample_ntt_pack(xof, sizeof xof, out)) memset(out, 0, 384);
         return;
     }
     sha3_sponge(PARAM[kind].rate, PARAM[kind].dom, msg, len, out, outlen);
@@ -101,6 +109,88 @@ static int algo_sweep(hash_chip_t *c) {
     return fail;
 }
 
+// FINISH (the chip pads) at every corner of the block, and ABSORB_N packets with and without it
+static int finish_sweep(hash_chip_t *c) {
+    int fail = 0, n = 0;
+    uint8_t msg[300];
+    for (int kind = HASH_SHA3_256; kind <= HASH_SHAKE256; kind++) {
+        const unsigned rate = PARAM[kind].rate;
+        const unsigned lens[] = {0, 1, 7, 8, rate - 9, rate - 8, rate - 1, rate, rate + 1, 200};
+        for (unsigned i = 0; i < sizeof lens / sizeof lens[0]; i++) {
+            for (unsigned k = 0; k < lens[i]; k++) msg[k] = (uint8_t)(13 * k + lens[i]);
+            const uint32_t outlen = kind == HASH_SHA3_256 ? 32 : kind == HASH_SHA3_512 ? 64 : 200;
+            static const unsigned OPTS[] = {HASH_FINISH, HASH_FINISH | HASH_RAW, HASH_RAW};
+            for (unsigned o = 0; o < 3; o++) {
+                fail += check_job(c, (hash_kind_t)kind, msg, lens[i], outlen, OPTS[o], "finish");
+                n++;
+            }
+        }
+    }
+    printf("  FINISH (the chip pads) and ABSORB_N packets at the block corners (%d jobs): %s\n", n, fail ? "FAIL" : "ok");
+    return fail;
+}
+
+// one burst word per squeeze: the chip permutes between the blocks (framing mode 0: bytes by position)
+static int auto_sweep(hash_chip_t *c) {
+    int fail = 0, n = 0;
+    uint8_t msg[200];
+    for (unsigned k = 0; k < sizeof msg; k++) msg[k] = (uint8_t)(3 * k + 1);
+    static const struct { hash_kind_t kind; unsigned len, outlen, opts; } J[] = {
+        {HASH_SHAKE128, 34, 504, HASH_AUTO}, {HASH_SHAKE128, 200, 1000, HASH_AUTO | HASH_FINISH},
+        {HASH_SHAKE256, 33, 300, HASH_AUTO | HASH_RAW}, {HASH_SHA3_512, 100, 64, HASH_AUTO},
+        {HASH_PRF_CBD3, 33, 0, HASH_AUTO}, {HASH_PRF_CBD3, 33, 0, HASH_AUTO | HASH_FINISH | HASH_RAW},
+        {HASH_PRF_CBD2, 33, 0, HASH_AUTO},
+    };
+    for (unsigned i = 0; i < sizeof J / sizeof J[0]; i++, n++)
+        fail += check_job(c, J[i].kind, msg, J[i].len, J[i].outlen, J[i].opts, "auto");
+    printf("  blocks that follow by themselves, plain and PRF eta 3 (%d jobs): %s\n", n, fail ? "FAIL" : "ok");
+    return fail;
+}
+
+// Framing mode 1: no marker, the valid and busy pins, packed eta 3, and SampleNTT (which needs the valid pin)
+static int mode1_sweep(hash_chip_t *c) {
+    if (!hash_chip_has_mode1(c)) {
+        printf("  framing mode 1: skipped (this transport does not sample uio[1:0])\n");
+        return 0;
+    }
+    int fail = 0, n = 0;
+    uint8_t msg[300];
+    if (hash_chip_set_mode(c, 1)) {
+        printf("  framing mode 1: FAIL (MODE 1)\n");
+        return 1;
+    }
+    for (int kind = HASH_SHA3_256; kind <= HASH_SHAKE256; kind++) {
+        const unsigned rate = PARAM[kind].rate;
+        const unsigned lens[] = {0, rate - 1, 200};
+        for (unsigned i = 0; i < 3; i++) {
+            for (unsigned k = 0; k < lens[i]; k++) msg[k] = (uint8_t)(11 * k + lens[i]);
+            const uint32_t outlen = kind == HASH_SHA3_256 ? 32 : kind == HASH_SHA3_512 ? 64 : kind == HASH_SHAKE128 ? 504 : 192;
+            static const unsigned OPTS[] = {0, HASH_BYTEWISE | HASH_SKIP, HASH_FINISH | HASH_RAW | HASH_AUTO};
+            for (unsigned o = 0; o < 3; o++, n++)
+                fail += check_job(c, (hash_kind_t)kind, msg, lens[i], outlen, OPTS[o], "mode 1");
+        }
+    }
+    for (unsigned nonce = 0; nonce < 4; nonce++) {            // PRF: eta 2, and eta 3 packed (128 bytes on the pins)
+        for (unsigned k = 0; k < 32; k++) msg[k] = (uint8_t)(5 * k + nonce);
+        msg[32] = (uint8_t)nonce;
+        fail += check_job(c, nonce & 2 ? HASH_PRF_CBD2 : HASH_PRF_CBD3, msg, 33, 0, nonce & 1 ? HASH_AUTO : 0, "mode 1 cbd");
+        n++;
+    }
+    for (unsigned q = 0; q < 8; q++) {                        // XOF(rho, j, i) through SampleNTT: a polynomial of A
+        for (unsigned k = 0; k < 32; k++) msg[k] = (uint8_t)(1 + 29 * k);
+        msg[32] = (uint8_t)(q & 1);
+        msg[33] = (uint8_t)((q >> 1) & 1);
+        fail += check_job(c, HASH_XOF_NTT, msg, 34, 0, (q & 4 ? HASH_AUTO : 0) | (q & 1 ? HASH_FINISH | HASH_RAW : 0), "ntt");
+        n++;
+    }
+    if (hash_chip_set_mode(c, 0)) fail++;
+    fail += check_job(c, HASH_SHA3_256, (const uint8_t *)"abc", 3, 32, 0, "back in mode 0");
+    n++;
+    printf("  framing mode 1: valid pin, packed eta 3, SampleNTT, busy pin; and back to mode 0 (%d jobs): %s\n", n,
+           fail ? "FAIL" : "ok");
+    return fail;
+}
+
 static int cbd_sweep(hash_chip_t *c) {
     int fail = 0, n = 0;
     uint8_t seed[33];
@@ -108,7 +198,7 @@ static int cbd_sweep(hash_chip_t *c) {
         for (unsigned nonce = 0; nonce < 4; nonce++) {
             for (unsigned k = 0; k < 32; k++) seed[k] = (uint8_t)(5 * k + nonce);
             seed[32] = (uint8_t)nonce;
-            fail += check_job(c, eta == 2 ? HASH_PRF_CBD2 : HASH_PRF_CBD3, seed, 33, 0, 0, "cbd");
+            fail += check_job(c, eta == 2 ? HASH_PRF_CBD2 : HASH_PRF_CBD3, seed, 33, 0, nonce & 1 ? HASH_FINISH | HASH_RAW : 0, "cbd");
             n++;
         }
     printf("  PRF + SamplePolyCBD through BURST_CBD, eta 2 and 3 (%d jobs): %s\n", n, fail ? "FAIL" : "ok");
@@ -119,7 +209,10 @@ int app_selftest(hash_chip_t *c) {
     printf("selftest: hash chip, %s\n", c->io->name);
     int fail = known_answers(c);
     fail += algo_sweep(c);
+    fail += finish_sweep(c);
     fail += cbd_sweep(c);
+    fail += auto_sweep(c);
+    fail += mode1_sweep(c);
     printf("selftest: %s\n", fail ? "FAIL" : "PASS");
     return fail ? 1 : 0;
 }
@@ -129,15 +222,21 @@ int app_fuzz(hash_chip_t *c, uint32_t n, uint32_t seed) {
     int fail = 0;
     rnd_state = seed ? seed : 1;
     for (uint32_t j = 0; j < n; j++) {
-        const hash_kind_t kind = (hash_kind_t)(rnd() % HASH_NKIND);
+        // the second half in framing mode 1 where the transport has it (SampleNTT only there)
+        if (j == n / 2 && hash_chip_has_mode1(c) && hash_chip_set_mode(c, 1)) fail++;
+        hash_kind_t kind = (hash_kind_t)(rnd() % HASH_NKIND);
+        if (kind == HASH_XOF_NTT && !c->mode) kind = HASH_SHAKE128;
         const uint32_t len = rnd() % 380;
         for (uint32_t k = 0; k < len; k++) msg[k] = (uint8_t)rnd();
         if (rnd() % 4 == 0) memset(msg + len / 3, 0, (len - len / 3) / 2);      // zero lanes for SKIP
         uint32_t outlen = hash_kind_fixed_len(kind);
         if (kind == HASH_SHAKE128 || kind == HASH_SHAKE256) outlen = 1 + rnd() % 420;
-        const unsigned opts = (rnd() & 1 ? HASH_BYTEWISE : 0) | (rnd() & 1 ? HASH_SKIP : 0);
+        const unsigned r = rnd();
+        const unsigned opts = (r & 1 ? HASH_BYTEWISE : 0) | (r & 2 ? HASH_SKIP : 0) | (r & 4 ? HASH_FINISH : 0) |
+                              (r & 8 ? HASH_RAW : 0) | (r & 16 ? HASH_AUTO : 0);
         fail += check_job(c, kind, msg, len, outlen, opts, "fuzz");
     }
+    if (hash_chip_set_mode(c, 0)) fail++;
     printf("fuzz: %s (%lu random jobs)\n", fail ? "FAIL" : "PASS", (unsigned long)n);
     return fail ? 1 : 0;
 }

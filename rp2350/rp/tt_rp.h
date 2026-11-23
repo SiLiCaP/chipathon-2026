@@ -27,6 +27,9 @@
 #define TT_PIN_OUT_BASE 26      // PIO OUT window, 19 bits: uio[5..7] on GPIO 26-28, then ui_in[0..7], uio[0..4] on GPIO 0-12
 #define TT_N_OUT_PIO 19
 #define TT_PIN_UO_OUT0 13       // uo_out[7:0] = GPIO 13-20
+#define TT_PIN_UIO0 8           // uio[0], uio[1] = GPIO 8, 9: the chip's valid / busy outputs in framing mode 1
+#define TT_PIN_IN_WIDE 8        // wide IN window: GPIO 8-20 = uio[1:0], (uio[4:2]), uo_out
+#define TT_N_IN_WIDE 13
 #define TT_PIO_GPIO_BASE 0
 #define TT_PACKAGE_QFN60 1      // RP2350A
 #else
@@ -43,6 +46,9 @@
 #define TT_PIN_OUT_BASE 17      // ui_in[7:0] = GPIO 17-24, uio[7:0] = GPIO 25-32: one 16-bit word as is
 #define TT_N_OUT_PIO 16
 #define TT_PIN_UO_OUT0 33       // uo_out[7:0] = GPIO 33-40
+#define TT_PIN_UIO0 25          // uio[0], uio[1] = GPIO 25, 26: the chip's valid / busy outputs in framing mode 1
+#define TT_PIN_IN_WIDE 25       // wide IN window: GPIO 25-40 = uio[7:0], uo_out
+#define TT_N_IN_WIDE 16
 #define TT_PIO_GPIO_BASE 16
 #define TT_PACKAGE_QFN60 0      // RP2350B
 #endif
@@ -53,7 +59,9 @@ uint32_t tt_rp_set_clock(uint32_t hz);    // returns the clock actually set
 uint32_t tt_rp_clock_hz(void);
 void tt_rp_clock_phases(uint32_t *div, uint32_t *low, uint32_t *high);   // in system clocks
 
-int tt_rp_run(const uint16_t *words, uint32_t n, uint8_t *uo);           // lockstep words, one sample each
+// lockstep words, one sample each; aux != NULL: also uio[1:0] per clock (0 unless released, see below)
+int tt_rp_run(const uint16_t *words, uint32_t n, uint8_t *uo, uint8_t *aux);
+void tt_rp_uio_release(bool release);     // stop / resume driving uio[1:0] (the chip drives them in framing mode 1)
 uint32_t tt_rp_last_conv_cyc(void);       // cycles the last run spent reformatting words (rig only)
 int tt_rp_reset(uint32_t cycles);
 uint8_t tt_rp_read_uo(void);              // uo_out right now (clock is stopped low)

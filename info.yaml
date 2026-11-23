@@ -3,7 +3,7 @@ project:
   title:        "SHA-3 Engine"      # Project title
   author:       "Nikita"      # Your name
   discord:      ""      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  "Keccak-f[1600] sponge for ML-KEM: SHA3-256/512, SHAKE128/256 at 368 clocks per permutation, burst squeeze and SamplePolyCBD"      # One line description of what your project does
+  description:  "Keccak-f[1600] sponge for ML-KEM: SHA3-256/512, SHAKE128/256 at 368 clocks per permutation, burst squeeze, on-chip padding, SamplePolyCBD and SampleNTT"      # One line description of what your project does
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
   clock_hz:     50000000 # Clock frequency in Hz (or 0 if not applicable)
 
@@ -24,6 +24,7 @@ project:
     - "tt_um_NTT_Core.v"
     - "io_in_capture.v"
     - "hash_io.v"
+    - "sample_ntt.v"
     - "keccak_ring.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
@@ -50,8 +51,8 @@ pinout:
   uo[7]: "byte[7]"
 
   # Bidirectional pins
-  uio[0]: "tag[0] (1)"
-  uio[1]: "tag[1] (1)"
+  uio[0]: "tag[0] (1); mode 1: valid out"
+  uio[1]: "tag[1] (1); mode 1: busy out"
   uio[2]: "tag[2] (1)"
   uio[3]: "tag[3] (1)"
   uio[4]: "valid"

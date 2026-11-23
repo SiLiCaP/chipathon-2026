@@ -66,6 +66,31 @@ The console `selftest` (and `all` = selftest + fuzz) is the hash chip's known-an
 SHAKE128/256 at the rate edges with byte and burst squeeze, with and without SKIP, and PRF + CBD for eta 2 and 3,
 against the software reference; it prints `selftest: PASS`.
 
+## Commands outside the contract (Nov 23, 2026)
+
+The chip has more commands (`docs/info.md`): Absorb N, Finish, Mode, Burst NTT, and bursts whose next blocks
+follow by themselves. Every command word the
+contract-2 jobs send is unchanged, so `CI_CONTRACT` stays 2 and the golden vectors are not regenerated.
+
+| Command | `hash_chip.c` | `hash_swchip.c` | Checked by |
+|---|---|---|---|
+| Absorb N, Finish | job options `HASH_RAW`, `HASH_FINISH` | modelled, clock for clock | `selftest`, `fuzz`, and their pin stream through the RTL (`make -C test rp2350`) |
+| Blocks that follow by themselves (Burst x, `auto`) | job option `HASH_AUTO` | modelled, clock for clock | the same |
+| Mode 1 (`uio[0]` = valid out, `uio[1]` = busy out, packed eta = 3) | `hash_chip_set_mode`; jobs then check the valid pin on every clock | modelled, both pins clock for clock | the same; the replay also compares `uio[1:0]` on every clock |
+| Burst NTT | job kind 6, `HASH_XOF_NTT` (384 bytes, mode 1 only); with `HASH_AUTO` it runs until busy falls | modelled | the same |
+
+Mode 1 needs a transport that samples `uio[1:0]` next to `uo_out` and can stop driving them
+(`tt_io.h`: the `aux` samples and `uio_release`):
+- **RP2350** (`rp/tt_rp.c`): in mode 1 the PIO's IN window is widened to take `uio[1:0]` with `uo_out` (16-bit
+  samples) and the two pins become inputs. In mode 0 the transport is exactly as before (8-bit samples).
+- **Tang Nano over USB** (`pc/pc_main.c`): the emulator's capture already holds `uio_out` and `uio_oe`.
+- **No fight on the wires:** `hash_chip_set_mode` plays the Mode word and two idle clocks while the host still
+  drives `uio[1:0]` low, which is what the chip drives there once it takes over; only then does the host let go.
+  Back to mode 0 the chip lets go first. `fpga/tangnano20k_pico_top.v` drives `uio[1:0]` back in mode 1.
+
+`selftest` and `fuzz` run their mode-1 part wherever the transport has it, so on the rig they exercise the real
+pins. The `ci` jobs (contract 2) do not use the new commands.
+
 ## Sync rule
 
 Any change to the chip's commands, framing or busy times must keep `hash_chip.c`, `hash_swchip.c`, `app_ci` and

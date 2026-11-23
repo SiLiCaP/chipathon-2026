@@ -13,6 +13,9 @@
 ;
 ; The delay fields of both instructions are patched at run time (tt_rp.c) to set the low and high
 ; phase lengths, so the chip clock is sys_clk / (clkdiv * (low + high)).
+;
+; Wide sampling (the chip's framing mode 1): the IN window and bit count are patched too, so one sample
+; also holds uio[1:0], the chip's valid and busy pins (tt_rp.h TT_PIN_IN_WIDE, TT_N_IN_WIDE; 16-bit DMA).
 
 .program tt_lockstep
 .side_set 1

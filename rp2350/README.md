@@ -18,15 +18,19 @@ rp2350/
     tt_io.h        the pin transport interface (16-bit pin words in, uo_out samples out) and TT_WORD
     hash_chip.c    the driver: builds the pin words of a sponge job exactly like test/hash_jobs.py (CLEAR, absorb,
                    PERMUTE + busy, squeeze by SQUEEZE or BURST, BURST_CBD for the PRF), picks the bytes out, checks
-                   that uo_out is quiet when no byte is due
-    hash_swchip.c  software chip: pin-level twin of hash_io.v + keccak_ring (K = 8) on sha3_sw.c's Keccak-f,
-                   records protocol violations (a command while busy, SKIP off a lane, ...)
+                   that uo_out is quiet when no byte is due. Options: ABSORB_N packets (HASH_RAW), the chip's own
+                   padding (HASH_FINISH), one burst word per squeeze (HASH_AUTO). hash_chip_set_mode switches the
+                   chip to framing mode 1 (valid and busy pins, packed eta 3), where the kind HASH_XOF_NTT returns a
+                   polynomial of A through SampleNTT
+    hash_swchip.c  software chip: pin-level twin of hash_io.v + sample_ntt.v + keccak_ring (K = 8) on sha3_sw.c's
+                   Keccak-f, with the valid and busy pins of mode 1; records protocol violations (a command
+                   while busy, SKIP off a lane, ...)
     hash_app.c     selftest, fuzz, calibrate
     ci_app.c       app_ci: the compiled-in ML-KEM hash jobs of ci/ci_vectors.h
-    sha3_sw.c      FIPS 202 + SamplePolyCBD in software: the reference every chip result is checked against
+    sha3_sw.c      FIPS 202 + SamplePolyCBD + SampleNTT in software: the reference every chip result is checked against
   ci/            ci_vectors.h = the stub (CI_NJOB 0); golden/ = committed fixed-seed vectors; check_contract.py
   rp/            RP2350 only
-    tt_lockstep.pio  one loop = one chip clock: input word out, uo_out sampled, clk via side-set
+    tt_lockstep.pio  one loop = one chip clock: input word out, uo_out sampled (in mode 1 with uio[1:0]), clk via side-set
     tt_rp.h        the two targets' pin maps (TT_TARGET)
     tt_rp.c        pins, TT mux select, reset, PIO + DMA transport, chip clock settings, package check
     main.c         USB command line + the TTE1 binary protocol
@@ -73,7 +77,7 @@ Open the USB serial port, for example `python3 -m serial.tools.miniterm /dev/tty
 | `select <n>` | select project n on the TT mux (the TT SDK sequence), then reset the chip. On the rig: just a reset |
 | `clk <hz>` | chip clock. Starts at 1 MHz |
 | `sys <mhz>` | RP2350 clock: 150 by default, 200 gives 50 MHz with even phases |
-| `selftest` | known answers, SHA-3 / SHAKE at the rate edges (byte + burst squeeze, +- SKIP), PRF + CBD, vs the C reference |
+| `selftest` | known answers, SHA-3 / SHAKE at the rate edges (byte + burst squeeze, +- SKIP), FINISH and ABSORB_N at the block corners, PRF + CBD, one-word squeezes, and framing mode 1 (valid pin, packed eta 3, SampleNTT, busy pin), vs the C reference |
 | `fuzz [n]` | n random jobs of every kind (random lengths, zero lanes, outputs) vs the C reference |
 | `ci` | the CI emulator check: the compiled-in per-commit ML-KEM hash jobs (docs/ci-emulator.md); `ci: NOVECTORS` on the stub |
 | `cal` | find the sample skew (see bring-up) |
@@ -147,6 +151,6 @@ typed commands. The PC tools written for the FPGA in
 | Run | Result |
 |---|---|
 | PC, software chip: selftest, fuzz, golden ML-KEM hash jobs | PASS; 0 protocol violations |
-| C driver's pin stream through the RTL (`make -C test rp2350`, iverilog + cocotb) | uo_out identical to the software chip on every clock |
+| C driver's pin stream through the RTL (`make -C test rp2350`, iverilog + cocotb) | uo_out and the chip's uio[1:0] identical to the software chip on every clock |
 | Firmware build (pico-sdk 2.1.1, Arm GCC) for `pico2w_tang` with the golden vectors | builds without warnings |
 | **On the Pico 2 W + Tang Nano rig** | by the host CI (`host-ci/rig`) |

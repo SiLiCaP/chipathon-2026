@@ -5,8 +5,8 @@
 //                  in tt-viktor-chiptor), so the C harness is proven on real logic before silicon exists.
 //
 //   make -C rp2350/pc && rp2350/pc/hash_host [--sw | --port /dev/ttyUSB1] all | selftest | fuzz [n] | ci | cal
-//   --dump-words FILE   write every pin word played and every uo_out sampled (HWD1 file, test/test_driver_stream.py
-//                       replays it through the RTL and compares the samples clock for clock)
+//   --dump-words FILE   write every pin word played and every uo_out and uio[1:0] sampled (HWD2 file,
+//                       test/test_driver_stream.py replays it through the RTL and compares the samples clock for clock)
 #define _DEFAULT_SOURCE
 #include <errno.h>
 #include <fcntl.h>
@@ -62,7 +62,7 @@ static int xfer(const uint8_t *cmd, size_t n, uint8_t *resp, size_t want) {
 
 static void le16(uint8_t *p, uint32_t v) { p[0] = v & 0xFF; p[1] = (v >> 8) & 0xFF; }
 
-static int tte_run(tt_io_t *io, const uint16_t *words, uint32_t n, uint8_t *uo) {
+static int tte_run(tt_io_t *io, const uint16_t *words, uint32_t n, uint8_t *uo, uint8_t *aux) {
     (void)io;
     static uint8_t buf[5 + 2 * TTE_DEPTH], cap[3 * TTE_DEPTH];
     for (uint32_t off = 0; off < n; off += TTE_DEPTH) {
@@ -74,7 +74,10 @@ static int tte_run(tt_io_t *io, const uint16_t *words, uint32_t n, uint8_t *uo) 
         if (xfer(buf, 3, NULL, 0)) return -1;
         buf[0] = OP_READ_CAP; le16(buf + 1, 0); le16(buf + 3, m);
         if (xfer(buf, 5, cap, 3 * m)) return -1;
-        for (uint32_t i = 0; i < m; i++) uo[off + i] = cap[3 * i];   // uo_out, uio_out, uio_oe
+        for (uint32_t i = 0; i < m; i++) {                           // uo_out, uio_out, uio_oe
+            uo[off + i] = cap[3 * i];
+            if (aux) aux[off + i] = cap[3 * i + 1] & cap[3 * i + 2] & 3;
+        }
     }
     return 0;
 }
@@ -86,6 +89,9 @@ static int tte_reset(tt_io_t *io, uint32_t cycles) {
     b[0] = OP_RESET; le16(b + 1, cycles);
     return xfer(b, 3, NULL, 0);
 }
+
+// The emulator's uio inputs are a register behind the UART, not pins: nothing to let go of.
+static int tte_release(tt_io_t *io, int release) { (void)io; (void)release; return 0; }
 
 static int tte_open(const char *dev, uint32_t div) {
     fd = open(dev, O_RDWR | O_NOCTTY);
@@ -107,29 +113,38 @@ static int tte_open(const char *dev, uint32_t div) {
 }
 
 // ---------------- word dump ----------------
-// HWD1 file: "HWD1", u32 n, n x u16 words, n x u8 uo_out samples (little endian). Appended to as the chip runs, the
-// header is patched at the end. A clock stopped between transport calls is invisible to the chip, so one stream.
+// HWD2 file: "HWD2", u32 n, n x u16 words, n x u8 uo_out samples, n x u8 uio[1:0] samples (what the chip drives
+// there in framing mode 1, else 0), little endian. A clock stopped between transport calls is invisible to the
+// chip, so one stream.
 static FILE *dump;
 static uint32_t dump_n;
 static tt_io_t *dump_inner;
 static tt_io_t dump_io;
 static uint16_t *dump_w;
-static uint8_t *dump_u;
+static uint8_t *dump_u, *dump_a;
 static size_t dump_cap;
 
-static int dump_run(tt_io_t *io, const uint16_t *words, uint32_t n, uint8_t *uo) {
+static int dump_run(tt_io_t *io, const uint16_t *words, uint32_t n, uint8_t *uo, uint8_t *aux) {
     (void)io;
-    if (dump_inner->run(dump_inner, words, n, uo)) return -1;
     if (dump_n + n > dump_cap) {
         dump_cap = (dump_n + n) * 2;
         dump_w = realloc(dump_w, dump_cap * sizeof *dump_w);
         dump_u = realloc(dump_u, dump_cap);
-        if (!dump_w || !dump_u) return -1;
+        dump_a = realloc(dump_a, dump_cap);
+        if (!dump_w || !dump_u || !dump_a) return -1;
     }
+    // the chip's pins are recorded on every clock, whether the driver looks at them or not
+    if (dump_inner->run(dump_inner, words, n, uo, dump_a + dump_n)) return -1;
+    if (aux) memcpy(aux, dump_a + dump_n, n);
     memcpy(dump_w + dump_n, words, n * sizeof *words);
     memcpy(dump_u + dump_n, uo, n);
     dump_n += n;
     return 0;
+}
+
+static int dump_release(tt_io_t *io, int release) {
+    (void)io;
+    return dump_inner->uio_release(dump_inner, release);
 }
 
 static int dump_reset(tt_io_t *io, uint32_t cycles) {
@@ -139,11 +154,12 @@ static int dump_reset(tt_io_t *io, uint32_t cycles) {
 }
 
 static void dump_finish(void) {
-    fwrite("HWD1", 1, 4, dump);
+    fwrite("HWD2", 1, 4, dump);
     uint8_t h[4] = {dump_n & 255, (dump_n >> 8) & 255, (dump_n >> 16) & 255, dump_n >> 24};
     fwrite(h, 1, 4, dump);
     for (uint32_t i = 0; i < dump_n; i++) { uint8_t b[2] = {dump_w[i] & 255, dump_w[i] >> 8}; fwrite(b, 1, 2, dump); }
     fwrite(dump_u, 1, dump_n, dump);
+    fwrite(dump_a, 1, dump_n, dump);
     fclose(dump);
 }
 
@@ -164,7 +180,7 @@ int main(int argc, char **argv) {
     }
     if (port) {
         if (tte_open(port, div)) return 2;
-        io = (tt_io_t){.run = tte_run, .reset = tte_reset, .name = "Tang Nano (TTE1)"};
+        io = (tt_io_t){.run = tte_run, .reset = tte_reset, .uio_release = tte_release, .name = "Tang Nano (TTE1)"};
     } else {
         hash_swchip_init(&sw);
         io = hash_swchip_io(&sw);
@@ -173,7 +189,7 @@ int main(int argc, char **argv) {
         dump = fopen(dump_path, "wb");
         if (!dump) { perror(dump_path); return 2; }
         dump_inner = &io;
-        dump_io = (tt_io_t){.run = dump_run, .reset = dump_reset, .name = io.name};
+        dump_io = (tt_io_t){.run = dump_run, .reset = dump_reset, .uio_release = dump_release, .name = io.name};
         hash_chip_init(&chip, &dump_io);
     } else {
         hash_chip_init(&chip, &io);
