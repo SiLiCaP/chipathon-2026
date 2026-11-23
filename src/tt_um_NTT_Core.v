@@ -9,7 +9,11 @@
  * Pins (unchanged from sha3-4x2, so the same host code runs): ui_in[7:0] = data byte, uio_in[3:0] = 0xF marks
  * a hash word, uio_in[4] = valid, {uio_in[5], uio_in[7:6]} = command (hash_io.v lists them). uo_out = the
  * squeezed byte (or its CBD coefficients) two clocks after the word that asked for it, 0 otherwise.
- * Every uio pin is an input. Constant time: every command has a fixed length.
+ * After reset every uio pin is an input. Constant time: every command has a fixed length.
+ *
+ * Framing mode 1 (the MODE command, hash_io.v; reset returns to mode 0): the marker is dropped, a hash word
+ * is just uio_in[4] = 1, and uio[0] becomes an output: high on every clock where uo_out carries a byte. The
+ * SampleNTT burst needs it (its output rate depends on the data). uio[3:1] are then unused inputs.
  */
 
 `default_nettype none
@@ -41,8 +45,9 @@ module tt_um_NTT_Core #(
       .op_q   (op_q)
   );
 
-  // hash-word flag, registered beside io_in_capture (equals valid_q & coeff_q[11:8] == 4'hF)
-  wire hash_in = uio_in[4] & (uio_in[3:0] == 4'hF);
+  // hash-word flag, registered beside io_in_capture (mode 0: equals valid_q & coeff_q[11:8] == 4'hF)
+  wire mode, dvalid;
+  wire hash_in = uio_in[4] & (mode | (uio_in[3:0] == 4'hF));
   reg  hash_w;
   always @(posedge clk) begin
     if (!rst_n) hash_w <= 1'b0;
@@ -60,6 +65,8 @@ module tt_um_NTT_Core #(
       .cmd      ({sof_q, op_q}),
       .din      (coeff_q[7:0]),
       .dout     (uo_out),
+      .dvalid   (dvalid),
+      .mode     (mode),
       .c_valid  (c_valid),
       .c_cmd    (c_cmd),
       .c_din    (c_din),
@@ -76,8 +83,8 @@ module tt_um_NTT_Core #(
       .busy     ()
   );
 
-  assign uio_out = 8'h00;
-  assign uio_oe  = 8'h00;
+  assign uio_out = {7'h00, dvalid};
+  assign uio_oe  = {7'h00, mode};
 
   wire _unused = &{ena, valid_q, coeff_q[11:8], 1'b0};
 

@@ -66,6 +66,20 @@ The console `selftest` (and `all` = selftest + fuzz) is the hash chip's known-an
 SHAKE128/256 at the rate edges with byte and burst squeeze, with and without SKIP, and PRF + CBD for eta 2 and 3,
 against the software reference; it prints `selftest: PASS`.
 
+## Commands outside the contract (Nov 23, 2026)
+
+The chip has four more commands (`docs/info.md`): Absorb N, Finish, Mode and Burst NTT. Every command word the
+contract-2 jobs send is unchanged, so `CI_CONTRACT` stays 2 and the golden vectors are not regenerated.
+
+| Command | `hash_chip.c` | `hash_swchip.c` | Checked by |
+|---|---|---|---|
+| Absorb N, Finish | job options `HASH_RAW`, `HASH_FINISH` | modelled, clock for clock | `selftest`, `fuzz`, and their pin stream through the RTL (`make -C test rp2350`) |
+| Mode 1 (`uio[0]` = valid out), Burst NTT | not used | **not modelled**: recorded as a protocol violation | the RTL tests only (`test/test_hash_only.py`) |
+
+Mode 1 and Burst NTT need a transport that samples `uio[0]` next to `uo_out` (`tt_io.h` returns `uo_out` only)
+and a Pico that stops driving GPIO 8 first. `fpga/tangnano20k_pico_top.v` already drives `uio[0]` back in mode 1.
+The `ci` jobs do not use the new commands yet.
+
 ## Sync rule
 
 Any change to the chip's commands, framing or busy times must keep `hash_chip.c`, `hash_swchip.c`, `app_ci` and

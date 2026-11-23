@@ -43,6 +43,33 @@ static void squeeze_byte(hash_swchip_t *s, uint32_t t, int cbd, int eta3) {
     s->out_clk[(t + HC_SQ_DELAY) & 7] = t + HC_SQ_DELAY;
 }
 
+static void absorb_byte(hash_swchip_t *s, unsigned data) {
+    if (s->ptr >= 200) violation(s, "absorb past the state");
+    else s->st[s->ptr / 8] ^= (uint64_t)data << (8 * (s->ptr % 8));
+    s->ptr++;
+}
+
+// One clock of FINISH (hash_io.v): the domain byte, the rest of its lane, a SKIP per whole lane, the last lane
+// with 0x80 at rate - 1, then the PERMUTE.
+static void finish_step(hash_swchip_t *s) {
+    const unsigned last = s->fin_alg == 1 ? 8 : s->fin_alg == 2 ? 20 : 16;      // last lane of the rate
+    const int at = s->ptr >= last * 8 + 7;
+    if (s->fin_end) {
+        keccak_f1600(s->st);
+        s->ptr = 0;
+        s->busy = HC_PERM_BUSY;
+        s->fin_on = 0;
+        return;
+    }
+    if (s->fin_dom && s->ptr % 8 == 0 && s->ptr / 8 < last) {
+        s->ptr += 8;
+    } else {
+        absorb_byte(s, (at ? 0x80u : 0u) | (s->fin_dom ? 0u : (s->fin_alg & 2) ? 0x1Fu : 0x06u));
+        if (at) s->fin_end = 1;
+    }
+    s->fin_dom = 1;
+}
+
 static uint8_t step(hash_swchip_t *s, uint16_t w) {
     const uint32_t t = s->clk++;
     const uint8_t uo = (s->out_clk[t & 7] == t) ? s->out[t & 7] : 0;      // sampled before this edge
@@ -59,13 +86,19 @@ static uint8_t step(hash_swchip_t *s, uint16_t w) {
         squeeze_byte(s, t, s->cbd_on, s->eta3);
         return uo;
     }
+    if (s->raw_left) {                                                      // ABSORB_N: the data byte, whatever uio says
+        s->raw_left--;
+        absorb_byte(s, data);
+        return uo;
+    }
+    if (s->fin_on) {                                                        // FINISH pads, one step per clock
+        if (valid) violation(s, "command during FINISH");
+        finish_step(s);
+        return uo;
+    }
     if (!valid) return uo;
     switch (cmd) {
-    case HC_ABSORB:
-        if (s->ptr >= 200) violation(s, "absorb past the state");
-        else s->st[s->ptr / 8] ^= (uint64_t)data << (8 * (s->ptr % 8));
-        s->ptr++;
-        break;
+    case HC_ABSORB: absorb_byte(s, data); break;
     case HC_SQUEEZE: squeeze_byte(s, t, 0, 0); break;
     case HC_PERMUTE:
         keccak_f1600(s->st);
@@ -89,13 +122,31 @@ static uint8_t step(hash_swchip_t *s, uint16_t w) {
             violation(s, "burst length outside 1..21");
             break;
         }
+        if (cmd == HC_BURST_CBD && (data & HC_BURST_NTT)) {
+            violation(s, "SampleNTT burst: not modelled (it needs the valid pin, which the transports do not sample)");
+            break;
+        }
         s->cbd_on = cmd == HC_BURST_CBD;
         s->eta3 = (data >> 7) & 1;
         s->burst_left = 8 * n - 1;
         squeeze_byte(s, t, s->cbd_on, s->eta3);
         break;
     }
-    default: break;                                                         // 7: reserved, no-op
+    case HC_EXT:
+        switch (data & 0xC0) {
+        case HC_EXT_ABSORB_N: s->raw_left = (data & 63) + 1; break;
+        case HC_EXT_FINISH:
+            s->fin_alg = data & 3;
+            if (s->ptr >= (s->fin_alg == 1 ? 72u : s->fin_alg == 2 ? 168u : 136u))
+                violation(s, "FINISH with a full block (PERMUTE first)");
+            s->fin_on = 1;
+            s->fin_dom = s->fin_end = 0;
+            break;
+        case HC_EXT_MODE: violation(s, "MODE: framing mode 1 is not modelled (uio[0] as the valid output)"); break;
+        default: break;                                                     // 00: reserved, no-op
+        }
+        break;
+    default: break;
     }
     return uo;
 }

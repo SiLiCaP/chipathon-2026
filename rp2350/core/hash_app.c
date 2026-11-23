@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Self test, fuzz and skew calibration for the hash chip. Mirrors test/test_hash_only.py: SHA3-256/512 and
-// SHAKE128/256 at the rate edges (with and without SKIP, byte and burst squeeze) and ML-KEM's PRF through
-// BURST_CBD, all against the software reference (sha3_sw.c), plus known answers that anchor the reference itself.
+// SHAKE128/256 at the rate edges (with and without SKIP, byte and burst squeeze), the chip's own padding (FINISH)
+// and packet absorb (ABSORB_N), and ML-KEM's PRF through BURST_CBD, all against the software reference
+// (sha3_sw.c), plus known answers that anchor the reference itself.
 #include "hash_app.h"
 
 #include <stdio.h>
@@ -101,6 +102,27 @@ static int algo_sweep(hash_chip_t *c) {
     return fail;
 }
 
+// FINISH (the chip pads) at every corner of the block, and ABSORB_N packets with and without it
+static int finish_sweep(hash_chip_t *c) {
+    int fail = 0, n = 0;
+    uint8_t msg[300];
+    for (int kind = HASH_SHA3_256; kind <= HASH_SHAKE256; kind++) {
+        const unsigned rate = PARAM[kind].rate;
+        const unsigned lens[] = {0, 1, 7, 8, rate - 9, rate - 8, rate - 1, rate, rate + 1, 200};
+        for (unsigned i = 0; i < sizeof lens / sizeof lens[0]; i++) {
+            for (unsigned k = 0; k < lens[i]; k++) msg[k] = (uint8_t)(13 * k + lens[i]);
+            const uint32_t outlen = kind == HASH_SHA3_256 ? 32 : kind == HASH_SHA3_512 ? 64 : 200;
+            static const unsigned OPTS[] = {HASH_FINISH, HASH_FINISH | HASH_RAW, HASH_RAW};
+            for (unsigned o = 0; o < 3; o++) {
+                fail += check_job(c, (hash_kind_t)kind, msg, lens[i], outlen, OPTS[o], "finish");
+                n++;
+            }
+        }
+    }
+    printf("  FINISH (the chip pads) and ABSORB_N packets at the block corners (%d jobs): %s\n", n, fail ? "FAIL" : "ok");
+    return fail;
+}
+
 static int cbd_sweep(hash_chip_t *c) {
     int fail = 0, n = 0;
     uint8_t seed[33];
@@ -108,7 +130,7 @@ static int cbd_sweep(hash_chip_t *c) {
         for (unsigned nonce = 0; nonce < 4; nonce++) {
             for (unsigned k = 0; k < 32; k++) seed[k] = (uint8_t)(5 * k + nonce);
             seed[32] = (uint8_t)nonce;
-            fail += check_job(c, eta == 2 ? HASH_PRF_CBD2 : HASH_PRF_CBD3, seed, 33, 0, 0, "cbd");
+            fail += check_job(c, eta == 2 ? HASH_PRF_CBD2 : HASH_PRF_CBD3, seed, 33, 0, nonce & 1 ? HASH_FINISH | HASH_RAW : 0, "cbd");
             n++;
         }
     printf("  PRF + SamplePolyCBD through BURST_CBD, eta 2 and 3 (%d jobs): %s\n", n, fail ? "FAIL" : "ok");
@@ -119,6 +141,7 @@ int app_selftest(hash_chip_t *c) {
     printf("selftest: hash chip, %s\n", c->io->name);
     int fail = known_answers(c);
     fail += algo_sweep(c);
+    fail += finish_sweep(c);
     fail += cbd_sweep(c);
     printf("selftest: %s\n", fail ? "FAIL" : "PASS");
     return fail ? 1 : 0;
@@ -135,7 +158,8 @@ int app_fuzz(hash_chip_t *c, uint32_t n, uint32_t seed) {
         if (rnd() % 4 == 0) memset(msg + len / 3, 0, (len - len / 3) / 2);      // zero lanes for SKIP
         uint32_t outlen = hash_kind_fixed_len(kind);
         if (kind == HASH_SHAKE128 || kind == HASH_SHAKE256) outlen = 1 + rnd() % 420;
-        const unsigned opts = (rnd() & 1 ? HASH_BYTEWISE : 0) | (rnd() & 1 ? HASH_SKIP : 0);
+        const unsigned opts = (rnd() & 1 ? HASH_BYTEWISE : 0) | (rnd() & 1 ? HASH_SKIP : 0) |
+                              (rnd() & 1 ? HASH_FINISH : 0) | (rnd() & 1 ? HASH_RAW : 0);
         fail += check_job(c, kind, msg, len, outlen, opts, "fuzz");
     }
     printf("fuzz: %s (%lu random jobs)\n", fail ? "FAIL" : "PASS", (unsigned long)n);

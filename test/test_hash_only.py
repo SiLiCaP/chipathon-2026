@@ -11,6 +11,12 @@ the pins, before the clock edge that takes it; the byte asked for by word k is s
   test_hash_bursts       the same algorithms with BURST squeeze (8n bytes from one word)
   test_cbd               ML-KEM PRF_eta (SHAKE256) through BURST_CBD, eta = 2 and 3, vs SamplePolyCBD
   test_quiet             uo_out is 0 whenever no byte is due (nothing leaks between commands)
+  test_finish            FINISH: the chip pads and permutes, at every corner of the block
+  test_absorb_n          ABSORB_N: packets of raw data bytes, whatever the uio pins say meanwhile
+  test_mode              framing mode 1: no marker, uio[0] is the valid output; and back to mode 0
+  test_sample_ntt        ML-KEM's XOF through SampleNTT, vs FIPS 203 SampleNTT + ByteEncode_12
+
+In mode 1 a sample also carries the valid pin (uio_out[0] while uio_oe[0] is set) as hash_jobs.VALID.
 
 HASH_K=16 make runs the K = 16 core. Under GATES=yes a reduced set runs because gate-level simulation is slow.
 """
@@ -20,7 +26,8 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, FallingEdge
 
-from hash_jobs import CLEAR, HashJob, hash_only_jobs, hw, standard_jobs
+from hash_jobs import (CLEAR, EXT, EXT_MODE, VALID, HashJob, finish_jobs, hash_only_jobs, hw, ntt_jobs, raw_jobs,
+                       standard_jobs)
 
 GL = os.environ.get("GATES") == "yes"
 
@@ -46,7 +53,10 @@ async def stream(dut, words):
     for w in words:
         await FallingEdge(dut.clk)
         v = dut.uo_out.value
-        samples.append(int(v) if v.is_resolvable else -1)
+        s = int(v) if v.is_resolvable else -1
+        if s >= 0 and int(dut.uio_oe.value) & int(dut.uio_out.value) & 1:
+            s |= VALID                                  # mode 1: the chip's valid pin
+        samples.append(s)
         dut.ui_in.value = w & 0xFF
         dut.uio_in.value = w >> 8
     return samples
@@ -59,6 +69,12 @@ async def run_jobs(dut, jobs, what):
         due = {k + 2 for k in sq}
         loud = [k for k, s in enumerate(samples) if k not in due and s != 0]
         assert not loud, f"{what} {job.name} len {len(job.msg)}: uo_out nonzero at idle samples {loud[:5]}"
+        if job.mode and not job.ntt:                    # the valid pin marks exactly the clocks with a byte
+            flagged = {k for k, s in enumerate(samples) if s & VALID}
+            assert flagged == due, f"{what} {job.name} len {len(job.msg)}: valid pin differs from the due clocks"
+        if job.ntt:                                     # a byte only with valid, and valid only in the windows
+            bare = [k for k, s in enumerate(samples) if s & 0xFF and not s & VALID]
+            assert not bare, f"{what} {job.name}: uo_out nonzero without valid at samples {bare[:5]}"
         got, exp = job.collect(samples, sq), job.expected()
         assert got == exp, f"{what} {job.name} len {len(job.msg)} eta {job.cbd_eta}: output mismatch"
     dut._log.info(f"{what}: {len(jobs)} jobs ok")
@@ -101,3 +117,52 @@ async def test_quiet(dut):
     assert job.collect(samples, sq) == job.expected(), "a hash word during a burst disturbed it"
     # the chip still works afterwards
     await run_jobs(dut, [HashJob("shake_128", b"x" * 40, K, burst=True)], "after burst")
+
+
+@cocotb.test()
+async def test_finish(dut):
+    await reset(dut)
+    await run_jobs(dut, pick(finish_jobs(core_k(dut))), "FINISH")
+
+
+@cocotb.test()
+async def test_absorb_n(dut):
+    await reset(dut)
+    await run_jobs(dut, pick(raw_jobs(core_k(dut))), "ABSORB_N")
+
+
+async def set_mode(dut, m, now):
+    """Send MODE m in the framing of mode `now`; the chip's uio[0] driver follows."""
+    await stream(dut, [hw(EXT, EXT_MODE | m, now), 0, 0, 0])
+    assert int(dut.uio_oe.value) == m, f"uio_oe is {int(dut.uio_oe.value):#04x} in mode {m}"
+
+
+@cocotb.test()
+async def test_mode(dut):
+    """Mode 1 drops the marker and drives the valid pin; mode 0 is the reset state and comes back on MODE 0."""
+    await reset(dut)
+    K = core_k(dut)
+    assert int(dut.uio_oe.value) == 0, "every uio pin is an input after reset"
+    # mode 0: a word without the marker is not a command (the CLEAR would wipe the absorbed message)
+    job = HashJob("sha3_256", b"abc", K, burst=True)
+    words, sq = job.words()
+    at = words.index(hw(2))                             # the PERMUTE that ends the absorb
+    words[at:at] = [hw(CLEAR, 0, mode=1)]
+    samples = await stream(dut, words)
+    assert job.collect(samples, [k + 1 for k in sq]) == job.expected(), "mode 0 took a word without the marker"
+    await set_mode(dut, 1, now=0)
+    jobs = [HashJob("sha3_512", b"mode one", K, mode=1),
+            HashJob("shake_128", bytes(range(170)), K, mode=1, burst=True, finish=True, raw=True),
+            HashJob("shake_256", bytes(33), K, mode=1, cbd_eta=3)]
+    await run_jobs(dut, jobs, "mode 1")
+    await run_jobs(dut, [HashJob("sha3_256", b"marker", K)], "mode 1, words with the marker")
+    await set_mode(dut, 0, now=1)
+    await run_jobs(dut, pick(standard_jobs(K))[:2], "back in mode 0")
+
+
+@cocotb.test()
+async def test_sample_ntt(dut):
+    await reset(dut)
+    await set_mode(dut, 1, now=0)
+    jobs = ntt_jobs(core_k(dut))
+    await run_jobs(dut, jobs[:2] + jobs[-2:] if GL else jobs, "SampleNTT")

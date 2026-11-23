@@ -15,8 +15,16 @@
 #include "tt_io.h"
 
 // chip commands (uio[5], uio[7:6] = cmd bits 2, 1:0; data byte on ui[7:0])
-enum { HC_ABSORB = 0, HC_SQUEEZE = 1, HC_PERMUTE = 2, HC_CLEAR = 3, HC_SKIP = 4, HC_BURST = 5, HC_BURST_CBD = 6 };
+enum { HC_ABSORB = 0, HC_SQUEEZE = 1, HC_PERMUTE = 2, HC_CLEAR = 3, HC_SKIP = 4, HC_BURST = 5, HC_BURST_CBD = 6,
+       HC_EXT = 7 };
 #define HC_WORD(cmd, data) TT_WORD(0xF00 | ((data) & 0xFF), 1, (cmd) >> 2, (cmd) & 3)
+// EXT sub-commands, data[7:6] (src/hash_io.v):
+#define HC_EXT_ABSORB_N 0x40    // | (n - 1): the next n (1..64) clocks' ui bytes are absorbed as they are
+#define HC_EXT_FINISH 0x80      // | function (0 SHA3-256, 1 SHA3-512, 2 SHAKE128, 3 SHAKE256): the chip pads + permutes
+#define HC_EXT_MODE 0xC0        // | framing mode (1: no marker, uio[0] = the chip's valid output). Not used by this
+                                // driver yet: the transports sample uo_out only, and SampleNTT needs the valid pin.
+#define HC_BURST_NTT 0x40       // BURST_CBD data bit 6: SampleNTT instead of CBD (needs mode 1)
+#define HC_RAW_MAX 64
 
 // K = 8 core: CLEAR 8 busy clocks, PERMUTE 368 (M + 24 (2M - 1), M = 8); a squeezed byte is on uo_out 2 clocks
 // after the word that asked for it.
@@ -38,6 +46,8 @@ enum { HASH_OK = 0, HASH_ERR_ARG = -1, HASH_ERR_IO = -2, HASH_ERR_QUIET = -3 };
 // job options
 #define HASH_BYTEWISE 1u        // squeeze with one SQUEEZE word per byte instead of BURST
 #define HASH_SKIP 2u            // absorb all-zero lanes with SKIP
+#define HASH_FINISH 4u          // the chip pads the last block (FINISH) instead of the host
+#define HASH_RAW 8u             // absorb with ABSORB_N packets: bare data bytes, one header word per 64 (no SKIP)
 
 #define HASH_WORDS_MAX 1024     // longest transport call: one block (a rate of absorb words + PERMUTE + 368 busy)
 
@@ -62,6 +72,9 @@ const char *hash_kind_name(hash_kind_t kind);
 // is due (the chip must be quiet between commands). The chip is left in a defined state (next job starts with CLEAR).
 int hash_chip_job(hash_chip_t *c, hash_kind_t kind, const uint8_t *msg, uint32_t len, uint8_t *out, uint32_t outlen,
                   unsigned opts);
+
+// Padding steps of FINISH from byte pointer p in the block; the chip is then busy for these + 1 + HC_PERM_BUSY.
+unsigned hash_fin_steps(unsigned p, unsigned rate);
 
 const char *hash_err_str(int err);
 

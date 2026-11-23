@@ -16,6 +16,9 @@ typedef struct {
     uint32_t clk;               // chip clocks since reset
     uint32_t busy;              // clocks still busy (PERMUTE, CLEAR)
     uint32_t burst_left;        // bytes still to stream after the current clock
+    uint32_t raw_left;          // ABSORB_N: data bytes still to take
+    int fin_on, fin_dom, fin_end;   // FINISH: running, domain byte done, PERMUTE is next
+    unsigned fin_alg;
     int cbd_on, eta3;           // mode of the running burst
     unsigned p3;                // eta = 3: byte position in its triple (survives PERMUTE, restarts at CLEAR)
     uint8_t left2, left4;

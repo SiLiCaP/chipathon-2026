@@ -18,7 +18,8 @@ rp2350/
     tt_io.h        the pin transport interface (16-bit pin words in, uo_out samples out) and TT_WORD
     hash_chip.c    the driver: builds the pin words of a sponge job exactly like test/hash_jobs.py (CLEAR, absorb,
                    PERMUTE + busy, squeeze by SQUEEZE or BURST, BURST_CBD for the PRF), picks the bytes out, checks
-                   that uo_out is quiet when no byte is due
+                   that uo_out is quiet when no byte is due. Options: ABSORB_N packets (HASH_RAW) and the chip's own
+                   padding (HASH_FINISH). Framing mode 1 and SampleNTT are not driven yet (docs/ci-emulator.md)
     hash_swchip.c  software chip: pin-level twin of hash_io.v + keccak_ring (K = 8) on sha3_sw.c's Keccak-f,
                    records protocol violations (a command while busy, SKIP off a lane, ...)
     hash_app.c     selftest, fuzz, calibrate
@@ -73,7 +74,7 @@ Open the USB serial port, for example `python3 -m serial.tools.miniterm /dev/tty
 | `select <n>` | select project n on the TT mux (the TT SDK sequence), then reset the chip. On the rig: just a reset |
 | `clk <hz>` | chip clock. Starts at 1 MHz |
 | `sys <mhz>` | RP2350 clock: 150 by default, 200 gives 50 MHz with even phases |
-| `selftest` | known answers, SHA-3 / SHAKE at the rate edges (byte + burst squeeze, +- SKIP), PRF + CBD, vs the C reference |
+| `selftest` | known answers, SHA-3 / SHAKE at the rate edges (byte + burst squeeze, +- SKIP), FINISH and ABSORB_N at the block corners, PRF + CBD, vs the C reference |
 | `fuzz [n]` | n random jobs of every kind (random lengths, zero lanes, outputs) vs the C reference |
 | `ci` | the CI emulator check: the compiled-in per-commit ML-KEM hash jobs (docs/ci-emulator.md); `ci: NOVECTORS` on the stub |
 | `cal` | find the sample skew (see bring-up) |

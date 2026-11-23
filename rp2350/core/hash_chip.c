@@ -52,9 +52,36 @@ static int check_quiet(hash_chip_t *c, uint32_t n, uint32_t d0, uint32_t take) {
     return HASH_OK;
 }
 
+unsigned hash_fin_steps(unsigned p, unsigned rate) {
+    if (p / 8 == rate / 8 - 1) return 8 - p % 8;                 // already in the last lane
+    return (8 - p % 8) + (rate / 8 - 2 - p / 8) + 8;              // rest of the lane, a SKIP per lane, the last lane
+}
+
+// Words that absorb cnt bytes: ABSORB words (SKIP for a whole all-zero lane if asked), or ABSORB_N packets.
+static uint32_t put_bytes(hash_chip_t *c, uint32_t n, const uint8_t *b, unsigned cnt, unsigned opts) {
+    if (opts & HASH_RAW) {
+        for (unsigned i = 0; i < cnt; i += HC_RAW_MAX) {
+            const unsigned part = cnt - i < HC_RAW_MAX ? cnt - i : HC_RAW_MAX;
+            c->words[n++] = HC_WORD(HC_EXT, HC_EXT_ABSORB_N | (part - 1));
+            for (unsigned k = 0; k < part; k++) c->words[n++] = b[i + k];      // the bare byte: no valid, no marker
+        }
+        return n;
+    }
+    for (unsigned ln = 0; ln < cnt; ln += 8) {
+        const unsigned part = cnt - ln < 8 ? cnt - ln : 8;
+        int any = 0;
+        for (unsigned k = 0; k < part; k++) any |= b[ln + k];
+        if ((opts & HASH_SKIP) && part == 8 && !any) c->words[n++] = HC_WORD(HC_SKIP, 0);
+        else for (unsigned k = 0; k < part; k++) c->words[n++] = HC_WORD(HC_ABSORB, b[ln + k]);
+    }
+    return n;
+}
+
 // One transport call is one block, so the clock budget of the longest block must fit the buffers:
-// 1 + 168 absorb words + PERMUTE + 368 busy, or PERMUTE + 368 busy + 168 squeeze words + delay.
-_Static_assert(1 + 168 + 1 + HC_PERM_BUSY + HC_CLEAR_BUSY < HASH_WORDS_MAX, "block does not fit HASH_WORDS_MAX");
+// CLEAR + 168 absorb words (+ 3 packet headers) + PERMUTE + 368 busy, or the last block with FINISH
+// (167 bytes + 3 headers + FINISH + 35 steps + PERMUTE + 368 busy) followed by 168 squeeze clocks + delay.
+_Static_assert(1 + HC_CLEAR_BUSY + 168 + 3 + 1 + 35 + 1 + HC_PERM_BUSY + 168 + HC_SQ_DELAY + 4 < HASH_WORDS_MAX,
+               "block does not fit HASH_WORDS_MAX");
 
 int hash_chip_job(hash_chip_t *c, hash_kind_t kind, const uint8_t *msg, uint32_t len, uint8_t *out, uint32_t outlen,
                   unsigned opts) {
@@ -71,27 +98,40 @@ int hash_chip_job(hash_chip_t *c, hash_kind_t kind, const uint8_t *msg, uint32_t
     uint32_t n = 0;
     c->words[n++] = HC_WORD(HC_CLEAR, 0);
     for (int i = 0; i < HC_CLEAR_BUSY; i++) c->words[n++] = 0;
-    for (uint32_t base = 0; base < padded; base += rate) {
-        for (unsigned ln = 0; ln < rate; ln += 8) {
-            uint8_t lane[8];
-            int any = 0;
-            for (unsigned b = 0; b < 8; b++) {
-                const uint32_t i = base + ln + b;
-                uint8_t v = i < len ? msg[i] : 0;
-                if (i == len) v ^= KIND[kind].dom;
-                if (i == padded - 1) v |= 0x80;
-                lane[b] = v;
-                any |= v;
-            }
-            if ((opts & HASH_SKIP) && !any) c->words[n++] = HC_WORD(HC_SKIP, 0);
-            else for (unsigned b = 0; b < 8; b++) c->words[n++] = HC_WORD(HC_ABSORB, lane[b]);
-        }
-        c->words[n++] = HC_WORD(HC_PERMUTE, 0);
-        for (int i = 0; i < HC_PERM_BUSY; i++) c->words[n++] = 0;
-        if (base + rate < padded) {                         // next block needs a fresh buffer
+    if (opts & HASH_FINISH) {
+        // the chip pads: the message's whole blocks, then what is left and FINISH (pads, permutes)
+        const uint32_t full = len / rate * rate;
+        for (uint32_t base = 0; base < full; base += rate) {
+            n = put_bytes(c, n, msg + base, rate, opts);
+            c->words[n++] = HC_WORD(HC_PERMUTE, 0);
+            for (int i = 0; i < HC_PERM_BUSY; i++) c->words[n++] = 0;
             int err = play(c, n) ? HASH_ERR_IO : check_quiet(c, n, 0, 0);
             if (err) return err;
             n = 0;
+        }
+        if (len > full) n = put_bytes(c, n, msg + full, len - full, opts);
+        const unsigned fn = kind == HASH_SHA3_256 ? 0 : kind == HASH_SHA3_512 ? 1 : kind == HASH_SHAKE128 ? 2 : 3;
+        c->words[n++] = HC_WORD(HC_EXT, HC_EXT_FINISH | fn);
+        const unsigned wait = hash_fin_steps(len - full, rate) + 1 + HC_PERM_BUSY;
+        for (unsigned i = 0; i < wait; i++) c->words[n++] = 0;
+    } else {
+        for (uint32_t base = 0; base < padded; base += rate) {
+            uint8_t blk[168];
+            for (unsigned b = 0; b < rate; b++) {
+                const uint32_t i = base + b;
+                uint8_t v = i < len ? msg[i] : 0;
+                if (i == len) v ^= KIND[kind].dom;
+                if (i == padded - 1) v |= 0x80;
+                blk[b] = v;
+            }
+            n = put_bytes(c, n, blk, rate, opts);
+            c->words[n++] = HC_WORD(HC_PERMUTE, 0);
+            for (int i = 0; i < HC_PERM_BUSY; i++) c->words[n++] = 0;
+            if (base + rate < padded) {                         // next block needs a fresh buffer
+                int err = play(c, n) ? HASH_ERR_IO : check_quiet(c, n, 0, 0);
+                if (err) return err;
+                n = 0;
+            }
         }
     }
 
