@@ -116,7 +116,7 @@ int hash_chip_job(hash_chip_t *c, hash_kind_t kind, const uint8_t *msg, uint32_t
         for (unsigned i = 0; i < wait; i++) c->words[n++] = 0;
     } else {
         for (uint32_t base = 0; base < padded; base += rate) {
-            uint8_t blk[168];
+            uint8_t blk[168] = {0};    // fully written below; GCC 14 -O2 can't prove it (-Werror=maybe-uninitialized)
             for (unsigned b = 0; b < rate; b++) {
                 const uint32_t i = base + b;
                 uint8_t v = i < len ? msg[i] : 0;
