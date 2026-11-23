@@ -12,7 +12,11 @@ The host waits the fixed busy times; the byte asked for by word k appears on uo_
                   like ByteEncode_12, on the clocks where the valid pin (uio[0], framing mode 1) is high
   7 EXT           (sha3-only) data[7:6]: 01 ABSORB_N (data[5:0] = n - 1: the next n clocks' ui bytes are absorbed
                   as they are), 10 FINISH (data[1:0] = function: the chip pads and permutes), 11 MODE (data[0])
-Framing mode 1 (after MODE 1): a hash word needs no 0xF marker, and uio[0] is the chip's valid output.
+Framing mode 1 (after MODE 1): a hash word needs no 0xF marker, uio[0] is the chip's valid output and uio[1] its
+busy output; eta = 3 CBD output is packed like eta = 2 (two bytes per three, marked by valid).
+Blocks that follow by themselves (AUTO): BURST data[7:5] = x more blocks (PERMUTE + n lanes each); BURST_CBD
+data bit 5: eta = 3: the other 24 - n lanes after a PERMUTE; SampleNTT: blocks until the polynomial is complete.
+A block starts 8n + AUTO_GAP + the PERMUTE time after the one before it.
 Cores: keccak_ring with K = 2 / 4 (K-bit words) or 8 / 16 (byte words: the hash-only chip pairs bytes for K = 16):
 CLEAR M, PERMUTE M + 24 (2M - 1) clocks, M = 64 / K. keccak_lat: CLEAR 1, PERMUTE 1,464.
 """
@@ -24,6 +28,9 @@ BURST_NTT = 0x40                                          # BURST_CBD data bit 6
 RAW_MAX = 64                                              # longest ABSORB_N packet
 NTT_TAIL = 3                                              # SampleNTT bytes leave up to 3 clocks after a burst
 VALID = 0x100                                             # the valid pin in a sample (mode 1), next to uo_out
+BUSY = 0x200                                              # the busy pin in a sample (mode 1)
+AUTO = 0x20                                               # BURST_CBD data bit 5: the next blocks by themselves
+AUTO_GAP = 3                                              # clocks between a block's last byte and its PERMUTE
 SQ_DELAY = 2
 ALGOS = {"sha3_256": (136, 0x06, 32), "sha3_512": (72, 0x06, 64),
          "shake_128": (168, 0x1F, 504), "shake_256": (136, 0x1F, 192)}
@@ -95,13 +102,18 @@ class HashJob:
     this value on the uio pins during the data clocks, to show they are ignored); mode: the framing mode the
     chip is in (1: words without the marker, samples carry the valid pin as VALID);
     ntt: a SHAKE128 whose output goes through SampleNTT (mode 1 only): 384 bytes, ByteEncode_12 of the
-    polynomial; ntt_extra: more blocks squeezed after the polynomial is complete (the chip must stay quiet)."""
+    polynomial; ntt_extra: more blocks squeezed after the polynomial is complete (the chip must stay quiet).
+    auto: one word for the whole squeeze, the chip permutes between the blocks itself (plain bursts of whole
+    blocks, up to 8; PRF eta = 3; SampleNTT, where ntt_extra is then idle time in which nothing may happen)."""
 
     def __init__(self, name, msg, K=8, core="ring", skip=False, burst=False, cbd_eta=None, outlen=None,
-                 finish=False, raw=False, raw_junk=0, mode=0, ntt=False, ntt_extra=0):
+                 finish=False, raw=False, raw_junk=0, mode=0, ntt=False, ntt_extra=0, auto=False):
         self.name, self.msg, self.K, self.skip = name, bytes(msg), K, skip
         self.io = min(K, 8)
-        self.burst = burst or cbd_eta is not None or ntt
+        self.burst = burst or cbd_eta is not None or ntt or auto
+        self.auto = auto
+        self.packed = cbd_eta == 3 and mode == 1           # two bytes per three, marked by valid
+        assert not auto or cbd_eta != 2, "PRF eta = 2 is one block"
         self.cbd_eta = cbd_eta
         self.rate, self.dom, default_len = ALGOS[name]
         self.outlen = 64 * cbd_eta if cbd_eta else (outlen or default_len)
@@ -111,7 +123,8 @@ class HashJob:
         if ntt:
             assert name == "shake_128" and mode == 1, "SampleNTT: SHAKE128, and the valid pin needs mode 1"
             coeffs, used = sample_ntt(hashlib.shake_128(self.msg).digest(self.rate * 40))
-            self.ntt_blocks = -(-used // self.rate) + ntt_extra
+            self.ntt_need = -(-used // self.rate)
+            self.ntt_blocks = self.ntt_need + ntt_extra
             self.outlen = self.ntt_blocks * self.rate
             self.ntt_bytes = encode12(coeffs)
 
@@ -160,6 +173,25 @@ class HashJob:
             for i in range(0, len(m), self.rate):
                 w += self._absorb(m[i:i + self.rate]) + [hw(PERMUTE)] + [0] * self.perm_busy
         sq, got = [], 0
+        if self.auto:                                      # one word, the chip does the blocks
+            n, k0 = self.rate // 8, len(w)
+            period = self.rate + AUTO_GAP + self.perm_busy
+            if self.ntt:
+                w.append(hw(BURST_CBD, BURST_NTT | AUTO | n))
+                for b in range(self.ntt_need):
+                    sq += [k0 + b * period + j for j in range(self.rate + NTT_TAIL)]
+                end = sq[-1] + (self.ntt_blocks - self.ntt_need) * period
+            elif self.cbd_eta:
+                w.append(hw(BURST_CBD, 0x80 | AUTO | n))
+                sq = [k0 + j for j in range(self.rate)] + [k0 + period + j for j in range(192 - self.rate)]
+                end = sq[-1]
+            else:
+                blocks = -(-self.outlen // self.rate)
+                assert blocks <= 8, "BURST: at most 7 blocks follow by themselves"
+                w.append(hw(BURST, n | ((blocks - 1) << 5)))
+                sq = [k0 + b * period + j for b in range(blocks) for j in range(self.rate)]
+                end = sq[-1]
+            return w + [0] * (end - k0 + SQ_DELAY + 2 + AUTO_GAP + 2), sq
         while got < self.outlen:
             if got:
                 w += [hw(PERMUTE)] + [0] * self.perm_busy
@@ -186,6 +218,12 @@ class HashJob:
             return bytes(s & 0xFF for s in samples if s & VALID)
         io, mask, v, n = self.io, (1 << self.io) - 1, 0, 0
         out = bytearray()
+        if self.packed:                                    # only the bytes marked valid, two coefficients each
+            coeffs = []
+            for k in sq:
+                if samples[k + SQ_DELAY] & VALID:
+                    coeffs += [s4(samples[k + SQ_DELAY] & 15), s4(samples[k + SQ_DELAY] >> 4 & 15)]
+            return coeffs
         for k in sq:
             v |= (samples[k + SQ_DELAY] & mask) << n
             n += io
@@ -276,3 +314,17 @@ def ntt_jobs(K=8):
     seeds = [ntt_seed(1, j, i) for i in (0, 1) for j in (0, 1)] + [ntt_seed(t) for t in NTT_CORNER_SEEDS]
     return [HashJob("shake_128", s, K, mode=1, ntt=True, finish=bool(n % 2), raw=bool(n % 2), ntt_extra=int(n == 0))
             for n, s in enumerate(seeds)]
+
+
+def auto_jobs(K=8, mode=0):
+    """One word per squeeze: plain bursts over several blocks and PRF eta = 3 (mode 0 and 1), and in mode 1
+    SampleNTT until the polynomial is complete (the first also idles a block's time: nothing may follow)."""
+    jobs = [HashJob("shake_128", bytes(range(34)), K, mode=mode, auto=True),                 # 504 bytes: 3 blocks
+            HashJob("shake_256", b"auto", K, mode=mode, auto=True, outlen=300, finish=True),
+            HashJob("sha3_512", bytes(100), K, mode=mode, auto=True),                        # one block: plain burst
+            HashJob("shake_256", bytes(range(33)), K, mode=mode, cbd_eta=3, auto=True)]
+    if mode:
+        seeds = [ntt_seed(1, 1, 0)] + [ntt_seed(t) for t in NTT_CORNER_SEEDS]
+        jobs += [HashJob("shake_128", s, K, mode=1, ntt=True, auto=True, finish=True, ntt_extra=int(n == 0))
+                 for n, s in enumerate(seeds)]
+    return jobs

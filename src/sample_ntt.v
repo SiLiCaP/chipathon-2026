@@ -25,7 +25,8 @@ module sample_ntt (
     input  wire       v,              // b is the next XOF byte
     input  wire [7:0] b,
     output wire [7:0] o,              // packed byte, valid when ov
-    output wire       ov
+    output wire       ov,
+    output wire       done            // 256 coefficients accepted
 );
   reg [1:0]  ph;                      // byte position in the triple
   reg [7:0]  c0, c1;
@@ -46,8 +47,9 @@ module sample_ntt (
   wire        both = a1 & a2;
   wire        one_left = (cnt == 9'd255);            // then na is set: only one more coefficient is taken
 
-  assign o  = ob[7:0];
-  assign ov = (oc != 2'd0);
+  assign o    = ob[7:0];
+  assign ov   = (oc != 2'd0);
+  assign done = full;
 
   always @(posedge clk) begin
     if (!rst_n || clear) begin

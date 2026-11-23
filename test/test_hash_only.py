@@ -15,8 +15,10 @@ the pins, before the clock edge that takes it; the byte asked for by word k is s
   test_absorb_n          ABSORB_N: packets of raw data bytes, whatever the uio pins say meanwhile
   test_mode              framing mode 1: no marker, uio[0] is the valid output; and back to mode 0
   test_sample_ntt        ML-KEM's XOF through SampleNTT, vs FIPS 203 SampleNTT + ByteEncode_12
+  test_auto              one word per squeeze: the chip permutes between the blocks itself; the busy pin
 
-In mode 1 a sample also carries the valid pin (uio_out[0] while uio_oe[0] is set) as hash_jobs.VALID.
+In mode 1 a sample also carries the valid and busy pins (uio_out[1:0] while uio_oe is set) as hash_jobs.VALID
+and hash_jobs.BUSY.
 
 HASH_K=16 make runs the K = 16 core. Under GATES=yes a reduced set runs because gate-level simulation is slow.
 """
@@ -26,8 +28,8 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, FallingEdge
 
-from hash_jobs import (CLEAR, EXT, EXT_MODE, VALID, HashJob, finish_jobs, hash_only_jobs, hw, ntt_jobs, raw_jobs,
-                       standard_jobs)
+from hash_jobs import (BUSY, CLEAR, EXT, EXT_MODE, PERMUTE, VALID, HashJob, auto_jobs, finish_jobs, hash_only_jobs,
+                       hw, ntt_jobs, raw_jobs, standard_jobs)
 
 GL = os.environ.get("GATES") == "yes"
 
@@ -54,8 +56,8 @@ async def stream(dut, words):
         await FallingEdge(dut.clk)
         v = dut.uo_out.value
         s = int(v) if v.is_resolvable else -1
-        if s >= 0 and int(dut.uio_oe.value) & int(dut.uio_out.value) & 1:
-            s |= VALID                                  # mode 1: the chip's valid pin
+        if s >= 0:                                      # mode 1: the chip's valid and busy pins
+            s |= (int(dut.uio_oe.value) & int(dut.uio_out.value) & 3) << 8
         samples.append(s)
         dut.ui_in.value = w & 0xFF
         dut.uio_in.value = w >> 8
@@ -67,11 +69,18 @@ async def run_jobs(dut, jobs, what):
         words, sq = job.words()
         samples = await stream(dut, words)
         due = {k + 2 for k in sq}
-        loud = [k for k, s in enumerate(samples) if k not in due and s != 0]
+        loud = [k for k, s in enumerate(samples) if k not in due and s & (VALID | 0xFF)]
         assert not loud, f"{what} {job.name} len {len(job.msg)}: uo_out nonzero at idle samples {loud[:5]}"
         if job.mode and not job.ntt:                    # the valid pin marks exactly the clocks with a byte
             flagged = {k for k, s in enumerate(samples) if s & VALID}
-            assert flagged == due, f"{what} {job.name} len {len(job.msg)}: valid pin differs from the due clocks"
+            want = {k for i, k in enumerate(sorted(due)) if i % 3} if job.packed else due    # packed: 2 of 3
+            assert flagged == want, f"{what} {job.name} len {len(job.msg)}: valid pin differs from the due clocks"
+        if job.ntt and job.auto:                        # busy from the word to the end, then free; all bytes in it
+            k0 = sq[0]
+            busy = [k for k, s in enumerate(samples) if k > k0 and s & BUSY]     # at k0: still the PERMUTE before
+            assert busy and busy == list(range(k0 + 2, busy[-1] + 1)), f"{what}: busy is not one stretch"
+            last = max(k for k, s in enumerate(samples) if s & VALID)
+            assert last <= busy[-1] < len(samples) - 1, f"{what}: busy ends at {busy[-1]}, last byte at {last}"
         if job.ntt:                                     # a byte only with valid, and valid only in the windows
             bare = [k for k, s in enumerate(samples) if s & 0xFF and not s & VALID]
             assert not bare, f"{what} {job.name}: uo_out nonzero without valid at samples {bare[:5]}"
@@ -132,9 +141,9 @@ async def test_absorb_n(dut):
 
 
 async def set_mode(dut, m, now):
-    """Send MODE m in the framing of mode `now`; the chip's uio[0] driver follows."""
+    """Send MODE m in the framing of mode `now`; the chip's uio[1:0] drivers follow."""
     await stream(dut, [hw(EXT, EXT_MODE | m, now), 0, 0, 0])
-    assert int(dut.uio_oe.value) == m, f"uio_oe is {int(dut.uio_oe.value):#04x} in mode {m}"
+    assert int(dut.uio_oe.value) == 3 * m, f"uio_oe is {int(dut.uio_oe.value):#04x} in mode {m}"
 
 
 @cocotb.test()
@@ -151,6 +160,9 @@ async def test_mode(dut):
     samples = await stream(dut, words)
     assert job.collect(samples, [k + 1 for k in sq]) == job.expected(), "mode 0 took a word without the marker"
     await set_mode(dut, 1, now=0)
+    # the busy pin: high for the PERMUTE time, from 2 clocks after the word
+    samples = await stream(dut, [hw(PERMUTE, 0, 1)] + [0] * (job.perm_busy + 6))
+    assert [k for k, s in enumerate(samples) if s & BUSY] == list(range(2, 2 + job.perm_busy)), "busy pin and PERMUTE"
     jobs = [HashJob("sha3_512", b"mode one", K, mode=1),
             HashJob("shake_128", bytes(range(170)), K, mode=1, burst=True, finish=True, raw=True),
             HashJob("shake_256", bytes(33), K, mode=1, cbd_eta=3)]
@@ -166,3 +178,14 @@ async def test_sample_ntt(dut):
     await set_mode(dut, 1, now=0)
     jobs = ntt_jobs(core_k(dut))
     await run_jobs(dut, jobs[:2] + jobs[-2:] if GL else jobs, "SampleNTT")
+
+
+@cocotb.test()
+async def test_auto(dut):
+    """Blocks that follow by themselves, in both framing modes; in mode 1 with SampleNTT and the busy pin."""
+    await reset(dut)
+    K = core_k(dut)
+    await run_jobs(dut, pick(auto_jobs(K)), "auto, mode 0")
+    await set_mode(dut, 1, now=0)
+    jobs = auto_jobs(K, mode=1)
+    await run_jobs(dut, jobs[3:5] if GL else jobs, "auto, mode 1")

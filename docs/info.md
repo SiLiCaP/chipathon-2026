@@ -30,9 +30,9 @@ A word on the pins with `uio[4]` = 1 and `uio[3:0]` = 0xF is a command; the comm
 | 2 | Permute, rewinds the byte pointer | - | 368 clocks |
 | 3 | Clear the state, rewinds the byte pointer | - | 8 clocks |
 | 4 | Skip: the pointer moves to the next lane, which stays untouched (only at a lane boundary) | - | - |
-| 5 | Burst: the next 8n state bytes on `uo_out`, one per clock, the first 2 clocks later | n (1..21) | 8n clocks |
-| 6 | Burst CBD: like Burst, each byte as SamplePolyCBD coefficients | {eta3, 2'b0, n} | 8n clocks |
-| 6 | Burst NTT: like Burst, the bytes go through SampleNTT (mode 1 only) | {1'b0, 1'b1, 1'b0, n} | 8n + 3 clocks |
+| 5 | Burst: the next 8n state bytes on `uo_out`, one per clock, the first 2 clocks later | {x, n}: n = 1..21, x = 0..7 more blocks | 8n clocks per block |
+| 6 | Burst CBD: like Burst, each byte as SamplePolyCBD coefficients | {eta3, 1'b0, auto, n} | 8n clocks per block |
+| 6 | Burst NTT: like Burst, the bytes go through SampleNTT (mode 1 only) | {1'b0, 1'b1, auto, n} | 8n + 3 clocks per block |
 | 7 | Ext: one of the four commands below, picked by data bits 7:6 | | |
 
 | Ext, `ui[7:6]` | Command | `ui[5:0]` | Busy afterwards |
@@ -46,9 +46,19 @@ Finish from byte pointer p in a block of `rate` bytes (136, 72, 168, 136 for the
 s = 8 - p % 8 padding steps when p is in the block's last lane, else (8 - p % 8) + (rate / 8 - 2 - p / 8) + 8.
 When a message fills its block exactly, send Permute first and then Finish (p = 0).
 
+**Blocks that follow by themselves.** One burst word can cover a whole squeeze: after its n lanes the
+chip permutes and bursts again, each block starting 8n + 3 + 368 clocks after the one before.
+Burst: x more blocks of n lanes. Burst CBD with `auto` (eta = 3): the other 24 - n lanes, so n = 17 returns
+all 192 bytes of PRF_3. Burst NTT with `auto`: blocks until the polynomial's 256 coefficients are out.
+Hash words in between are ignored.
+
 **Framing mode 1** (after Mode 1; reset returns to mode 0): a command is `uio[4]` = 1 alone, without the
-0xF marker, and `uio[0]` becomes an output, `valid`: high on every clock where `uo_out` carries a byte.
-The host must stop driving `uio[0]` before it sends Mode 1.
+0xF marker, and `uio[1:0]` become outputs. `uio[0]` = `valid`: high on every clock where `uo_out` carries
+a byte. `uio[1]` = `busy`: high while the chip takes no command (Permute, Clear, a burst, Absorb N, Finish,
+blocks that follow by themselves), from 2 clocks after the command word. The host must stop driving
+`uio[1:0]` before it sends Mode 1. In mode 1 the eta = 3 CBD output is packed like eta = 2: of every three
+clocks the first has no byte (`valid` low), the next two carry `{f[4j+1], f[4j]}` and `{f[4j+3], f[4j+2]}`,
+128 bytes for PRF_3.
 
 Burst NTT output: every pair of accepted coefficients (x, y), each below 3329, leaves as the three bytes
 `x[7:0]`, `{y[3:0], x[11:8]}`, `y[11:4]`, on clocks marked by `valid`, the last ones up to 3 clocks after
@@ -66,7 +76,7 @@ PRF_3 (192 bytes, more than SHAKE256's 136-byte rate) is two bursts with a Permu
 | Pin | Direction | Function |
 | --- | --- | --- |
 | `ui[7:0]` | in | Data byte |
-| `uio[3:0]` | in | 0xF: marks a command word (mode 0). Mode 1: unused, and `uio[0]` is the output `valid` |
+| `uio[3:0]` | in | 0xF: marks a command word (mode 0). Mode 1: unused, and `uio[0]` is the output `valid`, `uio[1]` the output `busy` |
 | `uio[4]` | in | valid: a command this clock |
 | `uio[5]`, `uio[7:6]` | in | command bit 2, bits 1:0 |
 | `uo[7:0]` | out | Squeezed bytes (or CBD coefficients) 2 clocks after the word that asked for them, 0x00 otherwise |
@@ -78,10 +88,11 @@ number of Burst NTT output bytes depends on the data.
 
 The cocotb tests in `test/` check SHA3-256/512 and SHAKE128/256 against Python's `hashlib`
 (byte and burst squeeze, with and without Skip, with Finish and Absorb N), Burst CBD against FIPS 203
-SamplePolyCBD for eta = 2 and 3, and Burst NTT against FIPS 203 SampleNTT in framing mode 1.
+SamplePolyCBD for eta = 2 and 3, Burst NTT against FIPS 203 SampleNTT in framing mode 1, and the
+blocks that follow by themselves with the `busy` pin.
 `test/hash_jobs.py` builds the pin words; the same file drives the FPGA rig.
 
 ## External hardware
 
 A host that drives the clock and the 16 input pins and samples `uo_out` on every clock
-(in framing mode 1: 15 input pins, and it also samples `uio[0]`), for example an RP2350 with PIO and DMA.
+(in framing mode 1: 14 input pins, and it also samples `uio[1:0]`), for example an RP2350 with PIO and DMA.

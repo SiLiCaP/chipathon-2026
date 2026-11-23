@@ -31,10 +31,8 @@
   "//": "https://tinytapeout.com/faq/#how-can-i-map-an-additional-external-clock-to-one-of-the-gpios",
   "CLOCK_PORT": "clk",
 
-  "//": "keccak_ring (the team's sha3-asic-research recipe): the rings' flip-flop to flip-flop hops need a",
-  "//": "0.14 ns hold uncertainty SDC, small cells allowed, clkdlybuf delay cells banned",
-  "PNR_SDC_FILE": "dir::custom.sdc",
-  "SIGNOFF_SDC_FILE": "dir::custom.sdc",
+  "//": "keccak_ring: small cells allowed, clkdlybuf delay cells banned. Hold uncertainty is the TT default",
+  "//": "(0.25 ns) since Nov 23, 2026: the hash-only chip routes with it (74.1 %); the 0.14 ns SDC is gone",
   "SYNTH_EXCLUDED_CELL_FILE": "dir::no_synth.cells",
   "EXTRA_EXCLUDED_CELLS": ["sky130_fd_sc_hd__clkdlybuf4s*"],
 

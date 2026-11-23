@@ -20,8 +20,8 @@ module tangnano20k_pico_top (
     input  wire       tt_rst_n,   // from the Pico (GPIO 22); pulled down: in reset while unwired
     input  wire [7:0] tt_ui,      // ui_in[7:0] from the Pico (GPIO 0-7)
     inout  wire [7:0] tt_uio,     // uio[7:0] from the Pico (GPIO 8-12, 26-28). The chip reads them; in framing
-                                  // mode 1 (MODE command) it drives uio[0], its valid output, and the Pico
-                                  // must have GPIO 8 as an input before it sends MODE 1
+                                  // mode 1 (MODE command) it drives uio[1:0], its valid and busy outputs,
+                                  // and the Pico must have GPIO 8 and 9 as inputs before it sends MODE 1
     output wire [7:0] tt_uo,      // uo_out[7:0] to the Pico (GPIO 13-20)
     output wire [5:0] led         // active low
 );
@@ -34,6 +34,7 @@ module tangnano20k_pico_top (
 
     wire [7:0] uio_out, uio_oe;
     assign tt_uio[0] = uio_oe[0] ? uio_out[0] : 1'bz;
+    assign tt_uio[1] = uio_oe[1] ? uio_out[1] : 1'bz;
 
     `TT_TOP dut (
         .ui_in  (tt_ui),
@@ -48,8 +49,8 @@ module tangnano20k_pico_top (
 
     // ---------------- status LEDs (active low) ----------------
     // LED0 heartbeat (bitstream loaded), LED1 chip clock running, LED2 chip in reset,
-    // LED3 valid inputs arriving, LED4 result bytes leaving, LED5 the design drives a uio pin other than uio[0]
-    // (never expected: only uio[0] is wired back, and only framing mode 1 drives it)
+    // LED3 valid inputs arriving, LED4 result bytes leaving, LED5 the design drives a uio pin other than
+    // uio[1:0] (never expected: only those two are wired back, and only framing mode 1 drives them)
     reg [24:0] hb = 25'd0;
     always @(posedge clk) hb <= hb + 1'b1;
 
@@ -63,7 +64,7 @@ module tangnano20k_pico_top (
         if (tt_uio[4]) valid_cnt <= valid_cnt + 1'b1;
         if (tt_uo != 8'd0) out_cnt <= out_cnt + 1'b1;
         if (!tt_rst_n) oe_seen <= 1'b0;
-        else if (uio_oe[7:1] != 7'd0) oe_seen <= 1'b1;
+        else if (uio_oe[7:2] != 6'd0) oe_seen <= 1'b1;
     end
 
     assign led = ~{oe_seen, out_cnt[13], valid_cnt[13], ~tt_rst_n, clk_cnt[17], hb[24]};

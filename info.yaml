@@ -52,7 +52,7 @@ pinout:
 
   # Bidirectional pins
   uio[0]: "tag[0] (1); mode 1: valid out"
-  uio[1]: "tag[1] (1)"
+  uio[1]: "tag[1] (1); mode 1: busy out"
   uio[2]: "tag[2] (1)"
   uio[3]: "tag[3] (1)"
   uio[4]: "valid"

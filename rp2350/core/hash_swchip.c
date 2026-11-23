@@ -126,6 +126,10 @@ static uint8_t step(hash_swchip_t *s, uint16_t w) {
             violation(s, "SampleNTT burst: not modelled (it needs the valid pin, which the transports do not sample)");
             break;
         }
+        if (cmd == HC_BURST ? (data >> 5) != 0 : (data & HC_BURST_AUTO) != 0) {
+            violation(s, "burst with blocks that follow by themselves: not modelled");
+            break;
+        }
         s->cbd_on = cmd == HC_BURST_CBD;
         s->eta3 = (data >> 7) & 1;
         s->burst_left = 8 * n - 1;

@@ -10,15 +10,23 @@
  *   2 PERMUTE      Keccak-f[1600]
  *   3 CLEAR        zero the state
  *   4 SKIP         pass over an all-zero lane (only at a lane boundary)
- *   5 BURST        data = n (1..21): stream n lanes = 8n bytes, one per clock, from this one word.
+ *   5 BURST        data = {x, n}: stream n (1..21) lanes = 8n bytes, one per clock, from this one word.
  *                  The host sends idle clocks (valid low) meanwhile; hash words during a burst are ignored.
- *   6 BURST_CBD    data = {eta3, ntt, 1'b0, n}: like BURST, but the bytes are processed on the way out.
+ *                  x (0..7) more blocks follow by themselves: PERMUTE and another n lanes, x times.
+ *   6 BURST_CBD    data = {eta3, ntt, auto, n}: like BURST, but the bytes are processed on the way out.
  *                  ntt = 0: SamplePolyCBD (FIPS 203 Alg. 8), 4-bit two's complement coefficients:
  *                    eta = 2: byte -> {f[2i+1], f[2i]}               (two coefficients per byte)
  *                    eta = 3: bytes 3j, 3j+1, 3j+2 -> {0, f[4j]}, {0, f[4j+1]}, {f[4j+3], f[4j+2]}
+ *                    eta = 3 in framing mode 1: packed like eta = 2, {f[4j+1], f[4j]} with byte 3j+1 and
+ *                      {f[4j+3], f[4j+2]} with byte 3j+2; nothing (dvalid low) with byte 3j
+ *                    auto (eta = 3 only): after the n lanes, PERMUTE and 24 - n more lanes by themselves:
+ *                      n = 17 gives all 192 bytes of PRF_3 from one word
  *                  ntt = 1: SampleNTT (FIPS 203 Alg. 7, sample_ntt.v): only the accepted 12-bit coefficients
  *                    come out, packed like ByteEncode_12, on the clocks where `dvalid` is high (the last
  *                    ones up to 3 clocks after the burst). 256 coefficients = 384 bytes, then quiet.
+ *                    auto: PERMUTE and another n lanes by themselves until the 256 are out
+ * A block that follows by itself starts 8n + 3 + the PERMUTE time after the one before it started.
+ * `busy` is high while the chip takes no command: core busy, a burst, ABSORB_N, FINISH, the automatic blocks.
  *   7 EXT          data[7:6] picks one of:
  *                    00 no-op (reserved)
  *                    01 ABSORB_N  data[5:0] = n - 1: the next n (1..64) clocks' data bytes are absorbed as
@@ -54,11 +62,13 @@ module hash_io #(
     input  wire [7:0]   din,
     output reg  [7:0]   dout,           // to uo_out, 0 when no byte is due
     output wire         dvalid,         // a byte is on dout this clock
+    output wire         busy,           // the chip takes no command this clock
     output reg          mode,           // framing mode (MODE command), 0 after reset
     output reg          c_valid,        // to the core
     output reg  [2:0]   c_cmd,
     output reg  [K-1:0] c_din,
-    input  wire [K-1:0] c_dout
+    input  wire [K-1:0] c_dout,
+    input  wire         c_busy
 );
   localparam ABSORB = 3'd0, SQUEEZE = 3'd1, PERMUTE = 3'd2, CLEAR = 3'd3, SKIP = 3'd4,
              BURST = 3'd5, BURST_CBD = 3'd6, EXT = 3'd7;
@@ -70,17 +80,31 @@ module hash_io #(
   reg  [1:0] fin_alg;
   reg  [7:0] bptr;                     // byte pointer in the block (the core's ptr, in bytes)
 
+  // blocks that follow a burst by themselves: 3 clocks after its last byte (the sampler has counted it by
+  // then) decide; if another block is due, PERMUTE, wait for the core, burst ap_n lanes again
+  reg  [1:0] ap_gap;                   // clocks to the decision, 0 = none pending
+  reg        ap_wait;                  // PERMUTE sent, waiting for the core
+  reg        ap_inf;                   // SampleNTT: until the polynomial is complete
+  reg  [2:0] ap_cnt;                   // else: blocks still to follow
+  reg  [4:0] ap_n;                     // their length in lanes
+  wire       s_done;                   // sample_ntt has its 256 coefficients
+
   wire       bursting = (burst_left != 8'd0);
   wire       raw_on   = (raw_left != 7'd0);
-  wire       hv       = cmd_valid & ~bursting & ~raw_on & ~fin_on;   // a host command this clock
+  wire       ap_on    = (ap_gap != 2'd0) | ap_wait;
+  wire       ap_more  = ap_inf ? ~s_done : (ap_cnt != 3'd0);
+  wire       ap_perm  = (ap_gap == 2'd1) & ap_more;            // the PERMUTE goes to the core this clock
+  wire       restart  = ap_wait & ~c_busy;                     // the next block starts this clock
+  wire       hv       = cmd_valid & ~bursting & ~raw_on & ~fin_on & ~ap_on;   // a host command this clock
   wire       start    = hv & ((cmd == BURST) | (cmd == BURST_CBD));
   wire       host_sq  = hv & (cmd == SQUEEZE);
-  wire       sreq     = host_sq | start | bursting;            // a byte is asked for this clock
+  wire       sreq     = host_sq | start | restart | bursting;  // a byte is asked for this clock
   wire       st_cbd   = (cmd == BURST_CBD) & ~din[6];
   wire       st_ntt   = (cmd == BURST_CBD) & din[6];
-  wire       cbd_req  = bursting ? cbd_on : (start & st_cbd);
-  wire       ntt_req  = bursting ? ntt_on : (start & st_ntt);
-  wire       eta_req  = bursting ? eta3 : din[7];
+  wire       in_burst = bursting | restart;
+  wire       cbd_req  = start ? st_cbd : (in_burst & cbd_on);
+  wire       ntt_req  = start ? st_ntt : (in_burst & ntt_on);
+  wire       eta_req  = start ? din[7] : eta3;
   wire       ext      = hv & (cmd == EXT);
   wire       ext_raw  = ext & (din[7:6] == 2'b01);
   wire       ext_fin  = ext & (din[7:6] == 2'b10);
@@ -94,9 +118,9 @@ module hash_io #(
   wire [7:0] f_din    = {fin_at, 2'b00, (fin_dom ? 5'h00 : fin_alg[1] ? 5'h1F : 5'h06)};
 
   // ---------------- the word that reaches the core side: host, ABSORB_N data or a FINISH step -------------
-  wire       a_valid = fin_on | raw_on |
+  wire       a_valid = fin_on | raw_on | ap_perm |
                        (hv & ((cmd == ABSORB) | (cmd == PERMUTE) | (cmd == CLEAR) | (cmd == SKIP)));
-  wire [2:0] a_cmd   = fin_on ? f_cmd : raw_on ? ABSORB : cmd;
+  wire [2:0] a_cmd   = fin_on ? f_cmd : ap_perm ? PERMUTE : raw_on ? ABSORB : cmd;
   wire [7:0] a_din   = fin_on ? f_din : din;
   wire       a_abs   = a_valid & (a_cmd == ABSORB);
   wire       a_clear = a_valid & (a_cmd == CLEAR);
@@ -138,6 +162,11 @@ module hash_io #(
       fin_alg <= 2'd0;
       bptr <= 8'd0;
       mode <= 1'b0;
+      ap_gap <= 2'd0;
+      ap_wait <= 1'b0;
+      ap_inf <= 1'b0;
+      ap_cnt <= 3'd0;
+      ap_n <= 5'd0;
       bph <= 1'b0;
       sq_q <= 1'b0;
       hi_q <= 1'b0;
@@ -147,9 +176,24 @@ module hash_io #(
         cbd_on <= st_cbd;
         ntt_on <= st_ntt;
         eta3 <= din[7];
+        // what follows by itself: BURST x blocks; CBD eta 3 the rest of the 24 lanes; SampleNTT until done
+        ap_inf <= st_ntt & din[5];
+        ap_cnt <= (cmd == BURST) ? din[7:5] : (st_cbd & din[7] & din[5]) ? 3'd1 : 3'd0;
+        ap_n   <= st_cbd ? 5'd24 - din[4:0] : din[4:0];
+      end else if (restart) begin
+        burst_left <= {ap_n, 3'b000} - 8'd1;
       end else if (bursting) begin
         burst_left <= burst_left - 8'd1;
       end
+
+      if (bursting & (burst_left == 8'd1) & (ap_inf | (ap_cnt != 3'd0))) ap_gap <= 2'd3;
+      else if (ap_gap != 2'd0) ap_gap <= ap_gap - 2'd1;
+      if (ap_gap == 2'd1) begin                      // the decision
+        if (ap_more) begin
+          ap_wait <= 1'b1;
+          if (~ap_inf) ap_cnt <= ap_cnt - 3'd1;
+        end else ap_inf <= 1'b0;
+      end else if (restart) ap_wait <= 1'b0;
 
       if (ext_raw) raw_left <= {1'b0, din[5:0]} + 7'd1;
       else if (raw_on) raw_left <= raw_left - 7'd1;
@@ -202,6 +246,7 @@ module hash_io #(
   // ---------------- output: raw byte, CBD coefficients or SampleNTT ----------------
   reg       cbd_q, ntt_q, eta_q;       // mode of the byte due this clock
   reg [1:0] p3;                        // eta = 3: byte position in its triple
+  reg [3:0] f0;                        // eta = 3, packed: f[4j], sent with byte 3j+1
   reg [1:0] left2;                     // eta = 3: bits 7:6 of byte 3j
   reg [3:0] left4;                     // eta = 3: bits 7:4 of byte 3j+1
   wire      due = sq_q | hi_q;
@@ -227,6 +272,7 @@ module hash_io #(
       if (a_clear) p3 <= 2'd0;                                  // a triple may straddle a PERMUTE
       else if (due & cbd_q & eta_q) p3 <= (p3 == 2'd2) ? 2'd0 : p3 + 2'd1;
       if (due & cbd_q & eta_q & (p3 == 2'd0)) left2 <= raw[7:6];
+      if (due & cbd_q & eta_q & (p3 == 2'd0)) f0 <= cbd3(raw[5:0]);
       if (due & cbd_q & eta_q & (p3 == 2'd1)) left4 <= raw[7:4];
     end
   end
@@ -240,11 +286,14 @@ module hash_io #(
       .v    (due & ntt_q),
       .b    (raw),
       .o    (s_o),
-      .ov   (s_ov)
+      .ov   (s_ov),
+      .done (s_done)
   );
 
-  wire due_out = due & ~ntt_q;         // a raw or CBD byte goes out this clock
+  wire pack3   = mode & cbd_q & eta_q;                         // eta = 3 in mode 1: two bytes per triple
+  wire due_out = due & ~ntt_q & ~(pack3 & (p3 == 2'd0));       // a raw or CBD byte goes out this clock
   assign dvalid = due_out | s_ov;
+  assign busy   = c_busy | bursting | raw_on | fin_on | ap_on | s_ov;
 
   always @(*) begin
     if (s_ov)            dout = s_o;
@@ -253,7 +302,7 @@ module hash_io #(
     else if (!eta_q)     dout = {cbd2(raw[7:4]), cbd2(raw[3:0])};
     else case (p3)
       2'd0:    dout = {4'h0, cbd3(raw[5:0])};
-      2'd1:    dout = {4'h0, cbd3({raw[3:0], left2})};
+      2'd1:    dout = pack3 ? {cbd3({raw[3:0], left2}), f0} : {4'h0, cbd3({raw[3:0], left2})};
       default: dout = {cbd3(raw[7:2]), cbd3({raw[1:0], left4})};
     endcase
   end

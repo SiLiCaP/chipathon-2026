@@ -85,9 +85,9 @@ Read the Tang Nano from the top, USB-C connector up:
 | GND | GND | 18 | – | R15 | GND | |
 | GND | GND | 28 | – | R2 | GND | |
 
-`uio[0]` (GP8 ↔ L12) changes direction in the chip's framing mode 1: the chip then drives it as its `valid`
-output (`docs/info.md`), and the Pico must have GP8 as an input before it sends Mode 1. The firmware never
-sends Mode 1 today, so the wire is Pico → FPGA as listed.
+`uio[0]` (GP8 ↔ L12) and `uio[1]` (GP9 ↔ L13) change direction in the chip's framing mode 1: the chip then
+drives them as its `valid` and `busy` outputs (`docs/info.md`), and the Pico must have GP8 and GP9 as inputs
+before it sends Mode 1. The firmware never sends Mode 1 today, so the wires are Pico → FPGA as listed.
 
 This table, `fpga/tangnano20k_pico.cst` and the firmware's pin map come from one source,
 `fpga/pico_rig_pins.py`. Its self-check refuses any table that doesn't match the firmware's PIO windows.
@@ -138,7 +138,7 @@ The FPGA's LEDs (active low):
 | LED2 | the chip is in reset (`rst_n` low) |
 | LED3 | valid inputs are arriving |
 | LED4 | result bytes are leaving |
-| LED5 | the design drives a `uio` pin other than `uio[0]`, which this chip never does: something is wrong |
+| LED5 | the design drives a `uio` pin other than `uio[1:0]`, which this chip never does: something is wrong |
 
 ### Pico 2 W
 

@@ -12,8 +12,9 @@
  * After reset every uio pin is an input. Constant time: every command has a fixed length.
  *
  * Framing mode 1 (the MODE command, hash_io.v; reset returns to mode 0): the marker is dropped, a hash word
- * is just uio_in[4] = 1, and uio[0] becomes an output: high on every clock where uo_out carries a byte. The
- * SampleNTT burst needs it (its output rate depends on the data). uio[3:1] are then unused inputs.
+ * is just uio_in[4] = 1, and uio[1:0] become outputs. uio[0] = valid: high on every clock where uo_out
+ * carries a byte (the SampleNTT burst needs it: its output rate depends on the data). uio[1] = busy: high
+ * while the chip takes no command. uio[3:2] are then unused inputs.
  */
 
 `default_nettype none
@@ -46,7 +47,7 @@ module tt_um_NTT_Core #(
   );
 
   // hash-word flag, registered beside io_in_capture (mode 0: equals valid_q & coeff_q[11:8] == 4'hF)
-  wire mode, dvalid;
+  wire mode, dvalid, io_busy, c_busy;
   wire hash_in = uio_in[4] & (mode | (uio_in[3:0] == 4'hF));
   reg  hash_w;
   always @(posedge clk) begin
@@ -66,11 +67,13 @@ module tt_um_NTT_Core #(
       .din      (coeff_q[7:0]),
       .dout     (uo_out),
       .dvalid   (dvalid),
+      .busy     (io_busy),
       .mode     (mode),
       .c_valid  (c_valid),
       .c_cmd    (c_cmd),
       .c_din    (c_din),
-      .c_dout   (c_dout)
+      .c_dout   (c_dout),
+      .c_busy   (c_busy)
   );
 
   keccak_ring #(.K(HASH_K)) u_hash (
@@ -80,11 +83,11 @@ module tt_um_NTT_Core #(
       .cmd      (c_cmd),
       .din      (c_din),
       .dout     (c_dout),
-      .busy     ()
+      .busy     (c_busy)
   );
 
-  assign uio_out = {7'h00, dvalid};
-  assign uio_oe  = {7'h00, mode};
+  assign uio_out = {6'h00, io_busy, dvalid};
+  assign uio_oe  = {6'h00, mode, mode};
 
   wire _unused = &{ena, valid_q, coeff_q[11:8], 1'b0};
 

@@ -24,6 +24,8 @@ enum { HC_ABSORB = 0, HC_SQUEEZE = 1, HC_PERMUTE = 2, HC_CLEAR = 3, HC_SKIP = 4,
 #define HC_EXT_MODE 0xC0        // | framing mode (1: no marker, uio[0] = the chip's valid output). Not used by this
                                 // driver yet: the transports sample uo_out only, and SampleNTT needs the valid pin.
 #define HC_BURST_NTT 0x40       // BURST_CBD data bit 6: SampleNTT instead of CBD (needs mode 1)
+#define HC_BURST_AUTO 0x20      // BURST_CBD data bit 5 (and BURST data[7:5] = blocks): the chip permutes and sends
+                                // the next blocks by itself. Not used by this driver yet.
 #define HC_RAW_MAX 64
 
 // K = 8 core: CLEAR 8 busy clocks, PERMUTE 368 (M + 24 (2M - 1), M = 8); a squeezed byte is on uo_out 2 clocks
