@@ -82,3 +82,21 @@ void cbd_pack(const uint8_t *buf, int eta, uint8_t *out) {
         }
     }
 }
+
+int sample_ntt_pack(const uint8_t *xof, uint32_t n, uint8_t *out) {
+    uint16_t a[256];
+    unsigned cnt = 0;
+    for (uint32_t i = 0; i + 3 <= n && cnt < 256; i += 3) {
+        const unsigned d1 = xof[i] | (unsigned)(xof[i + 1] & 15) << 8, d2 = (unsigned)(xof[i + 1] >> 4) | (unsigned)xof[i + 2] << 4;
+        if (d1 < 3329) a[cnt++] = (uint16_t)d1;
+        if (d2 < 3329 && cnt < 256) a[cnt++] = (uint16_t)d2;
+    }
+    if (cnt < 256) return 0;
+    for (unsigned j = 0; j < 128; j++) {
+        const unsigned x = a[2 * j], y = a[2 * j + 1];
+        out[3 * j] = (uint8_t)x;
+        out[3 * j + 1] = (uint8_t)((x >> 8) | (y & 15) << 4);
+        out[3 * j + 2] = (uint8_t)(y >> 4);
+    }
+    return 1;
+}

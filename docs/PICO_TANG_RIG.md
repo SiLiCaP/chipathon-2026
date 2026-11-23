@@ -86,8 +86,9 @@ Read the Tang Nano from the top, USB-C connector up:
 | GND | GND | 28 | – | R2 | GND | |
 
 `uio[0]` (GP8 ↔ L12) and `uio[1]` (GP9 ↔ L13) change direction in the chip's framing mode 1: the chip then
-drives them as its `valid` and `busy` outputs (`docs/info.md`), and the Pico must have GP8 and GP9 as inputs
-before it sends Mode 1. The firmware never sends Mode 1 today, so the wires are Pico → FPGA as listed.
+drives them as its `valid` and `busy` outputs (`docs/info.md`) and the Pico turns GP8 and GP9 into inputs
+(`selftest` and `fuzz` do this for their mode-1 part, without the two ever driving against each other:
+`docs/ci-emulator.md`). In mode 0, and after every reset, the wires are Pico → FPGA as listed.
 
 This table, `fpga/tangnano20k_pico.cst` and the firmware's pin map come from one source,
 `fpga/pico_rig_pins.py`. Its self-check refuses any table that doesn't match the firmware's PIO windows.

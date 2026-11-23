@@ -8,3 +8,6 @@ void keccak_f1600(uint64_t st[25]);
 void sha3_sponge(unsigned rate, uint8_t dom, const uint8_t *msg, uint32_t len, uint8_t *out, uint32_t outlen);
 // 64 * eta PRF bytes -> 256 coefficients packed as the hash chip's BURST_CBD output
 void cbd_pack(const uint8_t *buf, int eta, uint8_t *out);
+// SampleNTT (FIPS 203 Alg. 7) on n XOF bytes, the polynomial as ByteEncode_12 (384 bytes), the hash chip's
+// SampleNTT output. Returns 1, or 0 if the n bytes did not give 256 coefficients.
+int sample_ntt_pack(const uint8_t *xof, uint32_t n, uint8_t *out);

@@ -23,11 +23,14 @@ from test_hash_only import core_k
 
 
 def load(path):
-    b = open(path, "rb").read()
-    assert b[:4] == b"HWD1", "not a HWD1 stream"
+    """words, uo_out samples, uio[1:0] samples (HWD1 files have none: zeros)."""
+    with open(path, "rb") as f:
+        b = f.read()
+    assert b[:4] in (b"HWD1", b"HWD2"), "not a HWD1 / HWD2 stream"
     n = struct.unpack("<I", b[4:8])[0]
     words = struct.unpack("<%dH" % n, b[8:8 + 2 * n])
-    return words, b[8 + 2 * n:8 + 3 * n]
+    aux = b[8 + 3 * n:8 + 4 * n] if b[:4] == b"HWD2" else bytes(n)
+    return words, b[8 + 2 * n:8 + 3 * n], aux
 
 
 @cocotb.test()
@@ -38,7 +41,7 @@ async def test_rp2350_stream(dut):
     streams = [s for s in os.environ.get("STREAM", "").split(",") if s]
     assert streams, "set STREAM=file.hwd[,file2.hwd] (make -C test rp2350 does)"
     for path in streams:
-        words, want = load(path)
+        words, want, want_aux = load(path)
         cocotb.start_soon(Clock(dut.clk, 20, unit="ns").start())
         dut.ena.value = 1
         dut.ui_in.value = 0
@@ -51,11 +54,14 @@ async def test_rp2350_stream(dut):
             await FallingEdge(dut.clk)
             v = dut.uo_out.value
             got = int(v) if v.is_resolvable else -1
-            if got != want[k]:
+            aux = int(dut.uio_oe.value) & int(dut.uio_out.value) & 3     # valid, busy: driven in mode 1 only
+            if got != want[k] or aux != want_aux[k]:
                 bad += 1
                 if bad <= 5:
-                    dut._log.error(f"{path}: clock {k}: RTL uo_out {got:#04x}, software chip {want[k]:#04x}")
+                    dut._log.error(f"{path}: clock {k}: RTL uo_out {got:#04x} uio[1:0] {aux}, software chip "
+                                   f"{want[k]:#04x} {want_aux[k]}")
             dut.ui_in.value = w & 0xFF
             dut.uio_in.value = w >> 8
         assert not bad, f"{path}: {bad} of {len(words)} clocks differ between the RTL and the software chip"
-        dut._log.info(f"{path}: {len(words)} clocks identical, {sum(1 for x in want if x)} nonzero output bytes")
+        dut._log.info(f"{path}: {len(words)} clocks identical, {sum(1 for x in want if x)} nonzero output bytes, "
+                      f"{sum(1 for x in want_aux if x & 1)} marked valid, {sum(1 for x in want_aux if x & 2)} busy")

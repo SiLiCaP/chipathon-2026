@@ -4,13 +4,14 @@
 
 #include <string.h>
 
-static const struct { unsigned rate; uint8_t dom; uint32_t fixed; const char *name; } KIND[HASH_NKIND] = {
-    [HASH_SHA3_256] = {136, 0x06, 32, "sha3-256"},
-    [HASH_SHA3_512] = {72, 0x06, 64, "sha3-512"},
-    [HASH_SHAKE128] = {168, 0x1F, 0, "shake128"},
-    [HASH_SHAKE256] = {136, 0x1F, 0, "shake256"},
-    [HASH_PRF_CBD2] = {136, 0x1F, 128, "prf-cbd2"},
-    [HASH_PRF_CBD3] = {136, 0x1F, 192, "prf-cbd3"},
+static const struct { unsigned rate; uint8_t dom; uint32_t fixed; uint8_t fn; const char *name; } KIND[HASH_NKIND] = {
+    [HASH_SHA3_256] = {136, 0x06, 32, 0, "sha3-256"},
+    [HASH_SHA3_512] = {72, 0x06, 64, 1, "sha3-512"},
+    [HASH_SHAKE128] = {168, 0x1F, 0, 2, "shake128"},
+    [HASH_SHAKE256] = {136, 0x1F, 0, 3, "shake256"},
+    [HASH_PRF_CBD2] = {136, 0x1F, 128, 3, "prf-cbd2"},
+    [HASH_PRF_CBD3] = {136, 0x1F, 192, 3, "prf-cbd3"},
+    [HASH_XOF_NTT] = {168, 0x1F, 384, 2, "xof-ntt"},
 };
 
 uint32_t hash_kind_fixed_len(hash_kind_t kind) { return (unsigned)kind < HASH_NKIND ? KIND[kind].fixed : 0; }
@@ -21,7 +22,15 @@ void hash_chip_init(hash_chip_t *c, tt_io_t *io) {
     c->io = io;
 }
 
-int hash_chip_reset(hash_chip_t *c) { return c->io->reset(c->io, 10) ? HASH_ERR_IO : HASH_OK; }
+int hash_chip_reset(hash_chip_t *c) {
+    // rst_n clears the chip's framing mode, so it lets go of uio[1:0]; only then does the host drive them again
+    const int err = c->io->reset(c->io, 10) ? HASH_ERR_IO : HASH_OK;
+    c->mode = 0;
+    if (c->io->uio_release && c->io->uio_release(c->io, 0)) return HASH_ERR_IO;
+    return err;
+}
+
+int hash_chip_has_mode1(const hash_chip_t *c) { return c->io->uio_release != NULL; }
 
 const char *hash_err_str(int err) {
     switch (err) {
@@ -29,26 +38,59 @@ const char *hash_err_str(int err) {
     case HASH_ERR_ARG: return "bad argument";
     case HASH_ERR_IO: return "transport error";
     case HASH_ERR_QUIET: return "uo_out not quiet between commands (hardware fault)";
+    case HASH_ERR_VALID: return "the valid pin disagrees with the clocks a byte is due on (hardware fault)";
+    case HASH_ERR_NTT: return "SampleNTT did not return exactly 384 bytes";
     default: return "unknown error";
     }
 }
 
-// Play c->words[0..n-1] (n already includes any trailing idle clocks for the sample delay).
-static int play(hash_chip_t *c, uint32_t n) {
-    if (c->io->run(c->io, c->words, n, c->uo)) return HASH_ERR_IO;
-    c->clocks_total += n;
-    c->calls++;
-    return HASH_OK;
+// a command word in the chip's current framing
+static uint16_t cw(const hash_chip_t *c, unsigned cmd, unsigned data) {
+    return c->mode ? HC_WORD1(cmd, data) : HC_WORD(cmd, data);
 }
 
-// uo_out must be 0 on every clock except the `take` clocks from d0 on, where the squeezed bytes are.
-static int check_quiet(hash_chip_t *c, uint32_t n, uint32_t d0, uint32_t take) {
-    for (uint32_t k = 0; k < n; k++)
-        if (c->uo[k] && !(k >= d0 && k < d0 + take)) {
-            c->faults++;
-            hash_chip_reset(c);
-            return HASH_ERR_QUIET;
-        }
+// Play c->words[0..n-1] (n already includes any trailing idle clocks for the sample delay) and check every clock
+// against c->due: nothing where nothing is due; in mode 1 the valid pin exactly on the due clocks.
+static int play(hash_chip_t *c, uint32_t n) {
+    if (n > HASH_WORDS_MAX) return HASH_ERR_ARG;
+    if (c->io->run(c->io, c->words, n, c->uo, c->mode ? c->aux : NULL)) return HASH_ERR_IO;
+    c->clocks_total += n;
+    c->calls++;
+    int err = HASH_OK;
+    for (uint32_t k = 0; k < n && !err; k++) {
+        const int v = c->mode && (c->aux[k] & TT_AUX_VALID);
+        if (c->due[k] == 0) err = c->uo[k] ? HASH_ERR_QUIET : v ? HASH_ERR_VALID : HASH_OK;
+        else if (c->due[k] == 1) err = c->mode && !v ? HASH_ERR_VALID : HASH_OK;
+        else err = c->uo[k] && !v ? HASH_ERR_QUIET : HASH_OK;
+    }
+    if (err) {
+        c->faults++;
+        hash_chip_reset(c);
+    }
+    return err;
+}
+
+// start the next transport call's words
+static uint32_t begin(hash_chip_t *c) {
+    memset(c->due, 0, sizeof c->due);
+    return 0;
+}
+
+int hash_chip_set_mode(hash_chip_t *c, int mode) {
+    mode = mode ? 1 : 0;
+    if (mode == c->mode) return HASH_OK;
+    if (!c->io->uio_release) return HASH_ERR_ARG;
+    uint32_t n = begin(c);
+    c->words[n++] = cw(c, HC_EXT, HC_EXT_MODE | (unsigned)mode);
+    for (int i = 0; i < 3; i++) c->words[n++] = 0;
+    // To mode 1: the chip drives uio[1:0] from 2 clocks after the word, both low (not valid, not busy); the host's
+    // idle words drive them low too, and it lets go once the clock has stopped. To mode 0: the chip lets go first.
+    // (Its pins are not sampled in that call: once it lets go they float until the host drives them again.)
+    c->mode = 0;
+    const int err = play(c, n);
+    if (err) return err;
+    if (c->io->uio_release(c->io, mode)) return HASH_ERR_IO;
+    c->mode = mode;
     return HASH_OK;
 }
 
@@ -62,7 +104,7 @@ static uint32_t put_bytes(hash_chip_t *c, uint32_t n, const uint8_t *b, unsigned
     if (opts & HASH_RAW) {
         for (unsigned i = 0; i < cnt; i += HC_RAW_MAX) {
             const unsigned part = cnt - i < HC_RAW_MAX ? cnt - i : HC_RAW_MAX;
-            c->words[n++] = HC_WORD(HC_EXT, HC_EXT_ABSORB_N | (part - 1));
+            c->words[n++] = cw(c, HC_EXT, HC_EXT_ABSORB_N | (part - 1));
             for (unsigned k = 0; k < part; k++) c->words[n++] = b[i + k];      // the bare byte: no valid, no marker
         }
         return n;
@@ -71,16 +113,29 @@ static uint32_t put_bytes(hash_chip_t *c, uint32_t n, const uint8_t *b, unsigned
         const unsigned part = cnt - ln < 8 ? cnt - ln : 8;
         int any = 0;
         for (unsigned k = 0; k < part; k++) any |= b[ln + k];
-        if ((opts & HASH_SKIP) && part == 8 && !any) c->words[n++] = HC_WORD(HC_SKIP, 0);
-        else for (unsigned k = 0; k < part; k++) c->words[n++] = HC_WORD(HC_ABSORB, b[ln + k]);
+        if ((opts & HASH_SKIP) && part == 8 && !any) c->words[n++] = cw(c, HC_SKIP, 0);
+        else for (unsigned k = 0; k < part; k++) c->words[n++] = cw(c, HC_ABSORB, b[ln + k]);
     }
     return n;
 }
 
+static uint32_t put_idle(hash_chip_t *c, uint32_t n, uint32_t cnt) {
+    for (uint32_t i = 0; i < cnt && n < HASH_WORDS_MAX; i++) c->words[n++] = 0;
+    return n;
+}
+
+// mark the clocks of `cnt` bytes asked for from word `at` on (one per clock): due at + delay
+static void mark(hash_chip_t *c, uint32_t at, uint32_t cnt, uint8_t what) {
+    const uint32_t d0 = at + HC_SQ_DELAY + (uint32_t)c->skew;
+    for (uint32_t i = 0; i < cnt && d0 + i < HASH_WORDS_MAX; i++) c->due[d0 + i] = what;
+}
+
 // One transport call is one block, so the clock budget of the longest block must fit the buffers:
 // CLEAR + 168 absorb words (+ 3 packet headers) + PERMUTE + 368 busy, or the last block with FINISH
-// (167 bytes + 3 headers + FINISH + 35 steps + PERMUTE + 368 busy) followed by 168 squeeze clocks + delay.
-_Static_assert(1 + HC_CLEAR_BUSY + 168 + 3 + 1 + 35 + 1 + HC_PERM_BUSY + 168 + HC_SQ_DELAY + 4 < HASH_WORDS_MAX,
+// (167 bytes + 3 headers + FINISH + 35 steps + PERMUTE + 368 busy) followed by at least one squeezed block.
+#define ABSORB_MAX (1 + HC_CLEAR_BUSY + 168 + 3 + 1 + 35 + 1 + HC_PERM_BUSY)
+#define AUTO_PERIOD(rate) ((rate) + HC_AUTO_GAP + HC_PERM_BUSY)              /* block start to block start */
+_Static_assert(ABSORB_MAX + AUTO_PERIOD(168) + 168 + HC_NTT_TAIL + HC_SQ_DELAY + 4 + 8 < HASH_WORDS_MAX,
                "block does not fit HASH_WORDS_MAX");
 
 int hash_chip_job(hash_chip_t *c, hash_kind_t kind, const uint8_t *msg, uint32_t len, uint8_t *out, uint32_t outlen,
@@ -89,31 +144,33 @@ int hash_chip_job(hash_chip_t *c, hash_kind_t kind, const uint8_t *msg, uint32_t
     if ((unsigned)kind >= HASH_NKIND || (!msg && len) || !out) return HASH_ERR_ARG;
     const unsigned rate = KIND[kind].rate;
     const int cbd_eta = kind == HASH_PRF_CBD2 ? 2 : kind == HASH_PRF_CBD3 ? 3 : 0;
-    if (cbd_eta) outlen = KIND[kind].fixed;
+    const int ntt = kind == HASH_XOF_NTT;
+    if (ntt && !c->mode) return HASH_ERR_ARG;                  // its output is marked by the valid pin
+    if (cbd_eta || ntt) outlen = KIND[kind].fixed;
     else if (KIND[kind].fixed && outlen > KIND[kind].fixed) return HASH_ERR_ARG;   // SHA3 digests are fixed
     if (outlen == 0) return HASH_OK;
+    const int packed = cbd_eta == 3 && c->mode;                // mode 1: two bytes per three, marked by valid
+    const uint32_t delay = HC_SQ_DELAY + (uint32_t)c->skew;
+    int err;
 
-    // ---- absorb: CLEAR, then the padded message block by block; each block ends with PERMUTE + busy ----
+    // ---- absorb: CLEAR, then the message block by block; each block ends with PERMUTE + busy ----
     const uint32_t padded = (len / rate + 1) * rate;       // message + domain byte + zeros + 0x80, whole blocks
-    uint32_t n = 0;
-    c->words[n++] = HC_WORD(HC_CLEAR, 0);
-    for (int i = 0; i < HC_CLEAR_BUSY; i++) c->words[n++] = 0;
+    uint32_t n = begin(c);
+    c->words[n++] = cw(c, HC_CLEAR, 0);
+    n = put_idle(c, n, HC_CLEAR_BUSY);
     if (opts & HASH_FINISH) {
         // the chip pads: the message's whole blocks, then what is left and FINISH (pads, permutes)
         const uint32_t full = len / rate * rate;
         for (uint32_t base = 0; base < full; base += rate) {
             n = put_bytes(c, n, msg + base, rate, opts);
-            c->words[n++] = HC_WORD(HC_PERMUTE, 0);
-            for (int i = 0; i < HC_PERM_BUSY; i++) c->words[n++] = 0;
-            int err = play(c, n) ? HASH_ERR_IO : check_quiet(c, n, 0, 0);
-            if (err) return err;
-            n = 0;
+            c->words[n++] = cw(c, HC_PERMUTE, 0);
+            n = put_idle(c, n, HC_PERM_BUSY);
+            if ((err = play(c, n))) return err;
+            n = begin(c);
         }
         if (len > full) n = put_bytes(c, n, msg + full, len - full, opts);
-        const unsigned fn = kind == HASH_SHA3_256 ? 0 : kind == HASH_SHA3_512 ? 1 : kind == HASH_SHAKE128 ? 2 : 3;
-        c->words[n++] = HC_WORD(HC_EXT, HC_EXT_FINISH | fn);
-        const unsigned wait = hash_fin_steps(len - full, rate) + 1 + HC_PERM_BUSY;
-        for (unsigned i = 0; i < wait; i++) c->words[n++] = 0;
+        c->words[n++] = cw(c, HC_EXT, HC_EXT_FINISH | KIND[kind].fn);
+        n = put_idle(c, n, hash_fin_steps(len - full, rate) + 1 + HC_PERM_BUSY);
     } else {
         for (uint32_t base = 0; base < padded; base += rate) {
             uint8_t blk[168] = {0};    // fully written below; GCC 14 -O2 can't prove it (-Werror=maybe-uninitialized)
@@ -125,44 +182,104 @@ int hash_chip_job(hash_chip_t *c, hash_kind_t kind, const uint8_t *msg, uint32_t
                 blk[b] = v;
             }
             n = put_bytes(c, n, blk, rate, opts);
-            c->words[n++] = HC_WORD(HC_PERMUTE, 0);
-            for (int i = 0; i < HC_PERM_BUSY; i++) c->words[n++] = 0;
+            c->words[n++] = cw(c, HC_PERMUTE, 0);
+            n = put_idle(c, n, HC_PERM_BUSY);
             if (base + rate < padded) {                         // next block needs a fresh buffer
-                int err = play(c, n) ? HASH_ERR_IO : check_quiet(c, n, 0, 0);
-                if (err) return err;
-                n = 0;
+                if ((err = play(c, n))) return err;
+                n = begin(c);
             }
         }
     }
 
-    // ---- squeeze: one transport call per rate block, PERMUTE + busy before every block but the first ----
-    uint32_t got = 0;
-    while (got < outlen) {
-        const uint32_t rem = (outlen - got + 7) / 8 * 8;
-        const uint32_t take = rem < rate ? rem : rate;     // bytes this block, whole lanes
-        if (got) {
-            c->words[n++] = HC_WORD(HC_PERMUTE, 0);
-            for (int i = 0; i < HC_PERM_BUSY; i++) c->words[n++] = 0;
+    // ---- squeeze: one transport call per block (or per burst word that covers several blocks) ----
+    const uint32_t period = AUTO_PERIOD(rate);
+    uint8_t pk[128] = {0};                                  // packed eta = 3 bytes (zeroed: GCC 14 -Werror)
+    uint32_t got = 0, npk = 0, req = 0, idx3 = 0, calls = 0;
+    for (;;) {
+        if (req) {
+            c->words[n++] = cw(c, HC_PERMUTE, 0);
+            n = put_idle(c, n, HC_PERM_BUSY);
         }
-        const uint32_t first = n;                           // word k asks for byte k - first (burst: the first byte)
-        if ((opts & HASH_BYTEWISE) && !cbd_eta) {
-            for (uint32_t i = 0; i < take; i++) c->words[n++] = HC_WORD(HC_SQUEEZE, 0);
+        const uint32_t at = n;                              // the word that asks for this call's first byte
+        uint32_t take;
+        if (ntt && (opts & HASH_AUTO)) {
+            // one word: the chip bursts and permutes until the polynomial is complete; busy says when
+            c->words[n++] = cw(c, HC_BURST_CBD, HC_BURST_NTT | HC_BURST_AUTO | rate / 8);
+            n = put_idle(c, n, period + 64);
+            mark(c, at, n - at, 2);
+            take = rate;
+        } else if (ntt) {
+            c->words[n++] = cw(c, HC_BURST_CBD, HC_BURST_NTT | rate / 8);
+            n = put_idle(c, n, rate - 1 + HC_NTT_TAIL);
+            mark(c, at, rate + HC_NTT_TAIL, 2);
+            take = rate;
         } else {
-            const unsigned lanes = take / 8;
-            if (cbd_eta) c->words[n++] = HC_WORD(HC_BURST_CBD, lanes | (cbd_eta == 3 ? 0x80 : 0));
-            else c->words[n++] = HC_WORD(HC_BURST, lanes);
-            for (uint32_t i = 1; i < take; i++) c->words[n++] = 0;
+            const uint32_t rem = (outlen - req + 7) / 8 * 8;
+            take = rem < rate ? rem : rate;                 // bytes this block, whole lanes
+            uint32_t nblk = 1, second = 0;
+            if ((opts & HASH_BYTEWISE) && !cbd_eta) {
+                for (uint32_t i = 0; i < take; i++) c->words[n++] = cw(c, HC_SQUEEZE, 0);
+            } else if (cbd_eta) {
+                unsigned data = take / 8 | (cbd_eta == 3 ? 0x80u : 0u);
+                if ((opts & HASH_AUTO) && cbd_eta == 3 && req == 0) {      // all of PRF_3 from one word
+                    data |= HC_BURST_AUTO;
+                    second = 192 - rate;
+                }
+                c->words[n++] = cw(c, HC_BURST_CBD, data);
+                n = put_idle(c, n, take - 1);
+            } else {
+                if ((opts & HASH_AUTO) && outlen - req > rate) {            // several whole blocks from one word
+                    const uint32_t room = (HASH_WORDS_MAX - n - delay - 8) / period;
+                    nblk = (outlen - req + rate - 1) / rate;
+                    if (nblk > 8) nblk = 8;
+                    if (nblk > room) nblk = room;
+                    if (nblk < 1) nblk = 1;
+                }
+                c->words[n++] = cw(c, HC_BURST, take / 8 | (nblk - 1) << 5);
+                n = put_idle(c, n, take - 1);
+            }
+            // which of these clocks carry a byte: all, or for packed eta = 3 the last two of every three
+            for (uint32_t b = 0; b < nblk + (second ? 1 : 0); b++) {
+                const uint32_t cnt = b && second ? second : take;
+                if (b) n = put_idle(c, n, at + b * period + cnt - n);
+                for (uint32_t i = 0; i < cnt; i++, idx3++)
+                    if (!packed || idx3 % 3) mark(c, at + b * period + i, 1, 1);
+            }
+            take = nblk * take + second;
         }
-        for (int i = 0; i < HC_SQ_DELAY + c->skew; i++) c->words[n++] = 0;   // the last byte's sample
-        if (n > HASH_WORDS_MAX) return HASH_ERR_ARG;
-        int err = play(c, n);
-        if (err) return err;
-        // byte i of this block is asked for by word first + i (bytewise) or first (burst: i-th clock), due at +2
-        const uint32_t d0 = first + HC_SQ_DELAY + (uint32_t)c->skew;
-        if ((err = check_quiet(c, n, d0, take))) return err;
-        for (uint32_t i = 0; i < take && got + i < outlen; i++) out[got + i] = c->uo[d0 + i];
-        got += take;
-        n = 0;
+        n = put_idle(c, n, delay);                          // the last byte's sample
+        if ((err = play(c, n))) return err;
+        for (;;) {
+            for (uint32_t k = 0; k < n; k++) {
+                if (c->due[k] == 1) {
+                    if (packed) { if (npk < sizeof pk) pk[npk++] = c->uo[k]; }
+                    else if (got < outlen) out[got++] = c->uo[k];
+                } else if (c->due[k] == 2 && (c->aux[k] & TT_AUX_VALID)) {
+                    if (got >= outlen) return HASH_ERR_NTT;
+                    out[got++] = c->uo[k];
+                }
+            }
+            // the automatic SampleNTT is still going while busy is high: keep the clock running
+            if (!(ntt && (opts & HASH_AUTO)) || !(c->aux[n - 1] & TT_AUX_BUSY)) break;
+            if (++calls > 40) return HASH_ERR_NTT;
+            n = put_idle(c, begin(c), 512);
+            memset(c->due, 2, n);
+            if ((err = play(c, n))) return err;
+        }
+        req += take;
+        if (ntt) {
+            if (got == outlen) break;
+            if ((opts & HASH_AUTO) || ++calls > 16) return HASH_ERR_NTT;    // stopped short / never completes
+        } else if (req >= outlen) break;
+        n = begin(c);
+    }
+    if (packed) {                                           // {f1,f0} {f3,f2} -> {0,f0} {0,f1} {f3,f2}
+        if (npk != sizeof pk) return HASH_ERR_VALID;
+        for (unsigned j = 0; j < 64; j++) {
+            out[3 * j] = pk[2 * j] & 15;
+            out[3 * j + 1] = pk[2 * j] >> 4;
+            out[3 * j + 2] = pk[2 * j + 1];
+        }
     }
     return HASH_OK;
 }
