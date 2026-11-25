@@ -1,80 +1,103 @@
-![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/fpga/badge.svg)
+![](../../workflows/gds/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/rp2350/badge.svg) ![](../../workflows/docs/badge.svg)
 
-# Branch sha3-only: the NTT-free chip
+# SHA-3 engine for ML-KEM on Tiny Tapeout
 
-This branch is the hash-only variant: the NTT core is removed, and the chip is a Keccak-f[1600] sponge
-engine (`keccak_ring`, K = 8) with burst squeeze and on-chip SamplePolyCBD (`src/hash_io.v`). Datasheet:
-[docs/info.md](docs/info.md). Why and how it compares (tile fit, speed, rig results): `docs/tile_routes.md`
-on `main`. Tests: `cd test && make` (K = 8) or `HASH_K=16 make`. The specs below describe the NTT chip on `main`.
+A Keccak-f[1600] sponge coprocessor for the hash work of ML-KEM (FIPS 203, the post-quantum key exchange),
+taped out on Tiny Tapeout (sky130, 3×2 tiles). A microcontroller runs ML-KEM-512 and hands every SHA3-256,
+SHA3-512, SHAKE128 and SHAKE256 call to the chip. On the way out the chip can also sample ML-KEM's secret noise
+(SamplePolyCBD) and its public matrix (SampleNTT), so the host gets polynomials back instead of raw bytes.
 
-# Specs and tools
-Specs for the five parts of the chip (the source of truth for every port and timing):
-- [Spec 1: Pi harness and demo](specs/Spec%201%20Pi%20Harness%20and%20Demo.md)
-- [Spec 2: Multiplier](specs/Spec%202%20Multiplier.md)
-- [Spec 3: Control loop and integration](specs/Spec%203%20Control%20Loop%20and%20Integration.md)
-- [Spec 4: Adders](specs/Spec%204%20Adders.md)
-- [Spec 5: I/O](specs/Spec%205%20I%20O.md)
+[![Open the chip in 3D](https://img.shields.io/badge/Open_the_chip_in_3D-one_click-e21a1a?style=for-the-badge&logo=googleearth&logoColor=white)](https://gds-viewer.tinytapeout.com/?pdk=sky130A&model=https%3A%2F%2Fsilicap.github.io%2Fchipathon-2026%2Ftinytapeout.oas)
+[![2D render](https://img.shields.io/badge/2D_render-PNG-555?style=for-the-badge)](https://silicap.github.io/chipathon-2026/gds_render.png)
 
-Control and integration: [ntt_core](docs/control.md), [interface table](docs/interface.md),
-[per-mode schedule](docs/schedule.md), [host timing](docs/host_timing.md).
-Adders: [modq_addsub and modq_acc](docs/adders.md).
-RP2350 harness and demo (Spec 1): [rp2350/](rp2350/README.md), firmware for the demo board (PIO + DMA) plus the same C code on a PC against a software chip or the Tang Nano FPGA.
-Why SHA-3 sets ML-KEM's speed: [docs/sha3_report.md](docs/sha3_report.md). Tile options: [docs/architecture_options.md](docs/architecture_options.md).
+![The chip's layout: 3x2 tiles filled with the Keccak state rings and their logic](docs/img/chip_render.png)
 
-[Local CI](local-ci/README.md): `local-ci/run` runs the GitHub workflows (test, docs, gds,
-precheck, gate-level test) on your machine with Docker and shows the results on a local page.
+*The current design, 3×2 tiles, 74 % of the area in cells ([how it was made](#the-layout-images)). The team's
+logo is a 28 × 56 µm metal-4 block in the bottom right corner, too small to see here:
+[close-up](docs/img/logo_chip_met4.png). The 3D button opens whatever the last GitHub `gds` run published.*
 
-# Chipathon links
-Tasks:
-https://tinytapeout.com/
+## Why hashing
 
-Siliwiz:
-https://app.siliwiz.com/
+Hashing is 57–76 % of ML-KEM-512's work on a microcontroller. The polynomial arithmetic (NTT) is fast in software
+and slow through 8 output pins, so the team moved the hashing on-chip instead:
 
-Tinytapout library:
-https://tinytapeout.github.io/tinytapeout-sky-26c/datasheet.pdf
+| One ML-KEM-512 key exchange | Time | |
+|---|---|---|
+| RP2350 alone (pqm4's optimized code, cited) | 8.08 ms | |
+| RP2350 + this chip at 50 MHz | **3.18 ms** | **2.54× faster** (model: the chip's exact clock counts + the RP2350's feed) |
+| of which hashing | 5.81 ms → 1.09 ms | 5.3× |
 
+Measured so far, before silicon (the chip's RTL in an FPGA, the real RP2350 firmware, [speed_results.md](docs/speed_results.md)):
+the hashing of one exchange takes **19.7 ms through the chip against 39.9 ms in C on the RP2350 (2.02×)**, every
+result checked. The chip's own share is 2.6 ms at 18.75 MHz and 0.96 ms at 50 MHz; the rest is the RP2350 firmware
+feeding it, which is where the next speed-up is. `rp2350/speedtest.py` measures it on any board
+([getting started](docs/getting_started.md#the-speed-test)).
 
-# The project
-https://wokwi.com/projects/354858054593504257
+## The chip
 
-# Tiny Tapeout Verilog Project Template
+| | |
+|---|---|
+| Core | Keccak ring, 8 bit-slices per clock: one permutation in 368 clocks (7.4 µs at 50 MHz) |
+| Functions | SHA3-256 (H), SHA3-512 (G), SHAKE128 (XOF), SHAKE256 (PRF, J); on-chip padding; packet absorb |
+| Helpers | SamplePolyCBD η = 2 / 3 and SampleNTT on the squeeze stream; bursts that permute by themselves |
+| Pins | 8 data in, 8 bytes out, command and valid on `uio`; framing mode 1 adds `valid` and `busy` outputs |
+| Size, clock | 3×2 tiles, 50 MHz target, Tiny Tapeout's default timing constraints (no custom SDC) |
+| Datasheet | [docs/info.md](docs/info.md): every command, pin and timing |
 
-- [Read the documentation for project](docs/info.md)
+## Status
 
-## What is Tiny Tapeout?
+| Check | Latest (`main`) |
+|---|---|
+| RTL tests (cocotb, `test/`) | pass |
+| GDS, Tiny Tapeout precheck, gate-level test | pass (on the owner's CI server, `host-ci/gds`; GitHub builds when it's down) |
+| RP2350 firmware builds, its PC harness | pass (GitHub `rp2350`) |
+| The firmware driving the chip's gate netlist, every push | pass (`host-ci/rig`) |
+| Silicon | waiting for chips |
 
-Tiny Tapeout is an educational project that aims to make it easier and cheaper than ever to get your digital and analog designs manufactured on a real chip.
+Before silicon, the chip and the firmware were tested on an FPGA emulator (a Tang Nano 20K running the chip's gate
+netlist, driven by the same RP2350 firmware on a Pico 2 W over 26 wires). That history:
+[docs/PICO_TANG_RIG.md](docs/PICO_TANG_RIG.md), [docs/ci-emulator.md](docs/ci-emulator.md).
 
-To learn more and get started, visit https://tinytapeout.com.
+## Getting started
 
-## Set up your Verilog project
+Everything to test the chip, from simulation to the Tiny Tapeout demo board: [docs/getting_started.md](docs/getting_started.md).
 
-1. Add your Verilog files to the `src` folder.
-2. Edit the [info.yaml](info.yaml) and update information about your project, paying special attention to the `source_files` and `top_module` properties. If you are upgrading an existing Tiny Tapeout project, check out our [online info.yaml migration tool](https://tinytapeout.github.io/tt-yaml-upgrade-tool/).
-3. Edit [docs/info.md](docs/info.md) and add a description of your project.
-4. Adapt the testbench to your design. See [test/README.md](test/README.md) for more information.
+```bash
+cd test && make                                  # the chip's RTL in simulation
+make -C rp2350/pc test                           # the RP2350 driver against its software chip
+python3 rp2350/speedtest.py --select <n>         # on the TT demo board: self-test, wire speed, throughput
+```
 
-The GitHub action will automatically build the ASIC files using [LibreLane](https://www.zerotoasiccourse.com/terminology/librelane/).
+On the demo board, our firmware (`rp2350/`, `tt_hash_dbv3.uf2`) replaces Tiny Tapeout's MicroPython and drives the
+chip through PIO, one pin word per clock.
 
-## Enable GitHub actions to build the results page
+## What's where
 
-- [Enabling GitHub Pages](https://tinytapeout.com/faq/#my-github-action-is-failing-on-the-pages-part)
+| Path | What |
+|---|---|
+| `src/` | the chip: `tt_um_NTT_Core.v` (top), `hash_io.v` (commands, bursts, CBD), `sample_ntt.v`, `keccak_ring.v`, `logo/` |
+| `test/` | cocotb tests; `hash_jobs.py` builds the pin words for any job |
+| `rp2350/` | firmware for the TT demo board (PIO + DMA), its PC build, `speedtest.py` |
+| `docs/` | the datasheet ([info.md](docs/info.md)), [getting started](docs/getting_started.md), design notes |
 
-## Resources
+Design history: [tile_routes.md](docs/tile_routes.md) (why a hash chip and why 3×2),
+[sha3_only_3x2.md](docs/sha3_only_3x2.md) (signoff), [onchip_offload.md](docs/onchip_offload.md),
+[host_ci_findings.md](docs/host_ci_findings.md), [handoff_sha3_only.md](docs/handoff_sha3_only.md). The repo also
+keeps the earlier NTT chip's specs (`specs/`, `schematics/`, `tables/`, `research/`) and the pre-silicon test
+tools (`fpga/`, `host/`, `local-ci/`).
 
-- [FAQ](https://tinytapeout.com/faq/)
-- [Digital design lessons](https://tinytapeout.com/digital_design/)
-- [Learn how semiconductors work](https://tinytapeout.com/siliwiz/)
-- [Join the community](https://tinytapeout.com/discord)
-- [Build your design locally](https://www.tinytapeout.com/guides/local-hardening/)
+## The layout images
 
-## What next?
+- **3D:** the button above opens Tiny Tapeout's viewer on the `tinytapeout.oas` that the GitHub `gds` workflow
+  publishes to this repo's GitHub Pages. The CI server builds most commits instead, and then GitHub doesn't
+  publish. To refresh the 3D view after the last change: *Actions → gds → Run workflow* (a manual run always
+  builds on GitHub).
+- **2D:** `docs/img/chip_render.png` is rendered from a local build of `main` with the Tiny Tapeout tools
+  (`tt_tool.py --create-png`). The 2D button shows the render from the last GitHub run.
+- `local-ci/run gds` builds the GDS on your own machine and shows the render and a 3D link on its results page.
 
-- [Submit your design to the next shuttle](https://app.tinytapeout.com/).
-- Edit [this README](README.md) and explain your design, how it works, and how to test it.
-- Share your project on your social network of choice:
-  - LinkedIn [#tinytapeout](https://www.linkedin.com/search/results/content/?keywords=%23tinytapeout) [@TinyTapeout](https://www.linkedin.com/company/100708654/)
-  - Mastodon [#tinytapeout](https://chaos.social/tags/tinytapeout) [@matthewvenn](https://chaos.social/@matthewvenn)
-  - X (formerly Twitter) [#tinytapeout](https://twitter.com/hashtag/tinytapeout) [@tinytapeout](https://twitter.com/tinytapeout)
-  - Bluesky [@tinytapeout.com](https://bsky.app/profile/tinytapeout.com)
+## Tiny Tapeout
+
+Tiny Tapeout makes it cheap to get a design manufactured on a real chip: [tinytapeout.com](https://tinytapeout.com),
+[FAQ](https://tinytapeout.com/faq/), [local hardening](https://www.tinytapeout.com/guides/local-hardening/).
+The GDS is built by the [Tiny Tapeout GDS action](https://github.com/TinyTapeout/tt-gds-action) with LibreLane.

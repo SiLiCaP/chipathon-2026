@@ -173,42 +173,23 @@ Expect `all 26 wires OK` at every clock, then PASS. A line like
 `BAD uio[5] Pico GP26 (pin 31) <-> Tang R5 (FPGA pin 42)` names the jumper to fix.
 Measured on Oct 18, 2026: all 26 wires OK at 0.96, 4.5 and 13.5 MHz.
 
-## The hash-only chip on the rig (branch `sha3-only`)
+## The chip on the rig
 
-The NTT-free chip (Keccak K = 8 + burst squeeze + SamplePolyCBD, `docs/TILE_ROUTES.md` section 7). Its ring
-core is built with enable flops instead of clock gates (`CLOCK_GATING 0`), which the core test shows equivalent:
+The FPGA runs this repo's chip (`info.yaml` + `src/`): by default its hardened gate netlist with the clock gates
+turned into enables (`make -C fpga netlist` once, then `make -C fpga prog TARGET=pico`), or its RTL with `GL=0`.
+The Pico runs `tt_hash_pico2w_tang.uf2`. Then everything below goes through the real RP2350 firmware.
 
-```bash
-git worktree add ~/tools/work/br/sha3-only sha3-only        # once
-make -C fpga prog TARGET=pico GL=0 DESIGN_ROOT=~/tools/work/br/sha3-only BUILD_TAG=_hashonly_k8 \
-     CHPARAM='chparam -set CLOCK_GATING 0 keccak_ring;'
-python3 host/test_variant.py --port /dev/ttyACM0 --hash 8 --hash-only
-```
+**Speed test.** `python3 rp2350/speedtest.py` runs the firmware's `speedtest`: the wire speed of the rig (known
+answers at every clock and sample skew) and the throughput of ML-KEM-512's hash calls, chip against software on
+the same RP2350, saved to `rp2350/results/`. [getting_started.md](getting_started.md) explains both parts.
 
-It runs 42 jobs: 24 byte-squeeze (every algorithm at the rate edges), 12 bursts, and 6 ML-KEM PRF calls
-through Burst CBD (η = 2 and 3). Each is checked against hashlib or FIPS 203 SamplePolyCBD, and `uo_out`
-must stay 0 on every clock where no byte is due. Through the Tang Nano alone (USB build, `--port /dev/ttyUSB1`) the
-same 42 jobs pass too. Rig result: **42/42 bit-exact at 1.04, 3.38, 6.75 and 13.5 MHz**, the top of the rig's clock range, and `uo_out` is 0 on every clock where no byte is due. All 48,676 clocks take 1.9 s through the TTE1 bridge.
+**Demo website.** `host/sha3_demo.py` in [tt-viktor-chiptor](https://github.com/SiLiCaP/tt-viktor-chiptor) shows
+ML-KEM-512 with every hash call on the chip, live, with a block diagram of which step runs where. It drives the
+chip through this firmware's TTE1 bridge in framing mode 0, which the current chip still speaks.
 
-### The SHA-3 demo website
-
-With the hash-only chip loaded (above), `python3 host/sha3_demo.py` serves http://localhost:8080. It uses the
-Pico on /dev/ttyACM0 when present, or `--port /dev/ttyUSB1` for the Tang Nano alone, or `--sim` for a
-pin-level Python model of the chip. If the FPGA doesn't answer like the hash chip (the Tang loses its image
-when power-cycled), the script loads it itself with openFPGALoader, building the bitstream first if needed
-(about 2 minutes). `--flash` forces a reload, `--no-flash` never touches the FPGA. `--check` runs the 42-job
-self-test and one key exchange, then exits. It runs from a plain shell: without pyserial it restarts itself
-under the OSS CAD Suite's Python.
-
-- **ML-KEM-512 map:** the block diagram of KeyGen, Encaps and Decaps. Each block is marked chip or RP2350,
-  lights up while it runs (pick a slow pace), and opens its hash calls when clicked. A timeline shows the
-  exchange on the Tiny Tapeout board (model: 3.18 ms) or as measured on the rig, with a replay.
-- **The rig:** every hash call's LOAD / RUN / READ_CAP bytes and times, animated.
-- **The chip / Hash on the chip / Performance:** pinout and commands, any text through any of the four
-  functions (checked against hashlib), and the route model's numbers.
-
-Measured on Oct 18, 2026: one exchange is 32 hash calls and about 42,900 chip clocks. It takes 1.6 s on the
-rig, with the keys identical to pure-software FIPS 203 and every call equal to hashlib.
+Measured on Oct 18, 2026 (the chip of that day, RTL): all 26 wires OK at 0.96, 4.5 and 13.5 MHz; 42/42 hash jobs
+bit-exact at 1.04 to 13.5 MHz; one ML-KEM-512 exchange (32 hash calls, about 42,900 chip clocks) with keys
+identical to pure-software FIPS 203.
 
 ## Bring-up
 
@@ -222,11 +203,11 @@ Open the console with `python3 -m serial.tools.miniterm /dev/ttyACM0` and type:
 | 4 | `clk <hz>` | a clock that passes `sweep` with margin on both sides, then `cal` |
 | 5 | `all` | selftest, fuzz: PASS |
 | 6 | `ci` | `ci: NOVECTORS` on a plain build; the host CI builds the firmware with the commit's ML-KEM hash jobs and checks the `CI-OUT` lines (docs/ci-emulator.md) |
+| 7 | `speedtest` | wire speed (every clock × skew) and ML-KEM-512 hash throughput, chip vs software; `rp2350/speedtest.py` saves it |
 
-The PC tools written for the Tang Nano alone also run through the Pico, with the FPGA behind it: the full
-demo-board path, PC → RP2350 → wires → chip gates:
-- `python3 host/test_variant.py --port /dev/ttyACM0 --hash 8 --hash-only` runs the hash chip's jobs (bursts, SKIP, SamplePolyCBD), every output checked against hashlib.
-- `python3 host/sha3_demo.py` runs the SHA-3 demo website (ML-KEM-512 with every hash call on the chip).
+The PC tools written for the Tang Nano alone also run through the Pico, with the FPGA behind it (the full
+demo-board path, PC → RP2350 → wires → chip): `rp2350/pc/hash_host --port /dev/ttyACM0 all` here, and
+`host/test_variant.py` / `host/sha3_demo.py` in tt-viktor-chiptor.
 
 ## Troubleshooting
 

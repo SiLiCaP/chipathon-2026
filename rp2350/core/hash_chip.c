@@ -51,18 +51,43 @@ static uint16_t cw(const hash_chip_t *c, unsigned cmd, unsigned data) {
 
 // Play c->words[0..n-1] (n already includes any trailing idle clocks for the sample delay) and check every clock
 // against c->due: nothing where nothing is due; in mode 1 the valid pin exactly on the due clocks.
+// Per-clock rule (exact): nothing where nothing is due; in mode 1 the valid pin exactly on the due clocks.
+static int check_clock(const hash_chip_t *c, uint32_t k) {
+    const int v = c->mode && (c->aux[k] & TT_AUX_VALID);
+    if (c->due[k] == 0) return c->uo[k] ? HASH_ERR_QUIET : v ? HASH_ERR_VALID : HASH_OK;
+    if (c->due[k] == 1) return c->mode && !v ? HASH_ERR_VALID : HASH_OK;
+    return c->uo[k] && !v ? HASH_ERR_QUIET : HASH_OK;
+}
+
+// Four clocks at a time: bytes as 32-bit words. nz8 sets bit 7 of each byte that is nonzero.
+static inline uint32_t ld32(const uint8_t *p) {
+    uint32_t v;
+    memcpy(&v, p, 4);
+    return v;
+}
+static inline uint32_t nz8(uint32_t x) { return (((x & 0x7F7F7F7Fu) + 0x7F7F7F7Fu) | x) & 0x80808080u; }
+
+// 1 if clocks k..k+3 certainly pass check_clock (otherwise they are checked one by one)
+static int clean4(const hash_chip_t *c, uint32_t k) {
+    const uint32_t d = ld32(c->due + k), u = nz8(ld32(c->uo + k));
+    const uint32_t is1 = ~nz8(d ^ 0x01010101u) & 0x80808080u;
+    if (!c->mode) return (u & ~is1) == 0;                       // mode 0: only due clocks may carry a byte
+    const uint32_t v = (ld32(c->aux + k) & 0x01010101u) << 7;    // valid pin, at bit 7 of each byte
+    const uint32_t is0 = ~nz8(d) & 0x80808080u, is2 = ~nz8(d ^ 0x02020202u) & 0x80808080u;
+    return !(is0 & (u | v)) && !(is1 & ~v) && !(is2 & u & ~v);
+}
+
 static int play(hash_chip_t *c, uint32_t n) {
     if (n > HASH_WORDS_MAX) return HASH_ERR_ARG;
     if (c->io->run(c->io, c->words, n, c->uo, c->mode ? c->aux : NULL)) return HASH_ERR_IO;
     c->clocks_total += n;
     c->calls++;
     int err = HASH_OK;
-    for (uint32_t k = 0; k < n && !err; k++) {
-        const int v = c->mode && (c->aux[k] & TT_AUX_VALID);
-        if (c->due[k] == 0) err = c->uo[k] ? HASH_ERR_QUIET : v ? HASH_ERR_VALID : HASH_OK;
-        else if (c->due[k] == 1) err = c->mode && !v ? HASH_ERR_VALID : HASH_OK;
-        else err = c->uo[k] && !v ? HASH_ERR_QUIET : HASH_OK;
-    }
+    uint32_t k = 0;
+    for (; k + 4 <= n && !err; k += 4)
+        if (!clean4(c, k))
+            for (uint32_t j = k; j < k + 4 && !err; j++) err = check_clock(c, j);
+    for (; k < n && !err; k++) err = check_clock(c, k);
     if (err) {
         c->faults++;
         hash_chip_reset(c);
@@ -120,8 +145,9 @@ static uint32_t put_bytes(hash_chip_t *c, uint32_t n, const uint8_t *b, unsigned
 }
 
 static uint32_t put_idle(hash_chip_t *c, uint32_t n, uint32_t cnt) {
-    for (uint32_t i = 0; i < cnt && n < HASH_WORDS_MAX; i++) c->words[n++] = 0;
-    return n;
+    if (cnt > HASH_WORDS_MAX - n) cnt = n < HASH_WORDS_MAX ? HASH_WORDS_MAX - n : 0;
+    memset(&c->words[n], 0, cnt * sizeof c->words[0]);
+    return n + cnt;
 }
 
 // mark the clocks of `cnt` bytes asked for from word `at` on (one per clock): due at + delay
@@ -251,6 +277,10 @@ int hash_chip_job(hash_chip_t *c, hash_kind_t kind, const uint8_t *msg, uint32_t
         if ((err = play(c, n))) return err;
         for (;;) {
             for (uint32_t k = 0; k < n; k++) {
+                if (!(k & 3) && k + 4 <= n && !ld32(c->due + k)) {   // four clocks with nothing due
+                    k += 3;
+                    continue;
+                }
                 if (c->due[k] == 1) {
                     if (packed) { if (npk < sizeof pk) pk[npk++] = c->uo[k]; }
                     else if (got < outlen) out[got++] = c->uo[k];

@@ -26,6 +26,7 @@ rp2350/
                    Keccak-f, with the valid and busy pins of mode 1; records protocol violations (a command
                    while busy, SKIP off a lane, ...)
     hash_app.c     selftest, fuzz, calibrate
+    hash_bench.c   bench and speedtest (wire speed, ML-KEM-512 hash throughput: chip vs software)
     ci_app.c       app_ci: the compiled-in ML-KEM hash jobs of ci/ci_vectors.h
     sha3_sw.c      FIPS 202 + SamplePolyCBD + SampleNTT in software: the reference every chip result is checked against
   ci/            ci_vectors.h = the stub (CI_NJOB 0); golden/ = committed fixed-seed vectors; check_contract.py
@@ -45,6 +46,7 @@ rp2350/
 ```bash
 make -C rp2350/pc test                               # selftest + fuzz against the software chip
 make -C rp2350/pc ci-golden                          # the committed ML-KEM hash jobs on the software chip
+rp2350/pc/hash_host --sw bench                       # the speed test's logic (PC times mean nothing)
 rp2350/pc/hash_host --port /dev/ttyUSB1 all           # against a Tang Nano running the chip (see below)
 ```
 
@@ -76,12 +78,14 @@ Open the USB serial port, for example `python3 -m serial.tools.miniterm /dev/tty
 | `status` | board, project, chip clock (divider and phases), counters, uo_out right now |
 | `select <n>` | select project n on the TT mux (the TT SDK sequence), then reset the chip. On the rig: just a reset |
 | `clk <hz>` | chip clock. Starts at 1 MHz |
-| `sys <mhz>` | RP2350 clock: 150 by default, 200 gives 50 MHz with even phases |
+| `sys <mhz>` | RP2350 clock: 150 by default, 200 gives 50 MHz with even phases, 250 (core at 1.20 V) chip clocks up to 125 MHz |
 | `selftest` | known answers, SHA-3 / SHAKE at the rate edges (byte + burst squeeze, +- SKIP), FINISH and ABSORB_N at the block corners, PRF + CBD, one-word squeezes, and framing mode 1 (valid pin, packed eta 3, SampleNTT, busy pin), vs the C reference |
 | `fuzz [n]` | n random jobs of every kind (random lengths, zero lanes, outputs) vs the C reference |
 | `ci` | the CI emulator check: the compiled-in per-commit ML-KEM hash jobs (docs/ci-emulator.md); `ci: NOVECTORS` on the stub |
 | `cal` | find the sample skew (see bring-up) |
-| `sweep` | SHA3-256(abc) at 1-75 MHz, sample skews 0-2 |
+| `sweep` | SHA3-256(abc) from 1 MHz up to half the system clock (75 MHz at 150, 125 MHz at `sys 250`), sample skews 0-3 |
+| `bench` | ML-KEM-512's hash work (the 32 calls of one exchange) plus absorb / squeeze rates, timed by the cycle counter: on the chip and in software on this RP2350; every chip result checked |
+| `speedtest [mhz]` | wire speed: six known-answer jobs (every pin and output path) at every clock up to `mhz` (default: half the system clock) and skews 0-3; then `bench` at the fastest clock that passes with margin. `rp2350/speedtest.py` runs it from a PC and saves JSON + Markdown |
 | `sw` / `hw` | software chip / real chip. With `sw`, any RP2350 board runs everything without a TT chip |
 | `all` | selftest, fuzz |
 
@@ -95,11 +99,14 @@ typed commands. The PC tools written for the FPGA in
 
 1. `select <n>`, then `status`. The chip clock is 1 MHz.
 2. `selftest`. All lines should say ok. If they don't, try `cal`.
-3. `cal` finds the **sample skew**. At high clocks, the pad and clock-insertion delays (up to about 10 ns
-   on TT) can make results appear a clock later than at the pins of the design. The skew shifts where the
+3. `cal` finds the **sample skew** (0-3). At high clocks, the pad and clock-insertion delays (up to about 10 ns
+   on TT) can make results appear a clock or more later than at the pins of the design. The skew shifts where the
    driver reads them. It is 0 at low clocks and on the FPGA.
 4. `sweep` runs a known answer from 1 to 75 MHz at skews 0-2. Pick a clock that passes with margin on
    both sides, set it with `clk`, then run `all`.
+5. `speedtest` does steps 3-4 with a stronger known-answer set (every pin and output path) and then measures the
+   throughput. From a PC: `python3 rp2350/speedtest.py --select <n>` (add `--sys 250` to try chip clocks up to
+   125 MHz). Results land in `rp2350/results/`. Method: [docs/getting_started.md](../docs/getting_started.md).
 
 ## How it works
 
@@ -154,3 +161,4 @@ typed commands. The PC tools written for the FPGA in
 | C driver's pin stream through the RTL (`make -C test rp2350`, iverilog + cocotb) | uo_out and the chip's uio[1:0] identical to the software chip on every clock |
 | Firmware build (pico-sdk 2.1.1, Arm GCC) for `pico2w_tang` with the golden vectors | builds without warnings |
 | **On the Pico 2 W + Tang Nano rig** | by the host CI (`host-ci/rig`) |
+| `selftest`, `speedtest` on the rig (Nov 25, 2026) | PASS; wire speed 18.75-19.23 MHz (jumper wires); ML-KEM-512 hashing 2.02× faster than C on the RP2350, 0 errors ([docs/speed_results.md](../docs/speed_results.md)) |

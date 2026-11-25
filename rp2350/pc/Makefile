@@ -5,7 +5,7 @@
 CC ?= cc
 CFLAGS ?= -O2 -std=c11 -Wall -Wextra -Werror
 CORE := ../core
-SRCS := pc_main.c $(CORE)/hash_chip.c $(CORE)/hash_swchip.c $(CORE)/hash_app.c $(CORE)/ci_app.c $(CORE)/sha3_sw.c
+SRCS := pc_main.c $(CORE)/hash_chip.c $(CORE)/hash_swchip.c $(CORE)/hash_app.c $(CORE)/ci_app.c $(CORE)/hash_bench.c $(CORE)/sha3_sw.c
 CI_INC ?= -I../ci
 
 hash_host: $(SRCS) $(wildcard $(CORE)/*.h) $(wildcard ../ci/*.h)

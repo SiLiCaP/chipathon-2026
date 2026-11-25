@@ -247,12 +247,12 @@ int app_calibrate(hash_chip_t *c) {
     hash_ref(HASH_SHA3_256, abc, 3, want, 32);
     const int keep = c->skew;
     int found = -1;
-    for (int skew = 0; skew <= 2 && found < 0; skew++) {
+    for (int skew = 0; skew <= 3 && found < 0; skew++) {
         c->skew = skew;
         if (!hash_chip_job(c, HASH_SHA3_256, abc, 3, got, 32, 0) && !memcmp(got, want, 32)) found = skew;
     }
     c->skew = found < 0 ? keep : found;
-    if (found < 0) printf("cal: no skew 0..2 gives the SHA3-256 known answer\n");
+    if (found < 0) printf("cal: no skew 0..3 gives the SHA3-256 known answer\n");
     else printf("cal: skew %d\n", found);
     return found < 0;
 }

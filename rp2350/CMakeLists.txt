@@ -32,6 +32,7 @@ add_executable(${APP}
     core/hash_swchip.c
     core/hash_app.c
     core/ci_app.c
+    core/hash_bench.c
     core/sha3_sw.c
 )
 pico_generate_pio_header(${APP} ${CMAKE_CURRENT_LIST_DIR}/rp/tt_lockstep.pio)
@@ -47,7 +48,12 @@ target_compile_definitions(${APP} PRIVATE
     TT_PROJECT_ADDR=${TT_PROJECT_ADDR}
     PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=0
 )
-target_link_libraries(${APP} pico_stdlib pico_rand hardware_pio hardware_dma hardware_clocks)
+target_link_libraries(${APP} pico_stdlib pico_rand hardware_pio hardware_dma hardware_clocks hardware_vreg)
 pico_enable_stdio_usb(${APP} 1)
 pico_enable_stdio_uart(${APP} 0)
+# TT_COPY_TO_RAM=ON: the whole program runs from SRAM instead of flash (XIP), for the speed test
+option(TT_COPY_TO_RAM "run from SRAM (copy_to_ram)" OFF)
+if (TT_COPY_TO_RAM)
+    pico_set_binary_type(${APP} copy_to_ram)
+endif ()
 pico_add_extra_outputs(${APP})

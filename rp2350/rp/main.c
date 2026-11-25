@@ -15,10 +15,12 @@
 
 #include "ci_app.h"
 #include "hardware/clocks.h"
+#include "hardware/vreg.h"
 #include "hardware/structs/m33.h"
 #include "pico/rand.h"
 #include "pico/stdlib.h"
 #include "hash_app.h"
+#include "hash_bench.h"
 #include "hash_swchip.h"
 #include "tt_rp.h"
 
@@ -138,17 +140,21 @@ static void status(void) {
 }
 
 static void sweep(void) {
-    static const uint32_t mhz10[] = {10, 50, 100, 150, 200, 250, 300, 375, 500, 600, 750};   // MHz x 10
+    static const uint32_t mhz10[] = {10, 50, 100, 150, 200, 250, 300, 375, 500, 625, 750, 833, 1000, 1250};   // MHz x 10
     static const uint8_t abc[3] = {'a', 'b', 'c'};
     uint8_t want[32], got[32];
     hash_ref(HASH_SHA3_256, abc, 3, want, 32);
     const uint32_t keep = tt_rp_clock_hz();
     const int keep_skew = chip.skew;
-    printf("clock sweep: SHA3-256(abc) by burst at each clock and sample skew\n  %10s  skew 0  skew 1  skew 2\n", "clock");
+    printf("clock sweep: SHA3-256(abc) by burst at each clock and sample skew\n  %10s  skew 0  skew 1  skew 2  skew 3\n", "clock");
+    uint32_t last = 0;
     for (unsigned i = 0; i < sizeof mhz10 / sizeof mhz10[0]; i++) {
+        if (mhz10[i] * 100000u > clock_get_hz(clk_sys) / 2) break;     // the PIO needs 2 system clocks per chip clock
         uint32_t hz = tt_rp_set_clock(mhz10[i] * 100000u);
+        if (hz == last) continue;
+        last = hz;
         printf("  %7.2f MHz", hz / 1e6);
-        for (int k = 0; k <= 2; k++) {
+        for (int k = 0; k <= 3; k++) {
             chip.skew = k;
             int ok = 1;
             for (int r = 0; r < 3 && ok; r++)
@@ -159,7 +165,8 @@ static void sweep(void) {
     }
     chip.skew = keep_skew;
     tt_rp_set_clock(keep);
-    printf("back at %lu Hz, skew %d. Run at a clock where skew 0 or 1 passes with margin on both sides.\n",
+    printf("back at %lu Hz, skew %d. Run at a clock where a skew passes with margin on both sides; `sys 250` makes\n"
+           "chip clocks up to 125 MHz for a fast board; `speedtest` does all of this with a stronger test.\n",
            (unsigned long)tt_rp_clock_hz(), chip.skew);
 }
 
@@ -168,7 +175,7 @@ static void help(void) {
            "  status              board, clock, transport, counters\n"
            "  select <addr>       select our project on the TT mux (demo board; on the rig: just a reset)\n"
            "  clk <hz>            chip clock (starts at 1 MHz; integer PIO divider, long high phase)\n"
-           "  sys <mhz>           RP2350 system clock (150 default; 200 gives 50 MHz with even phases)\n"
+           "  sys <mhz>           RP2350 system clock (150 default; 200 gives 50 MHz with even phases, 250 up to 125 MHz)\n"
            "  reset               rst_n low for 10 clocks\n"
            "  hw | sw             use the real chip, or the software chip (works on any RP2350 board)\n"
            "  selftest            known answers + SHA-3/SHAKE sweeps + PRF/CBD + framing mode 1 (SampleNTT) vs the C reference\n"
@@ -176,12 +183,23 @@ static void help(void) {
            "  ci                  CI emulator check: the compiled-in per-commit ML-KEM hash jobs (docs/ci-emulator.md)\n"
            "  cal                 find the sample skew at the current clock\n"
            "  sweep               known answers across clocks and skews (bring-up)\n"
+           "  bench               ML-KEM-512 hash calls + absorb / squeeze rates: chip vs software on this RP2350\n"
+           "  speedtest [mhz]     wire speed (every clock x skew, up to mhz) then bench at the best clock\n"
            "  all                 selftest, fuzz\n"
            "binary TTE1 commands are accepted on the same port (host/tt_emu.py --port /dev/ttyACM0)\n");
 }
 
 // The FPGA is loaded after this firmware has booted (and reset the chip once), so its flops come up
 // unreset: every hardware check starts with a reset, or the chip answers all zeros.
+// the benchmark's view of this board: the CPU cycle counter, and the PIO chip clock (none on the software chip)
+static uint32_t rp_cycles(void) { return m33_hw->dwt_cyccnt; }
+static bench_plat_t rp_plat(void) {
+    static char host[48];
+    snprintf(host, sizeof host, "RP2350 at %lu MHz", (unsigned long)(clock_get_hz(clk_sys) / 1000000));
+    return (bench_plat_t){.cycles = rp_cycles, .cyc_hz = clock_get_hz(clk_sys), .host = host,
+                          .set_clock = use_sw ? NULL : tt_rp_set_clock, .clock_hz = use_sw ? NULL : tt_rp_clock_hz};
+}
+
 static void fresh_chip(void) {
     if (!use_sw && !wrong_board) hash_chip_reset(&chip);
 }
@@ -194,7 +212,7 @@ static void command(char *line) {
     if (!strcmp(cmd, "help") || !strcmp(cmd, "?")) help();
     else if (!strcmp(cmd, "status")) status();
     else if (wrong_board && strcmp(cmd, "sw") && strcmp(cmd, "selftest") && strcmp(cmd, "fuzz") &&
-             strcmp(cmd, "ci") && strcmp(cmd, "all"))
+             strcmp(cmd, "ci") && strcmp(cmd, "all") && strcmp(cmd, "bench"))
         printf("wrong board for this firmware: see `status`\n");
     else if (!strcmp(cmd, "select") && arg) {
         project = (int)n;
@@ -202,6 +220,10 @@ static void command(char *line) {
     } else if (!strcmp(cmd, "clk") && arg) printf("chip clock %lu Hz\n", (unsigned long)tt_rp_set_clock(n));
     else if (!strcmp(cmd, "sys") && arg) {
         uint32_t keep = tt_rp_clock_hz();
+        if (n > 200) {                                 // above 200 MHz the core needs more than the default 1.10 V
+            vreg_set_voltage(VREG_VOLTAGE_1_20);
+            sleep_ms(10);
+        }
         if (!set_sys_clock_khz(n * 1000, false)) printf("sys %lu MHz not possible\n", (unsigned long)n);
         tt_rp_set_clock(keep);
         printf("RP2350 at %lu MHz, chip clock %lu Hz\n", (unsigned long)(clock_get_hz(clk_sys) / 1000000),
@@ -217,6 +239,8 @@ static void command(char *line) {
     else if (!strcmp(cmd, "cal")) { fresh_chip(); app_calibrate(&chip); }
     else if (!strcmp(cmd, "ci")) { fresh_chip(); app_ci(&chip); }
     else if (!strcmp(cmd, "sweep")) { if (use_sw) printf("sweep needs the real chip (hw)\n"); else { fresh_chip(); sweep(); } }
+    else if (!strcmp(cmd, "bench")) { fresh_chip(); bench_plat_t p = rp_plat(); app_bench(&chip, &p); }
+    else if (!strcmp(cmd, "speedtest")) { fresh_chip(); bench_plat_t p = rp_plat(); app_speedtest(&chip, &p, n * 1000000u); }
     else if (!strcmp(cmd, "all")) {
         fresh_chip();
         int fail = app_selftest(&chip) | app_fuzz(&chip, 10, 1);

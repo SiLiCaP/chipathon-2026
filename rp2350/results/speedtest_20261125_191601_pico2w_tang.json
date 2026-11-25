@@ -1,0 +1,188 @@
+{
+ "meta": {
+  "board": "pico2w_tang",
+  "port": "/dev/ttyACM0",
+  "date": "2026-11-25T19:16:01",
+  "status": "status\r\nHash chip harness on the Pico 2 W + Tang Nano 20K rig, RP2350 at 150 MHz\r\n  transport : chip via PIO + DMA (Pico 2 W + Tang Nano 20K rig)\r\n  chip clock: 1000000 Hz (PIO div 5, low 15 + high 15 cycles)\r\n  skew 0, calls 569, faults 0, clocks 312417, uo_out now 0x00\r\n> ",
+  "args": {
+   "port": "/dev/ttyACM0",
+   "select": null,
+   "sys": 250,
+   "max_mhz": 0,
+   "no_overclock": false,
+   "bench_only": false,
+   "clk": null,
+   "out": "/home/Viktor/Documents/Projects/Chipathon2026/chipathon-2026/rp2350/results"
+  }
+ },
+ "results": {
+  "sweep": [
+   {
+    "clock_hz": 1008064.0,
+    "skew0": 1.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 250000000.0
+   },
+   {
+    "clock_hz": 5000000.0,
+    "skew0": 1.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 250000000.0
+   },
+   {
+    "clock_hz": 10000000.0,
+    "skew0": 1.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 250000000.0
+   },
+   {
+    "clock_hz": 14705882.0,
+    "skew0": 1.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 250000000.0
+   },
+   {
+    "clock_hz": 19230769.0,
+    "skew0": 1.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 250000000.0
+   },
+   {
+    "clock_hz": 25000000.0,
+    "skew0": 0.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 250000000.0
+   },
+   {
+    "clock_hz": 31250000.0,
+    "skew0": 0.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 250000000.0
+   },
+   {
+    "clock_hz": 35714285.0,
+    "skew0": 0.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 250000000.0
+   },
+   {
+    "clock_hz": 41666666.0,
+    "skew0": 0.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 250000000.0
+   },
+   {
+    "clock_hz": 50000000.0,
+    "skew0": 0.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 250000000.0
+   },
+   {
+    "clock_hz": 62500000.0,
+    "skew0": 0.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 250000000.0
+   },
+   {
+    "clock_hz": 83333333.0,
+    "skew0": 0.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 250000000.0
+   },
+   {
+    "clock_hz": 125000000.0,
+    "skew0": 0.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 250000000.0
+   }
+  ],
+  "bench": {
+   "mlkem512_exchange": {
+    "clock_hz": 19230769.0,
+    "skew": 0.0,
+    "mode": 1.0,
+    "calls": 32.0,
+    "sw_us": 23921.8,
+    "chip_us": 12758.8,
+    "speedup": 1.875,
+    "chip_clocks": 48152.0,
+    "chip_only_us": 2503.9,
+    "errors": 0.0
+   },
+   "breakdown": {
+    "clock_hz": 19230769.0,
+    "run_us": 7010.5,
+    "driver_us": 5748.3,
+    "transport_calls": 73.0
+   },
+   "keygen": {
+    "clock_hz": 19230769.0,
+    "sw_us": 7454.2,
+    "chip_us": 4253.4,
+    "chip_clocks": 15896.0
+   },
+   "encaps": {
+    "clock_hz": 19230769.0,
+    "sw_us": 8235.1,
+    "chip_us": 4254.7,
+    "chip_clocks": 16128.0
+   },
+   "decaps": {
+    "clock_hz": 19230769.0,
+    "sw_us": 8232.5,
+    "chip_us": 4250.6,
+    "chip_clocks": 16128.0
+   },
+   "absorb": {
+    "clock_hz": 19230769.0,
+    "bytes": 4096.0,
+    "sw_us": 8107.9,
+    "chip_us": 3468.2,
+    "chip_clocks": 15699.0
+   },
+   "squeeze": {
+    "clock_hz": 19230769.0,
+    "bytes": 1344.0,
+    "sw_us": 2095.7,
+    "chip_us": 1176.3,
+    "chip_clocks": 4386.0
+   }
+  },
+  "speedtest": {
+   "max_pass_hz": 19230769.0,
+   "recommended_hz": 19230769.0,
+   "recommended_skew": 0.0,
+   "tried_up_to_hz": 125000000.0,
+   "host_limited": 0.0,
+   "sys_hz": 250000000.0,
+   "result": "pass"
+  }
+ },
+ "log": "status\r\nHash chip harness on the Pico 2 W + Tang Nano 20K rig, RP2350 at 250 MHz\r\n  transport : chip via PIO + DMA (Pico 2 W + Tang Nano 20K rig)\r\n  chip clock: 1008064 Hz (PIO div 8, low 15 + high 16 cycles)\r\n  skew 0, calls 569, faults 0, clocks 312417, uo_out now 0x00\r\n> speedtest\r\nspeedtest 1/2: wire speed. At each chip clock and sample skew: 6 known-answer jobs (bursts, padding,\r\npackets, CBD) + SampleNTT and the valid / busy pins, 3 rounds; pass = every byte right.\r\n       clock  skew 0  skew 1  skew 2  skew 3\r\n     1.01 MHz    pass       -       -       -\r\nSWEEP clock_hz=1008064 skew0=1 skew1=0 skew2=0 skew3=0\r\n     5.00 MHz    pass       -       -       -\r\nSWEEP clock_hz=5000000 skew0=1 skew1=0 skew2=0 skew3=0\r\n    10.00 MHz    pass       -       -       -\r\nSWEEP clock_hz=10000000 skew0=1 skew1=0 skew2=0 skew3=0\r\n    14.71 MHz    pass       -       -       -\r\nSWEEP clock_hz=14705882 skew0=1 skew1=0 skew2=0 skew3=0\r\n    19.23 MHz    pass       -       -       -\r\nSWEEP clock_hz=19230769 skew0=1 skew1=0 skew2=0 skew3=0\r\n    25.00 MHz       -       -       -       -\r\nSWEEP clock_hz=25000000 skew0=0 skew1=0 skew2=0 skew3=0\r\n    31.25 MHz       -       -       -       -\r\nSWEEP clock_hz=31250000 skew0=0 skew1=0 skew2=0 skew3=0\r\n    35.71 MHz       -       -       -       -\r\nSWEEP clock_hz=35714285 skew0=0 skew1=0 skew2=0 skew3=0\r\n    41.67 MHz       -       -       -       -\r\nSWEEP clock_hz=41666666 skew0=0 skew1=0 skew2=0 skew3=0\r\n    50.00 MHz       -       -       -       -\r\nSWEEP clock_hz=50000000 skew0=0 skew1=0 skew2=0 skew3=0\r\n    62.50 MHz       -       -       -       -\r\nSWEEP clock_hz=62500000 skew0=0 skew1=0 skew2=0 skew3=0\r\n    83.33 MHz       -       -       -       -\r\nSWEEP clock_hz=83333333 skew0=0 skew1=0 skew2=0 skew3=0\r\n   125.00 MHz       -       -       -       -\r\nSWEEP clock_hz=125000000 skew0=0 skew1=0 skew2=0 skew3=0\r\nSPEEDTEST max_pass_hz=19230769 recommended_hz=19230769 recommended_skew=0 tried_up_to_hz=125000000 host_limited=0 sys_hz=250000000\r\nspeedtest: highest passing clock 19.23 MHz; running at 19.23 MHz, skew 0 (passes one step lower too)\r\nspeedtest 2/2: throughput at that clock\r\nbench: ML-KEM-512, the 32 hash calls of one key exchange, on the chip and in software on the RP2350 at 250 MHz\r\n  chip clock 19.23 MHz, sample skew 0, framing mode 1, chip path: packets + on-chip padding + one burst word\r\n  op      calls       software  with the chip  speed-up  chip clocks  clocks / f_chip\r\n  keygen     10      7454.2 us      4253.4 us     1.75x        15896         826.6 us\r\n  encaps     11      8235.1 us      4254.7 us     1.94x        16128         838.7 us\r\n  decaps     11      8232.5 us      4250.6 us     1.94x        16128         838.7 us\r\n  total      32     23921.8 us     12758.8 us     1.87x        48152        2503.9 us\r\nBENCH workload=mlkem512_exchange clock_hz=19230769 skew=0 mode=1 calls=32 sw_us=23921.8 chip_us=12758.8 speedup=1.875 chip_clocks=48152 chip_only_us=2503.9 errors=0\r\n  where the chip path's 12758.8 us go: 7010.5 us in 73 transport runs (PIO + DMA at the chip clock, incl. word\r\n  conversion), 5748.3 us in the driver (building the pin words, picking the bytes out, checking quiet clocks)\r\n  per call: kind      n  chip clocks       runs    with chip        in runs      in driver\r\n            G         3          511          1     146.9 us        82.7 us        64.1 us\r\n            XOF      12         2158          3     616.2 us       313.1 us       303.1 us\r\n            PRF3      8         1004          1     248.5 us       145.3 us       103.2 us\r\n            H         2         3091          6     686.1 us       449.2 us       236.8 us\r\n            PRF2      6          569          1     146.8 us        82.6 us        64.2 us\r\n            J         1         3091          6     683.1 us       449.2 us       233.9 us\r\nBENCH workload=breakdown clock_hz=19230769 run_us=7010.5 driver_us=5748.3 transport_calls=73\r\nBENCH workload=keygen clock_hz=19230769 sw_us=7454.2 chip_us=4253.4 chip_clocks=15896\r\nBENCH workload=encaps clock_hz=19230769 sw_us=8235.1 chip_us=4254.7 chip_clocks=16128\r\nBENCH workload=decaps clock_hz=19230769 sw_us=8232.5 chip_us=4250.6 chip_clocks=16128\r\n  absorb   4096 B   software   0.505 MB/s   with the chip   1.181 MB/s   chip alone   5.017 MB/s (15699 clocks)\r\nBENCH workload=absorb clock_hz=19230769 bytes=4096 sw_us=8107.9 chip_us=3468.2 chip_clocks=15699\r\n  squeeze  1344 B   software   0.641 MB/s   with the chip   1.143 MB/s   chip alone   5.893 MB/s (4386 clocks)\r\nBENCH workload=squeeze clock_hz=19230769 bytes=1344 sw_us=2095.7 chip_us=1176.3 chip_clocks=4386\r\nbench: PASS (every chip result equals the software one)\r\nSPEEDTEST result=pass\r\nspeedtest: left at 19.23 MHz, skew 0 (`clk 1008064` sets the clock back)\r\n> "
+}

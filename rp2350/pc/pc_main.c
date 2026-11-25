@@ -23,6 +23,7 @@
 
 #include "../core/ci_app.h"
 #include "../core/hash_app.h"
+#include "../core/hash_bench.h"
 #include "../core/hash_swchip.h"
 
 // ---------------- TTE1 transport (Tang Nano emulator) ----------------
@@ -164,6 +165,14 @@ static void dump_finish(void) {
 }
 
 // ---------------- main ----------------
+// the PC's clock for the benchmark: nanoseconds, low 32 bits (deltas only); the chip clock is the transport's
+static uint32_t pc_cycles(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint32_t)((uint64_t)ts.tv_sec * 1000000000u + (uint64_t)ts.tv_nsec);
+}
+static const bench_plat_t pc_plat = {.cycles = pc_cycles, .cyc_hz = 1000000000u, .host = "PC"};
+
 int main(int argc, char **argv) {
     static hash_chip_t chip;
     static hash_swchip_t sw;
@@ -202,6 +211,8 @@ int main(int argc, char **argv) {
     else if (!strcmp(cmd, "fuzz")) fail = app_fuzz(&chip, arg ? arg : 10, 1);
     else if (!strcmp(cmd, "cal")) fail = app_calibrate(&chip);
     else if (!strcmp(cmd, "ci")) fail = app_ci(&chip);
+    else if (!strcmp(cmd, "bench")) fail = app_bench(&chip, &pc_plat);
+    else if (!strcmp(cmd, "speedtest")) fail = app_speedtest(&chip, &pc_plat, 0);
     else if (!strcmp(cmd, "all")) {
         fail |= app_selftest(&chip);
         fail |= app_fuzz(&chip, 10, 1);
