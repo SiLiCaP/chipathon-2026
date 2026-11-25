@@ -16,5 +16,9 @@ Summary and what the numbers mean: [docs/speed_results.md](../../docs/speed_resu
 | `20261125_194159` | gate netlist | same | 250 MHz | same | mode 0: 24.0 → 8.5 ms (2.82×); mode 1 12.8; October 9.5 |
 | `20261125_200715` | gate netlist | **final driver**: windows, quiet check 16 clocks at a time, checked while the chip runs; mode 0 the default | 150 MHz | sweep, all three ways | **mode 0: 39.9 → 6.36 ms (6.27×)**; October 7.79 (5.12×); mode 1 15.3 (2.61×) |
 | `20261125_200720` | gate netlist | final driver | 250 MHz | same | mode 0: 23.9 → 4.71 ms (5.08×); October 5.59; mode 1 10.2 |
+| `20261125_203328` | gate netlist | + `bench compute`, running from flash | 150 MHz | sweep, compute only, all three ways | compute only 46× (one exchange 40.2 ms → 43,736 clocks); whole 6.75 ms (5.96×) |
+| `20261125_203334` | gate netlist | same | 250 MHz | same | compute only 28×; whole 4.97 ms (4.86×) |
+| `20261125_203446` | gate netlist | **final: running from SRAM** | 150 MHz | sweep, compute only, all three ways | **compute only: one exchange 39.76 ms in C, 43,736 chip clocks (2.33 ms here, 0.87 ms at 50 MHz, 46×); whole: 5.97 ms (6.67×)** |
+| `20261125_203452` | gate netlist | final | 250 MHz | same | compute only 27×; whole 23.9 → 4.50 ms (5.30×) |
 
 Add your own: run the script on any board with the firmware, and commit the two files it writes here.

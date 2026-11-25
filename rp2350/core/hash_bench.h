@@ -31,6 +31,9 @@ typedef struct {
 enum { BENCH_MODE0 = 0, BENCH_MODE1 = 1, BENCH_LEGACY = 2 };
 int app_bench(hash_chip_t *c, const bench_plat_t *p);       // BENCH_MODE0
 int app_bench_style(hash_chip_t *c, const bench_plat_t *p, int style);
+// compute only: each piece of C code (one permutation, CBD, SampleNTT, whole ML-KEM hash calls, one exchange) against
+// the chip's clocks for the same work, with CBD and SampleNTT on the chip; no transfers on either side
+int app_bench_compute(hash_chip_t *c, const bench_plat_t *p);
 // max_hz: the fastest clock to try (0: up to what the host can make, 75 MHz at a 150 MHz RP2350)
 int app_speedtest(hash_chip_t *c, const bench_plat_t *p, uint32_t max_hz);
 

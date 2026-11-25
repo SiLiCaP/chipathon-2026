@@ -51,8 +51,9 @@ target_compile_definitions(${APP} PRIVATE
 target_link_libraries(${APP} pico_stdlib pico_rand hardware_pio hardware_dma hardware_clocks hardware_vreg)
 pico_enable_stdio_usb(${APP} 1)
 pico_enable_stdio_uart(${APP} 0)
-# TT_COPY_TO_RAM=ON: the whole program runs from SRAM instead of flash (XIP), for the speed test
-option(TT_COPY_TO_RAM "run from SRAM (copy_to_ram)" OFF)
+# TT_COPY_TO_RAM (default ON): the program is copied to SRAM at boot and runs from there, not from flash (XIP):
+# the driver's per-clock loops then never wait for flash. Measured on the rig: 6.7 -> 6.0 ms per ML-KEM-512 exchange.
+option(TT_COPY_TO_RAM "run from SRAM (copy_to_ram)" ON)
 # HASH_PROF=ON: bench also prints where the driver's time goes (transport, check, unpack, buffer clearing)
 option(HASH_PROF "profile the hash driver in bench" OFF)
 if (HASH_PROF)

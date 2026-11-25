@@ -50,7 +50,8 @@ rp2350/pc/hash_host --sw bench                       # the speed test's logic (P
 rp2350/pc/hash_host --port /dev/ttyUSB1 all           # against a Tang Nano running the chip (see below)
 ```
 
-**Firmware**, with pico-sdk 2.1.1 and an Arm GCC:
+**Firmware**, with pico-sdk 2.1.1 and an Arm GCC. It runs from SRAM (`TT_COPY_TO_RAM`, default ON: the program is
+copied out of flash at boot, so the per-clock loops never wait for flash):
 
 ```bash
 cmake -S rp2350 -B rp2350/build_dbv3 -G Ninja -DPICO_SDK_PATH=/path/to/pico-sdk [-DTT_PROJECT_ADDR=<n>]
@@ -85,6 +86,7 @@ Open the USB serial port, for example `python3 -m serial.tools.miniterm /dev/tty
 | `cal` | find the sample skew (see bring-up) |
 | `sweep` | SHA3-256(abc) from 1 MHz up to half the system clock (75 MHz at 150, 125 MHz at `sys 250`), sample skews 0-3 |
 | `bench [mode1\|legacy]` | ML-KEM-512's hash work (the 32 calls of one exchange) plus absorb / squeeze rates, timed by the cycle counter: on the chip and in software on this RP2350; every chip result checked. Default: packets + on-chip padding + one burst word in framing mode 0, SampleNTT on the RP2350, samples checked while the chip runs (the fastest); `mode1`: SampleNTT on chip in framing mode 1; `legacy`: the October 2026 commands |
+| `bench compute` | compute only: each piece of C code (one permutation, CBD, SampleNTT, each ML-KEM hash call, one exchange) against the chip's clocks for the same work, CBD and SampleNTT on the chip; no transfers on either side |
 | `speedtest [mhz]` | wire speed: six known-answer jobs (every pin and output path) at every clock up to `mhz` (default: half the system clock) and skews 0-3; then `bench` at the fastest clock that passes with margin. `rp2350/speedtest.py` runs it from a PC and saves JSON + Markdown |
 | `sw` / `hw` | software chip / real chip. With `sw`, any RP2350 board runs everything without a TT chip |
 | `all` | selftest, fuzz |
@@ -161,4 +163,4 @@ typed commands. The PC tools written for the FPGA in
 | C driver's pin stream through the RTL (`make -C test rp2350`, iverilog + cocotb) | uo_out and the chip's uio[1:0] identical to the software chip on every clock |
 | Firmware build (pico-sdk 2.1.1, Arm GCC) for `pico2w_tang` with the golden vectors | builds without warnings |
 | **On the Pico 2 W + Tang Nano rig** | by the host CI (`host-ci/rig`) |
-| The gate netlist of `main` on the rig (Nov 25, 2026): `selftest`, `fuzz 200`, `ci` (golden vectors), `speedtest` | PASS, 0 errors; wire speed 18.75-19.23 MHz (jumper wires); ML-KEM-512 hashing 6.27× faster than C on the RP2350 ([docs/speed_results.md](../docs/speed_results.md)) |
+| The gate netlist of `main` on the rig (Nov 25, 2026): `selftest`, `fuzz 200`, `ci` (golden vectors), `speedtest` | PASS, 0 errors; wire speed 18.75-19.23 MHz (jumper wires); ML-KEM-512 hashing: compute only 46× faster than the same C code, whole system 6.67× ([docs/speed_results.md](../docs/speed_results.md)) |

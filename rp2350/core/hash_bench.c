@@ -240,6 +240,110 @@ int app_bench_style(hash_chip_t *c, const bench_plat_t *p, int style) {
     return errors != 0;
 }
 
+// ---------------- compute only: the chip against the code that does the same work ----------------
+// Software: each piece of C code on its own (sha3_sw.c), averaged over repeats. Chip: the clocks the chip needs for
+// the same work, with CBD and SampleNTT on the chip (framing mode 1) so both sides compute exactly the same thing.
+// No transfers on either side: this compares the computation, not the system.
+int app_bench_compute(hash_chip_t *c, const bench_plat_t *p) {
+    static uint8_t msg[800], got[1344], buf[8 * 168], out[384];
+    const uint32_t hz = p->clock_hz ? p->clock_hz() : 0;
+    int errors = 0;
+    const int mode1 = hash_chip_has_mode1(c) && !hash_chip_set_mode(c, 1);
+    if (!mode1) printf("bench compute: no framing mode 1 on this transport: SampleNTT rows skipped\n");
+    printf("bench compute: the chip's computation against the C code that does the same work, on the %s\n"
+           "  software: the code alone, averaged; chip: its clocks for the same work (no transfers on either side)\n"
+           "  %-40s %12s %10s %12s %12s %9s\n", p->host, "work", "software", "clocks", "chip now", "chip 50 MHz",
+           "speed-up*");
+    const double f50 = 50e6;
+#define ROW(name, sw_cyc, clocks)                                                                                      \
+    do {                                                                                                              \
+        const double sw_us = us(p, sw_cyc), now = hz ? (clocks) * 1e6 / hz : 0, at50 = (clocks) * 1e6 / f50;           \
+        if (at50 > 0)                                                                                                  \
+            printf("  %-40s %9.2f us %10lu %9.2f us %9.2f us %8.1fx\n", name, sw_us, (unsigned long)(clocks), now,    \
+                   at50, sw_us / at50);                                                                               \
+        else                                                                                                          \
+            printf("  %-40s %9.2f us %10s %12s %12s  in the stream\n", name, sw_us, "0", "-", "-");                 \
+        printf("COMPUTE work=%s sw_us=%.3f chip_clocks=%lu clock_hz=%lu\n", #sw_cyc, sw_us, (unsigned long)(clocks), \
+               (unsigned long)hz);                                                                                    \
+    } while (0)
+    rnd_state = 0x1234567u;
+    for (unsigned j = 0; j < sizeof msg; j++) msg[j] = (uint8_t)rnd();
+    // one permutation: keccak_f1600() against the chip's PERMUTE (368 clocks)
+    uint64_t st[25];
+    memcpy(st, msg, sizeof st);
+    enum { R = 200 };
+    uint32_t t0 = p->cycles();
+    for (int r = 0; r < R; r++) keccak_f1600(st);
+    const uint64_t perm = (uint64_t)(p->cycles() - t0) / R;
+    ROW("Keccak-f[1600], one permutation", perm, (uint32_t)HC_PERM_BUSY);   // COMPUTE work=perm
+    // SamplePolyCBD eta = 3 on 192 bytes: cbd_pack() against the chip (on the squeeze stream: no extra clocks)
+    t0 = p->cycles();
+    for (int r = 0; r < R; r++) cbd_pack(msg, 3, out);
+    const uint64_t cbd = (uint64_t)(p->cycles() - t0) / R;
+    ROW("SamplePolyCBD eta=3 (192 B)", cbd, 0u);
+    // SampleNTT on 504 XOF bytes: sample_ntt_pack() against the chip (on the squeeze stream, 3 clocks of tail)
+    sha3_sponge(168, 0x1F, msg, 34, buf, 504);
+    t0 = p->cycles();
+    for (int r = 0; r < R; r++) sample_ntt_pack(buf, 504, out);
+    const uint64_t ntt = (uint64_t)(p->cycles() - t0) / R;
+    ROW("SampleNTT, one polynomial", ntt, 0u);      // its 3-clock tail is in the XOF + SampleNTT call below
+    // whole ML-KEM hash calls: sw_call() against the chip's clocks for the same call
+    static const struct { const char *name; hash_kind_t kind; uint16_t inlen, outlen; } CALLS[] = {
+        {"G = SHA3-512 (64 B in)", HASH_SHA3_512, 64, 64}, {"H = SHA3-256 (800 B in)", HASH_SHA3_256, 800, 32},
+        {"J = SHAKE256 (800 B in, 32 out)", HASH_SHAKE256, 800, 32},
+        {"PRF_3 + CBD (33 B in, a polynomial)", HASH_PRF_CBD3, 33, 192},
+        {"PRF_2 + CBD (33 B in, a polynomial)", HASH_PRF_CBD2, 33, 128},
+        {"XOF + SampleNTT (34 B in, a polynomial)", HASH_XOF_NTT, 34, 384}};
+    uint64_t sw_ex = 0, clk_ex = 0;
+    for (unsigned i = 0; i < sizeof CALLS / sizeof CALLS[0]; i++) {
+        if (CALLS[i].kind == HASH_XOF_NTT && !mode1) continue;
+        // per-block bursts for SampleNTT: exact clock counts (the automatic burst runs the clock until busy drops)
+        const unsigned opts = CALLS[i].kind == HASH_XOF_NTT ? HASH_RAW | HASH_FINISH : FAST;
+        const uint64_t c0 = c->clocks_total;
+        int err = hash_chip_job(c, CALLS[i].kind, msg, CALLS[i].inlen, got, CALLS[i].outlen, opts);
+        const uint32_t clocks = (uint32_t)(c->clocks_total - c0);
+        uint8_t ref[1344];
+        hash_ref(CALLS[i].kind, msg, CALLS[i].inlen, ref, CALLS[i].outlen);
+        if (err || memcmp(got, ref, CALLS[i].outlen)) {
+            printf("  FAIL %s: %s\n", CALLS[i].name, err ? hash_err_str(err) : "differs from the reference");
+            errors++;
+        }
+        enum { RC = 20 };
+        t0 = p->cycles();
+        for (int r = 0; r < RC; r++) sw_call(CALLS[i].kind, msg, CALLS[i].inlen, ref, CALLS[i].outlen);
+        const uint64_t sw = (uint64_t)(p->cycles() - t0) / RC;
+        const double sw_us = us(p, sw), at50 = clocks * 1e6 / f50;
+        printf("  %-40s %9.2f us %10lu %9.2f us %9.2f us %8.1fx\n", CALLS[i].name, sw_us, (unsigned long)clocks,
+               hz ? clocks * 1e6 / hz : 0, at50, sw_us / at50);
+        printf("COMPUTE work=call_%u name=%s sw_us=%.3f chip_clocks=%lu clock_hz=%lu\n", i, hash_kind_name(CALLS[i].kind),
+               sw_us, (unsigned long)clocks, (unsigned long)hz);
+    }
+    // one ML-KEM-512 exchange, everything on the chip: the 32 calls of MLKEM512[] (CBD and SampleNTT included)
+    rnd_state = 0x2545F491u;
+    for (unsigned i = 0; i < NCALL; i++) {
+        const call_t *k = &MLKEM512[i];
+        if (k->kind == HASH_XOF_NTT && !mode1) continue;
+        for (unsigned j = 0; j < k->inlen; j++) msg[j] = (uint8_t)rnd();
+        const unsigned opts = k->kind == HASH_XOF_NTT ? HASH_RAW | HASH_FINISH : FAST;
+        const uint64_t c0 = c->clocks_total;
+        if (hash_chip_job(c, k->kind, msg, k->inlen, got, k->outlen, opts)) errors++;
+        clk_ex += c->clocks_total - c0;
+        t0 = p->cycles();
+        sw_call(k->kind, msg, k->inlen, out, k->outlen);
+        sw_ex += p->cycles() - t0;
+    }
+    printf("  %-40s %9.2f us %10llu %9.2f us %9.2f us %8.1fx\n", "one ML-KEM-512 exchange (32 calls)", us(p, sw_ex),
+           (unsigned long long)clk_ex, hz ? clk_ex * 1e6 / hz : 0, clk_ex * 1e6 / f50, us(p, sw_ex) / (clk_ex * 1e6 / f50));
+    printf("COMPUTE work=exchange sw_us=%.1f chip_clocks=%llu clock_hz=%lu\n", us(p, sw_ex), (unsigned long long)clk_ex,
+           (unsigned long)hz);
+    printf("  * software against the chip's clocks at 50 MHz. CBD and SampleNTT cost the chip no clocks of their own:\n"
+           "    they run on the bytes as they stream out of the squeeze (SampleNTT adds a 3-clock tail).\n");
+    if (mode1) hash_chip_set_mode(c, 0);
+#undef ROW
+    printf("bench compute: %s\n", errors ? "FAIL" : "PASS (every chip result equals the software one)");
+    return errors != 0;
+}
+
 // ---------------- wire speed ----------------
 // A known-answer set that exercises every pin and output path: bursts, blocks that follow by themselves,
 // packets + on-chip padding, CBD; SampleNTT and the valid / busy pins when the transport has mode 1.

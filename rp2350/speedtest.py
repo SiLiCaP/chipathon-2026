@@ -75,11 +75,13 @@ def kv(line):
 
 
 def parse(text):
-    res = {"sweep": [], "bench": {}, "speedtest": {}}
+    res = {"sweep": [], "bench": {}, "speedtest": {}, "compute": []}
     for line in text.splitlines():
         line = line.strip()
         if line.startswith("SWEEP "):
             res["sweep"].append(kv(line))
+        elif line.startswith("COMPUTE "):
+            res["compute"].append(kv(line))
         elif line.startswith("BENCH "):
             d = kv(line)
             res["bench"][d.pop("workload")] = d
@@ -148,6 +150,28 @@ def markdown(meta, res):
                     m.append(f"| {name} | {int(x['chip_clocks']):,} | {d.get('driver_us', 0):.0f} µs | "
                              f"{d.get('run_us', 0):.0f} µs | {x['chip_us']:.0f} µs | {x['speedup']:.2f}× |")
             m.append("")
+        if res["compute"]:
+            names = {"perm": "Keccak-f[1600], one permutation", "cbd": "SamplePolyCBD eta = 3 (192 B)",
+                     "ntt": "SampleNTT, one polynomial", "exchange": "**one ML-KEM-512 exchange (32 calls)**"}
+            calls = {"sha3-512": "G = SHA3-512 (64 B)", "sha3-256": "H = SHA3-256 (800 B)", "shake256": "J = SHAKE256 (800 B)",
+                     "prf-cbd3": "PRF_3 + CBD, one polynomial", "prf-cbd2": "PRF_2 + CBD, one polynomial",
+                     "xof-ntt": "XOF + SampleNTT, one polynomial"}
+            m += ["### Compute only: the chip against the C code doing the same work", "",
+                  "Software: each piece of C code alone on the RP2350. Chip: its clocks for the same work, with CBD and "
+                  "SampleNTT on the chip (they run on the output stream and cost no clocks of their own). No transfers on "
+                  "either side.", "",
+                  "| Work | C on the RP2350 | chip clocks | chip at this clock | chip at 50 MHz | speed-up at 50 MHz |",
+                  "|---|---|---|---|---|---|"]
+            for x in res["compute"]:
+                w = x["work"]
+                name = names.get(w) or calls.get(x.get("name"), w)
+                cl, hz = x["chip_clocks"], x.get("clock_hz") or 0
+                if cl:
+                    m.append(f"| {name} | {x['sw_us']:.1f} µs | {int(cl):,} | {cl / hz * 1e6 if hz else 0:.1f} µs | "
+                             f"{cl / 50:.1f} µs | {x['sw_us'] / (cl / 50):.0f}× |")
+                else:
+                    m.append(f"| {name} | {x['sw_us']:.1f} µs | 0 | – | – | in the output stream |")
+            m.append("")
         rows = [(k, b[k]) for k in ("absorb", "squeeze") if k in b]
         if rows:
             m += ["| Rate | bytes | software | with the chip | chip alone |", "|---|---|---|---|---|"]
@@ -165,6 +189,7 @@ def main():
     ap.add_argument("--sys", type=int, help="RP2350 system clock in MHz first (150 default; 200, 250 allow faster chip clocks)")
     ap.add_argument("--max-mhz", type=int, default=0, help="highest chip clock to try (default: all the RP2350 can make)")
     ap.add_argument("--no-overclock", action="store_true", help="don't raise the RP2350 above its clock when every clock passes")
+    ap.add_argument("--no-compute", action="store_true", help="skip `bench compute` (compute only, chip vs the same C code)")
     ap.add_argument("--no-legacy", action="store_true", help="skip `bench mode1` and `bench legacy` (the same workload driven other ways)")
     ap.add_argument("--bench-only", action="store_true", help="no wire-speed sweep, throughput at --clk only")
     ap.add_argument("--clk", type=int, help="chip clock in Hz for --bench-only (default: the board's current one)")
@@ -195,6 +220,8 @@ def main():
                 break
             print(f"every clock passed at RP2350 {st['sys_hz'] / 1e6:.0f} MHz: raising it to {sys_mhz} MHz and sweeping again")
             text += board.cmd(f"sys {sys_mhz}") + board.cmd("status") + run()
+    if not a.no_compute:    # compute only: each piece of C code against the chip's clocks for the same work
+        text += board.cmd("bench compute", until=r"^bench compute: (PASS|FAIL)", timeout=600)
     if not a.no_legacy:     # the same workload driven two other ways, at the same clock: what each choice costs
         text += board.cmd("bench mode1", until=r"^bench mode1: (PASS|FAIL)", timeout=180)
         text += board.cmd("bench legacy", until=r"^bench legacy: (PASS|FAIL)", timeout=180)

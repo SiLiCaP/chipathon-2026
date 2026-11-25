@@ -1,0 +1,337 @@
+{
+ "meta": {
+  "board": "pico2w_tang",
+  "port": "/dev/ttyACM0",
+  "date": "2026-11-25T20:34:46",
+  "status": "status\r\nHash chip harness on the Pico 2 W + Tang Nano 20K rig, RP2350 at 150 MHz\r\n  transport : chip via PIO + DMA (Pico 2 W + Tang Nano 20K rig)\r\n  chip clock: 1000000 Hz (PIO div 5, low 15 + high 15 cycles)\r\n  skew 0, calls 1217, faults 0, clocks 664433, uo_out now 0x00\r\n> ",
+  "args": {
+   "port": "/dev/ttyACM0",
+   "select": null,
+   "sys": null,
+   "max_mhz": 0,
+   "no_overclock": false,
+   "no_compute": false,
+   "no_legacy": false,
+   "bench_only": false,
+   "clk": null,
+   "out": "/home/Viktor/Documents/Projects/Chipathon2026/chipathon-2026/rp2350/results"
+  }
+ },
+ "results": {
+  "sweep": [
+   {
+    "clock_hz": 1000000.0,
+    "skew0": 1.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 150000000.0
+   },
+   {
+    "clock_hz": 5000000.0,
+    "skew0": 1.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 150000000.0
+   },
+   {
+    "clock_hz": 10000000.0,
+    "skew0": 1.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 150000000.0
+   },
+   {
+    "clock_hz": 15000000.0,
+    "skew0": 1.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 150000000.0
+   },
+   {
+    "clock_hz": 18750000.0,
+    "skew0": 1.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 150000000.0
+   },
+   {
+    "clock_hz": 25000000.0,
+    "skew0": 0.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 150000000.0
+   },
+   {
+    "clock_hz": 30000000.0,
+    "skew0": 0.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 150000000.0
+   },
+   {
+    "clock_hz": 37500000.0,
+    "skew0": 0.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 150000000.0
+   },
+   {
+    "clock_hz": 50000000.0,
+    "skew0": 0.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 150000000.0
+   },
+   {
+    "clock_hz": 75000000.0,
+    "skew0": 0.0,
+    "skew1": 0.0,
+    "skew2": 0.0,
+    "skew3": 0.0,
+    "sys_hz": 150000000.0
+   }
+  ],
+  "bench": {
+   "mlkem512_exchange": {
+    "clock_hz": 18750000.0,
+    "skew": 0.0,
+    "mode": 0.0,
+    "calls": 32.0,
+    "sw_us": 39766.6,
+    "chip_us": 5965.5,
+    "speedup": 6.666,
+    "chip_clocks": 47004.0,
+    "chip_only_us": 2506.9,
+    "errors": 0.0
+   },
+   "breakdown": {
+    "clock_hz": 18750000.0,
+    "run_us": 4163.5,
+    "driver_us": 1802.0,
+    "conv_us": 1551.6,
+    "transport_calls": 49.0
+   },
+   "keygen": {
+    "clock_hz": 18750000.0,
+    "sw_us": 12325.5,
+    "chip_us": 1809.2,
+    "chip_clocks": 14368.0
+   },
+   "encaps": {
+    "clock_hz": 18750000.0,
+    "sw_us": 13721.1,
+    "chip_us": 2078.5,
+    "chip_clocks": 16318.0
+   },
+   "decaps": {
+    "clock_hz": 18750000.0,
+    "sw_us": 13720.0,
+    "chip_us": 2077.8,
+    "chip_clocks": 16318.0
+   },
+   "absorb": {
+    "clock_hz": 18750000.0,
+    "bytes": 4096.0,
+    "sw_us": 13474.3,
+    "chip_us": 1813.7,
+    "chip_clocks": 15699.0
+   },
+   "squeeze": {
+    "clock_hz": 18750000.0,
+    "bytes": 1344.0,
+    "sw_us": 3468.9,
+    "chip_us": 485.5,
+    "chip_clocks": 4386.0
+   },
+   "mlkem512_exchange_mode1": {
+    "clock_hz": 18750000.0,
+    "skew": 0.0,
+    "mode": 1.0,
+    "calls": 32.0,
+    "sw_us": 39766.7,
+    "chip_us": 15155.1,
+    "speedup": 2.624,
+    "chip_clocks": 48152.0,
+    "chip_only_us": 2568.1,
+    "errors": 0.0
+   },
+   "breakdown_mode1": {
+    "clock_hz": 18750000.0,
+    "run_us": 7270.3,
+    "driver_us": 7884.7,
+    "conv_us": 1593.2,
+    "transport_calls": 73.0
+   },
+   "keygen_mode1": {
+    "clock_hz": 18750000.0,
+    "sw_us": 12325.6,
+    "chip_us": 5142.6,
+    "chip_clocks": 15896.0
+   },
+   "encaps_mode1": {
+    "clock_hz": 18750000.0,
+    "sw_us": 13721.1,
+    "chip_us": 5006.1,
+    "chip_clocks": 16128.0
+   },
+   "decaps_mode1": {
+    "clock_hz": 18750000.0,
+    "sw_us": 13720.0,
+    "chip_us": 5006.4,
+    "chip_clocks": 16128.0
+   },
+   "absorb_mode1": {
+    "clock_hz": 18750000.0,
+    "bytes": 4096.0,
+    "sw_us": 13474.3,
+    "chip_us": 3021.7,
+    "chip_clocks": 15699.0
+   },
+   "squeeze_mode1": {
+    "clock_hz": 18750000.0,
+    "bytes": 1344.0,
+    "sw_us": 3461.8,
+    "chip_us": 949.3,
+    "chip_clocks": 4386.0
+   },
+   "mlkem512_exchange_legacy": {
+    "clock_hz": 18750000.0,
+    "skew": 0.0,
+    "mode": 0.0,
+    "calls": 32.0,
+    "sw_us": 39770.4,
+    "chip_us": 7443.5,
+    "speedup": 5.343,
+    "chip_clocks": 46888.0,
+    "chip_only_us": 2500.7,
+    "errors": 0.0
+   },
+   "breakdown_legacy": {
+    "clock_hz": 18750000.0,
+    "run_us": 4262.4,
+    "driver_us": 3181.1,
+    "conv_us": 1624.2,
+    "transport_calls": 87.0
+   },
+   "keygen_legacy": {
+    "clock_hz": 18750000.0,
+    "sw_us": 12329.3,
+    "chip_us": 2270.8,
+    "chip_clocks": 14332.0
+   },
+   "encaps_legacy": {
+    "clock_hz": 18750000.0,
+    "sw_us": 13721.1,
+    "chip_us": 2587.0,
+    "chip_clocks": 16278.0
+   },
+   "decaps_legacy": {
+    "clock_hz": 18750000.0,
+    "sw_us": 13720.0,
+    "chip_us": 2585.7,
+    "chip_clocks": 16278.0
+   },
+   "absorb_legacy": {
+    "clock_hz": 18750000.0,
+    "bytes": 4096.0,
+    "sw_us": 13474.3,
+    "chip_us": 2449.4,
+    "chip_clocks": 15607.0
+   },
+   "squeeze_legacy": {
+    "clock_hz": 18750000.0,
+    "bytes": 1344.0,
+    "sw_us": 3468.9,
+    "chip_us": 570.4,
+    "chip_clocks": 4384.0
+   }
+  },
+  "speedtest": {
+   "max_pass_hz": 18750000.0,
+   "recommended_hz": 18750000.0,
+   "recommended_skew": 0.0,
+   "tried_up_to_hz": 75000000.0,
+   "host_limited": 0.0,
+   "sys_hz": 150000000.0,
+   "result": "pass"
+  },
+  "compute": [
+   {
+    "work": "perm",
+    "sw_us": 410.54,
+    "chip_clocks": 368.0,
+    "clock_hz": 18750000.0
+   },
+   {
+    "work": "cbd",
+    "sw_us": 118.747,
+    "chip_clocks": 0.0,
+    "clock_hz": 18750000.0
+   },
+   {
+    "work": "ntt",
+    "sw_us": 42.927,
+    "chip_clocks": 0.0,
+    "clock_hz": 18750000.0
+   },
+   {
+    "work": "call_0",
+    "name": "sha3-512",
+    "sw_us": 432.44,
+    "chip_clocks": 518.0,
+    "clock_hz": 18750000.0
+   },
+   {
+    "work": "call_1",
+    "name": "sha3-256",
+    "sw_us": 2614.067,
+    "chip_clocks": 3091.0,
+    "clock_hz": 18750000.0
+   },
+   {
+    "work": "call_2",
+    "name": "shake256",
+    "sw_us": 2614.067,
+    "chip_clocks": 3091.0,
+    "clock_hz": 18750000.0
+   },
+   {
+    "work": "call_3",
+    "name": "prf-cbd3",
+    "sw_us": 971.607,
+    "chip_clocks": 1004.0,
+    "clock_hz": 18750000.0
+   },
+   {
+    "work": "call_4",
+    "name": "prf-cbd2",
+    "sw_us": 525.487,
+    "chip_clocks": 569.0,
+    "clock_hz": 18750000.0
+   },
+   {
+    "work": "call_5",
+    "name": "xof-ntt",
+    "sw_us": 1345.8,
+    "chip_clocks": 1700.0,
+    "clock_hz": 18750000.0
+   },
+   {
+    "work": "exchange",
+    "sw_us": 39756.3,
+    "chip_clocks": 43736.0,
+    "clock_hz": 18750000.0
+   }
+  ]
+ },
+ "log": "status\r\nHash chip harness on the Pico 2 W + Tang Nano 20K rig, RP2350 at 150 MHz\r\n  transport : chip via PIO + DMA (Pico 2 W + Tang Nano 20K rig)\r\n  chip clock: 1000000 Hz (PIO div 5, low 15 + high 15 cycles)\r\n  skew 0, calls 1217, faults 0, clocks 664433, uo_out now 0x00\r\n> speedtest\r\nspeedtest 1/2: wire speed. At each chip clock and sample skew: 6 known-answer jobs (bursts, padding,\r\npackets, CBD) + SampleNTT and the valid / busy pins, 3 rounds; pass = every byte right.\r\n       clock  skew 0  skew 1  skew 2  skew 3\r\n     1.00 MHz    pass       -       -       -\r\nSWEEP clock_hz=1000000 skew0=1 skew1=0 skew2=0 skew3=0\r\n     5.00 MHz    pass       -       -       -\r\nSWEEP clock_hz=5000000 skew0=1 skew1=0 skew2=0 skew3=0\r\n    10.00 MHz    pass       -       -       -\r\nSWEEP clock_hz=10000000 skew0=1 skew1=0 skew2=0 skew3=0\r\n    15.00 MHz    pass       -       -       -\r\nSWEEP clock_hz=15000000 skew0=1 skew1=0 skew2=0 skew3=0\r\n    18.75 MHz    pass       -       -       -\r\nSWEEP clock_hz=18750000 skew0=1 skew1=0 skew2=0 skew3=0\r\n    25.00 MHz       -       -       -       -\r\nSWEEP clock_hz=25000000 skew0=0 skew1=0 skew2=0 skew3=0\r\n    30.00 MHz       -       -       -       -\r\nSWEEP clock_hz=30000000 skew0=0 skew1=0 skew2=0 skew3=0\r\n    37.50 MHz       -       -       -       -\r\nSWEEP clock_hz=37500000 skew0=0 skew1=0 skew2=0 skew3=0\r\n    50.00 MHz       -       -       -       -\r\nSWEEP clock_hz=50000000 skew0=0 skew1=0 skew2=0 skew3=0\r\n    75.00 MHz       -       -       -       -\r\nSWEEP clock_hz=75000000 skew0=0 skew1=0 skew2=0 skew3=0\r\nSPEEDTEST max_pass_hz=18750000 recommended_hz=18750000 recommended_skew=0 tried_up_to_hz=75000000 host_limited=0 sys_hz=150000000\r\nspeedtest: highest passing clock 18.75 MHz; running at 18.75 MHz, skew 0 (passes one step lower too)\r\nspeedtest 2/2: throughput at that clock\r\nbench: ML-KEM-512, the 32 hash calls of one key exchange, on the chip and in software on the RP2350 at 150 MHz\r\n  chip clock 18.75 MHz, sample skew 0, framing mode 0, chip path: packets + on-chip padding + one burst word, CBD on chip, SampleNTT in software (framing mode 0)\r\n  op      calls       software  with the chip  speed-up  chip clocks  clocks / f_chip\r\n  keygen     10     12325.5 us      1809.2 us     6.81x        14368         766.3 us\r\n  encaps     11     13721.1 us      2078.5 us     6.60x        16318         870.3 us\r\n  decaps     11     13720.0 us      2077.8 us     6.60x        16318         870.3 us\r\n  total      32     39766.6 us      5965.5 us     6.67x        47004        2506.9 us\r\nBENCH workload=mlkem512_exchange clock_hz=18750000 skew=0 mode=0 calls=32 sw_us=39766.6 chip_us=5965.5 speedup=6.666 chip_clocks=47004 chip_only_us=2506.9 errors=0\r\n  where the chip path's 5965.5 us go: 4163.5 us in 49 transport runs (PIO + DMA at the chip clock, incl. word\r\n  conversion), 1802.0 us in the driver (building the pin words, picking the bytes out, checking quiet clocks)\r\n  per call: kind      n  chip clocks       runs    with chip        in runs      in driver\r\n            G         3          511          1      66.8 us        50.0 us        16.8 us\r\n            XOF      12         2062          1     275.3 us       177.0 us        98.4 us\r\n            PRF3      8         1004          1     114.7 us        88.1 us        26.6 us\r\n            H         2         3091          6     369.2 us       289.3 us        79.9 us\r\n            PRF2      6          569          1      72.9 us        52.9 us        20.0 us\r\n            J         1         3091          6     368.2 us       289.3 us        78.9 us\r\n  of the runs, 1551.6 us reshuffle words onto pins that are not one GPIO window (the Pico rig only; the demo\r\n  board's 16 input pins are consecutive)\r\nBENCH workload=breakdown clock_hz=18750000 run_us=4163.5 driver_us=1802.0 conv_us=1551.6 transport_calls=49\r\nBENCH workload=keygen clock_hz=18750000 sw_us=12325.5 chip_us=1809.2 chip_clocks=14368\r\nBENCH workload=encaps clock_hz=18750000 sw_us=13721.1 chip_us=2078.5 chip_clocks=16318\r\nBENCH workload=decaps clock_hz=18750000 sw_us=13720.0 chip_us=2077.8 chip_clocks=16318\r\n  absorb   4096 B   software   0.304 MB/s   with the chip   2.258 MB/s   chip alone   4.892 MB/s (15699 clocks)\r\nBENCH workload=absorb clock_hz=18750000 bytes=4096 sw_us=13474.3 chip_us=1813.7 chip_clocks=15699\r\n  squeeze  1344 B   software   0.387 MB/s   with the chip   2.768 MB/s   chip alone   5.746 MB/s (4386 clocks)\r\nBENCH workload=squeeze clock_hz=18750000 bytes=1344 sw_us=3468.9 chip_us=485.5 chip_clocks=4386\r\nbench: PASS (every chip result equals the software one)\r\nSPEEDTEST result=pass\r\nspeedtest: left at 18.75 MHz, skew 0 (`clk 1000000` sets the clock back)\r\n> bench compute\r\nbench compute: the chip's computation against the C code that does the same work, on the RP2350 at 150 MHz\r\n  software: the code alone, averaged; chip: its clocks for the same work (no transfers on either side)\r\n  work                                         software     clocks     chip now  chip 50 MHz speed-up*\r\n  Keccak-f[1600], one permutation             410.54 us        368     19.63 us      7.36 us     55.8x\r\nCOMPUTE work=perm sw_us=410.540 chip_clocks=368 clock_hz=18750000\r\n  SamplePolyCBD eta=3 (192 B)                 118.75 us          0            -            -  in the stream\r\nCOMPUTE work=cbd sw_us=118.747 chip_clocks=0 clock_hz=18750000\r\n  SampleNTT, one polynomial                    42.93 us          0            -            -  in the stream\r\nCOMPUTE work=ntt sw_us=42.927 chip_clocks=0 clock_hz=18750000\r\n  G = SHA3-512 (64 B in)                      432.44 us        518     27.63 us     10.36 us     41.7x\r\nCOMPUTE work=call_0 name=sha3-512 sw_us=432.440 chip_clocks=518 clock_hz=18750000\r\n  H = SHA3-256 (800 B in)                    2614.07 us       3091    164.85 us     61.82 us     42.3x\r\nCOMPUTE work=call_1 name=sha3-256 sw_us=2614.067 chip_clocks=3091 clock_hz=18750000\r\n  J = SHAKE256 (800 B in, 32 out)            2614.07 us       3091    164.85 us     61.82 us     42.3x\r\nCOMPUTE work=call_2 name=shake256 sw_us=2614.067 chip_clocks=3091 clock_hz=18750000\r\n  PRF_3 + CBD (33 B in, a polynomial)         971.61 us       1004     53.55 us     20.08 us     48.4x\r\nCOMPUTE work=call_3 name=prf-cbd3 sw_us=971.607 chip_clocks=1004 clock_hz=18750000\r\n  PRF_2 + CBD (33 B in, a polynomial)         525.49 us        569     30.35 us     11.38 us     46.2x\r\nCOMPUTE work=call_4 name=prf-cbd2 sw_us=525.487 chip_clocks=569 clock_hz=18750000\r\n  XOF + SampleNTT (34 B in, a polynomial)    1345.80 us       1700     90.67 us     34.00 us     39.6x\r\nCOMPUTE work=call_5 name=xof-ntt sw_us=1345.800 chip_clocks=1700 clock_hz=18750000\r\n  one ML-KEM-512 exchange (32 calls)        39756.29 us      43736   2332.59 us    874.72 us     45.5x\r\nCOMPUTE work=exchange sw_us=39756.3 chip_clocks=43736 clock_hz=18750000\r\n  * software against the chip's clocks at 50 MHz. CBD and SampleNTT cost the chip no clocks of their own:\r\n    they run on the bytes as they stream out of the squeeze (SampleNTT adds a 3-clock tail).\r\nbench compute: PASS (every chip result equals the software one)\r\n> bench mode1\r\nbench mode1: ML-KEM-512, the 32 hash calls of one key exchange, on the chip and in software on the RP2350 at 150 MHz\r\n  chip clock 18.75 MHz, sample skew 0, framing mode 1, chip path: packets + on-chip padding + one burst word, CBD and SampleNTT on chip (framing mode 1)\r\n  op      calls       software  with the chip  speed-up  chip clocks  clocks / f_chip\r\n  keygen     10     12325.6 us      5142.6 us     2.40x        15896         847.8 us\r\n  encaps     11     13721.1 us      5006.1 us     2.74x        16128         860.2 us\r\n  decaps     11     13720.0 us      5006.4 us     2.74x        16128         860.2 us\r\n  total      32     39766.7 us     15155.1 us     2.62x        48152        2568.1 us\r\nBENCH workload=mlkem512_exchange_mode1 clock_hz=18750000 skew=0 mode=1 calls=32 sw_us=39766.7 chip_us=15155.1 speedup=2.624 chip_clocks=48152 chip_only_us=2568.1 errors=0\r\n  where the chip path's 15155.1 us go: 7270.3 us in 73 transport runs (PIO + DMA at the chip clock, incl. word\r\n  conversion), 7884.7 us in the driver (building the pin words, picking the bytes out, checking quiet clocks)\r\n  per call: kind      n  chip clocks       runs    with chip        in runs      in driver\r\n            G         3          511          1     110.6 us        80.5 us        30.0 us\r\n            XOF      12         2158          3     786.9 us       322.3 us       464.5 us\r\n            PRF3      8         1004          1     352.4 us       149.8 us       202.6 us\r\n            H         2         3091          6     607.2 us       481.3 us       125.9 us\r\n            PRF2      6          569          1     123.5 us        86.4 us        37.1 us\r\n            J         1         3091          6     606.1 us       481.3 us       124.9 us\r\n  of the runs, 1593.2 us reshuffle words onto pins that are not one GPIO window (the Pico rig only; the demo\r\n  board's 16 input pins are consecutive)\r\nBENCH workload=breakdown_mode1 clock_hz=18750000 run_us=7270.3 driver_us=7884.7 conv_us=1593.2 transport_calls=73\r\nBENCH workload=keygen_mode1 clock_hz=18750000 sw_us=12325.6 chip_us=5142.6 chip_clocks=15896\r\nBENCH workload=encaps_mode1 clock_hz=18750000 sw_us=13721.1 chip_us=5006.1 chip_clocks=16128\r\nBENCH workload=decaps_mode1 clock_hz=18750000 sw_us=13720.0 chip_us=5006.4 chip_clocks=16128\r\n  absorb   4096 B   software   0.304 MB/s   with the chip   1.356 MB/s   chip alone   4.892 MB/s (15699 clocks)\r\nBENCH workload=absorb_mode1 clock_hz=18750000 bytes=4096 sw_us=13474.3 chip_us=3021.7 chip_clocks=15699\r\n  squeeze  1344 B   software   0.388 MB/s   with the chip   1.416 MB/s   chip alone   5.746 MB/s (4386 clocks)\r\nBENCH workload=squeeze_mode1 clock_hz=18750000 bytes=1344 sw_us=3461.8 chip_us=949.3 chip_clocks=4386\r\nbench mode1: PASS (every chip result equals the software one)\r\n> bench legacy\r\nbench legacy: ML-KEM-512, the 32 hash calls of one key exchange, on the chip and in software on the RP2350 at 150 MHz\r\n  chip clock 18.75 MHz, sample skew 0, framing mode 0, chip path: the October 2026 way: host padding, a word per byte (+ SKIP), a burst word per block, CBD on chip, SampleNTT in software\r\n  op      calls       software  with the chip  speed-up  chip clocks  clocks / f_chip\r\n  keygen     10     12329.3 us      2270.8 us     5.43x        14332         764.4 us\r\n  encaps     11     13721.1 us      2587.0 us     5.30x        16278         868.2 us\r\n  decaps     11     13720.0 us      2585.7 us     5.31x        16278         868.2 us\r\n  total      32     39770.4 us      7443.5 us     5.34x        46888        2500.7 us\r\nBENCH workload=mlkem512_exchange_legacy clock_hz=18750000 skew=0 mode=0 calls=32 sw_us=39770.4 chip_us=7443.5 speedup=5.343 chip_clocks=46888 chip_only_us=2500.7 errors=0\r\n  where the chip path's 7443.5 us go: 4262.4 us in 87 transport runs (PIO + DMA at the chip clock, incl. word\r\n  conversion), 3181.1 us in the driver (building the pin words, picking the bytes out, checking quiet clocks)\r\n  per call: kind      n  chip clocks       runs    with chip        in runs      in driver\r\n            G         3          509          1      80.9 us        50.9 us        30.0 us\r\n            XOF      12         2060          3     333.7 us       182.4 us       151.2 us\r\n            PRF3      8         1002          2     145.7 us        91.8 us        53.9 us\r\n            H         2         3073          6     490.4 us       288.1 us       202.3 us\r\n            PRF2      6          567          1      93.4 us        53.7 us        39.7 us\r\n            J         1         3073          6     490.4 us       288.1 us       202.3 us\r\n  of the runs, 1624.2 us reshuffle words onto pins that are not one GPIO window (the Pico rig only; the demo\r\n  board's 16 input pins are consecutive)\r\nBENCH workload=breakdown_legacy clock_hz=18750000 run_us=4262.4 driver_us=3181.1 conv_us=1624.2 transport_calls=87\r\nBENCH workload=keygen_legacy clock_hz=18750000 sw_us=12329.3 chip_us=2270.8 chip_clocks=14332\r\nBENCH workload=encaps_legacy clock_hz=18750000 sw_us=13721.1 chip_us=2587.0 chip_clocks=16278\r\nBENCH workload=decaps_legacy clock_hz=18750000 sw_us=13720.0 chip_us=2585.7 chip_clocks=16278\r\n  absorb   4096 B   software   0.304 MB/s   with the chip   1.672 MB/s   chip alone   4.921 MB/s (15607 clocks)\r\nBENCH workload=absorb_legacy clock_hz=18750000 bytes=4096 sw_us=13474.3 chip_us=2449.4 chip_clocks=15607\r\n  squeeze  1344 B   software   0.387 MB/s   with the chip   2.356 MB/s   chip alone   5.748 MB/s (4384 clocks)\r\nBENCH workload=squeeze_legacy clock_hz=18750000 bytes=1344 sw_us=3468.9 chip_us=570.4 chip_clocks=4384\r\nbench legacy: PASS (every chip result equals the software one)\r\n> "
+}

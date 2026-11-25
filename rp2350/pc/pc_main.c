@@ -211,6 +211,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(cmd, "fuzz")) fail = app_fuzz(&chip, arg ? arg : 10, 1);
     else if (!strcmp(cmd, "cal")) fail = app_calibrate(&chip);
     else if (!strcmp(cmd, "ci")) fail = app_ci(&chip);
+    else if (!strcmp(cmd, "bench") && !strcmp(argv[argc - 1], "compute")) fail = app_bench_compute(&chip, &pc_plat);
     else if (!strcmp(cmd, "bench"))
         fail = app_bench_style(&chip, &pc_plat, !strcmp(argv[argc - 1], "legacy") ? BENCH_LEGACY
                                                  : !strcmp(argv[argc - 1], "mode1") ? BENCH_MODE1 : BENCH_MODE0);

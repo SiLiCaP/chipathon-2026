@@ -86,9 +86,10 @@ SampleNTT, 16 × PRF through CBD), timed with the RP2350's cycle counter:
 
 Every chip result is compared with the software one, so a "fast" result is always a correct one.
 
+`bench compute` compares the computation only: each piece of C code against the chip's clocks for the same work.
 `bench` alone drives the chip the fastest way known (framing mode 0, packets, on-chip padding, one burst word per
-squeeze). `bench mode1` and `bench legacy` drive the same workload two other ways for comparison; `speedtest.py` runs
-all three. Results so far: [speed_results.md](speed_results.md).
+squeeze) and times the whole system. `bench mode1` and `bench legacy` drive the same workload two other ways for
+comparison. `speedtest.py` runs all of them. Results so far: [speed_results.md](speed_results.md).
 
 No extra silicon is needed for any of this: the chip has no speed-test logic. The test is all in the firmware.
 

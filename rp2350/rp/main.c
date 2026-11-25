@@ -184,6 +184,7 @@ static void help(void) {
            "  cal                 find the sample skew at the current clock\n"
            "  sweep               known answers across clocks and skews (bring-up)\n"
            "  bench [mode1|legacy] ML-KEM-512 hash calls + absorb / squeeze rates: chip vs software on this RP2350\n"
+           "  bench compute       compute only: each piece of C code against the chip's clocks for the same work\n"
            "                      (default: framing mode 0, the fastest; mode1: SampleNTT on chip; legacy: October 2026)\n"
            "  speedtest [mhz]     wire speed (every clock x skew, up to mhz) then bench at the best clock\n"
            "  all                 selftest, fuzz\n"
@@ -243,7 +244,8 @@ static void command(char *line) {
     else if (!strcmp(cmd, "bench")) {
         fresh_chip();
         bench_plat_t p = rp_plat();
-        app_bench_style(&chip, &p, !arg ? BENCH_MODE0 : !strcmp(arg, "legacy") ? BENCH_LEGACY
+        if (arg && !strcmp(arg, "compute")) app_bench_compute(&chip, &p);
+        else app_bench_style(&chip, &p, !arg ? BENCH_MODE0 : !strcmp(arg, "legacy") ? BENCH_LEGACY
                                    : !strcmp(arg, "mode1") ? BENCH_MODE1 : BENCH_MODE0);
     }
     else if (!strcmp(cmd, "speedtest")) { fresh_chip(); bench_plat_t p = rp_plat(); app_speedtest(&chip, &p, n * 1000000u); }

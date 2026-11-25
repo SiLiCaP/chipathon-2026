@@ -10,37 +10,52 @@ SHA3-512, SHAKE128 and SHAKE256 call to the chip. On the way out the chip can al
 [![Open the chip in 3D](https://img.shields.io/badge/Open_the_chip_in_3D-one_click-e21a1a?style=for-the-badge&logo=googleearth&logoColor=white)](https://gds-viewer.tinytapeout.com/?pdk=sky130A&model=https%3A%2F%2Fsilicap.github.io%2Fchipathon-2026%2Ftinytapeout.oas)
 [![2D render](https://img.shields.io/badge/2D_render-PNG-555?style=for-the-badge)](https://silicap.github.io/chipathon-2026/gds_render.png)
 
-![The chip's layout: 3x2 tiles filled with the Keccak state rings and their logic](docs/img/chip_render.png)
+![The chip's layout: 3x2 tiles of Keccak rings and routing; the team's chip art in gold, bottom right](docs/img/chip_render.jpg)
 
-*The current design, 3×2 tiles, 74 % of the area in cells ([how it was made](#the-layout-images)). The team's
-logo is a 28 × 56 µm metal-4 block in the bottom right corner, too small to see here:
-[close-up](docs/img/logo_chip_met4.png). The 3D button opens whatever the last GitHub `gds` run published.*
+*The current design, 3×2 tiles: the routing layers, with metal 4 in gold (the power straps and the team's chip art in
+the bottom right corner). [Close-up of the chip art](docs/img/chip_art.png), 28 × 56 µm.
+[How the images are made](#the-layout-images).*
 
 ## Why hashing, and how fast
 
 Hashing is 57–76 % of ML-KEM-512's work on a microcontroller. The polynomial arithmetic (NTT) is fast in software and
-slow through 8 output pins, so the team put the hashing on the chip.
+slow through 8 output pins, so the team put the hashing on the chip. Measured on the chip's hardened gate netlist
+(in an FPGA, driven by the same RP2350 firmware as the demo board), RP2350 at 150 MHz, every result checked.
 
-The hashing of one ML-KEM-512 key exchange (32 calls), RP2350 at 150 MHz, every result checked against the software one:
-- **Whole time** is everything the RP2350 waits for: building the pin words, the transfers, the chip, unpacking.
-- **Accelerated part only** is the hashing computation itself: the C code against the chip's clocks.
+### Compute only: the chip against the code that does the same work
 
-| | Whole time | | Accelerated part only | |
+The C code alone on the RP2350, against the chip's clocks for the same work. CBD and SampleNTT run on the chip too.
+No transfers on either side.
+
+| Work | C on the RP2350 | Chip, measured on the FPGA (18.75 MHz) | Chip at 50 MHz | Speed-up |
 |---|---|---|---|---|
-| RP2350 alone, C (measured) | 39.9 ms | | 39.9 ms | |
-| **FPGA, measured:** the chip's gate netlist at 18.75 MHz, the real firmware over 26 wires | **6.36 ms** | **6.3×** | **2.51 ms** | **16×** |
-| **Real chip, guesstimate:** demo board, chip at 50 MHz | **≈ 3.2 ms** | **≈ 12×** | **≈ 0.94 ms** | **≈ 42×** |
-| Real chip, guesstimate: chip at 66 MHz | ≈ 3.0 ms | ≈ 13× | ≈ 0.71 ms | ≈ 57× |
+| One Keccak-f[1600] permutation | 411 µs | 19.6 µs (368 clocks) | 7.4 µs | **56×** |
+| H = SHA3-256 of 800 B | 2,614 µs | 165 µs (3,091 clocks) | 61.8 µs | **42×** |
+| PRF + SamplePolyCBD, one polynomial (η = 3) | 972 µs | 53.5 µs (1,004 clocks) | 20.1 µs | **48×** |
+| XOF + SampleNTT, one polynomial | 1,346 µs | 90.7 µs (1,700 clocks) | 34.0 µs | **40×** |
+| SamplePolyCBD alone / SampleNTT alone | 119 µs / 43 µs | no clocks of its own: it runs on the output stream | | |
+| **One ML-KEM-512 exchange (32 hash calls)** | **39.8 ms** | **2.33 ms** (43,736 clocks) | **0.87 ms** | **46×** |
 
-- **The FPGA row** is measured on the chip's hardened gate netlist with the same RP2350 firmware as the demo board.
-- **The guesstimate** keeps the RP2350's measured work, drops the word reshuffling that only the FPGA rig needs
-  (its pins aren't consecutive), and runs the chip's clocks at its own speed.
-- **Against hand-optimized assembly SHA-3** (about 5.8 ms, cited), the real chip should be about 1.8× faster
-  overall, and 6× in the computation.
+The C code is portable FIPS 202 / 203 code. Hand-optimized assembly does the exchange's hashing in about 5.8 ms
+(cited); the chip's 0.87 ms is still **6.6× faster** than that.
 
-Details, the firmware steps that got here, three ways to drive the chip, and the wire speed:
-[docs/speed_results.md](docs/speed_results.md). Measure it on any board: `python3 rp2350/speedtest.py`
-([getting started](docs/getting_started.md#the-speed-test)).
+### The whole system: everything the RP2350 waits for
+
+Building the pin words, the transfers, the chip, unpacking: the hashing of one ML-KEM-512 exchange.
+
+| | Time | vs C |
+|---|---|---|
+| RP2350 alone, C (measured) | 39.8 ms | |
+| **FPGA, measured:** RP2350 + the chip's gate netlist over 26 wires (18.75 MHz) | **5.97 ms** | **6.7×** |
+| **Real chip, guesstimate:** demo board, chip at 50 MHz | **≈ 2.8 ms** | **≈ 14×** |
+| Real chip, guesstimate: chip at 66 MHz | ≈ 2.6 ms | ≈ 15× |
+
+- **The guesstimate** keeps the RP2350's measured work. It drops the word reshuffling that only the FPGA rig needs
+  (its pins aren't consecutive) and runs the chip's clocks at its own speed.
+- **Against hand-optimized assembly** (about 5.8 ms), that's still about 2× faster for the whole system.
+
+Details, the firmware work that got here, and the wire speed: [docs/speed_results.md](docs/speed_results.md).
+Measure it on any board: `python3 rp2350/speedtest.py` ([getting started](docs/getting_started.md#the-speed-test)).
 
 ## The chip
 
@@ -98,11 +113,10 @@ tools (`fpga/`, `host/`, `local-ci/`).
 ## The layout images
 
 - **3D:** the button above opens Tiny Tapeout's viewer on the `tinytapeout.oas` that the GitHub `gds` workflow
-  publishes to this repo's GitHub Pages. The CI server builds most commits instead, and then GitHub doesn't
-  publish. To refresh the 3D view after the last change: *Actions → gds → Run workflow* (a manual run always
-  builds on GitHub).
-- **2D:** `docs/img/chip_render.png` is rendered from a local build of `main` with the Tiny Tapeout tools
-  (`tt_tool.py --create-png`). The 2D button shows the render from the last GitHub run.
+  publishes to this repo's GitHub Pages for every push to `main`.
+- **2D:** the 2D button shows Tiny Tapeout's own render from the same run (the cell layers; the chip art isn't
+  visible there). `docs/img/chip_render.jpg` and `chip_art.png` are rendered from the GDS of `main` with
+  `scripts/render_chip.py` (KLayout): the routing layers, metal 4 in gold.
 - `local-ci/run gds` builds the GDS on your own machine and shows the render and a 3D link on its results page.
 
 ## Tiny Tapeout
