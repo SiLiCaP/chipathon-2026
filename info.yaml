@@ -9,10 +9,6 @@ project:
 
   # How many tiles your design occupies? A single tile is about 167x108 uM.
   tiles: "3x2"          # Valid values (WxH): 1x1, 1x2, 2x2, 3x2, 3x4, 4x2, 4x4, 5x4, 6x2, 6x4, 8x2, 8x4 (docs/host_ci_findings.md)
-  # Fun fact: the host CI also hardened this chip "standing up", on a 2x3 die (2 tiles wide, 3 tall,
-  # 334.88 x 368.56 um), a shape Tiny Tapeout can't take (block heights are 1, 2 or 4 rows, never 3). It signed off
-  # clean anyway: 51.9 % utilization, 0 DRC / LVS / antenna, +7.57 ns setup at the slow corner, in 9.4 min.
-  # 3x2 for comparison: 55.5 %, +8.17 ns. (docs/host-ci.md, research dies)
 
   # Your top module name must start with "tt_um_". Make it unique by including your github username:
   top_module:  "tt_um_NTT_Core"
