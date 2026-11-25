@@ -2,12 +2,15 @@
 // RP2350 side of the chip. See tt_rp.h and tt_lockstep.pio.
 #include "tt_rp.h"
 
+#include <string.h>
+
 #include "hardware/clocks.h"
 #include "hardware/dma.h"
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
 #include "hardware/structs/m33.h"
 #include "hardware/structs/sysinfo.h"
+#include "hardware/sync.h"
 #include "pico/stdlib.h"
 #include "tt_lockstep.pio.h"
 
@@ -160,6 +163,10 @@ void tt_rp_uio_release(bool release) {
     sm_load();                                        // the clock is stopped low: only the pin directions change
 }
 
+// set by io_run for one run: called from the wait loop with the samples stored so far (8-bit runs only)
+static void (*run_progress)(void *ctx, uint32_t done);
+static void *run_progress_ctx;
+
 int tt_rp_run(const uint16_t *words, uint32_t n, uint8_t *uo, uint8_t *aux) {
     conv_cyc = 0;
     if (n == 0) return 0;
@@ -182,7 +189,28 @@ int tt_rp_run(const uint16_t *words, uint32_t n, uint8_t *uo, uint8_t *aux) {
     const void *src = words;
 #else
     const uint32_t t0 = m33_hw->dwt_cyccnt;
-    for (uint32_t i = 0; i < n; i++) stage[i] = pio_word(words[i]);
+    uint32_t i = 0;
+    while (i + 4 <= n) {                              // four words at a time; idle (all-zero) runs just stay zero
+        uint64_t quad;
+        memcpy(&quad, words + i, 8);
+        if (!quad) {
+            uint32_t j = i + 4;                       // how far the idle run goes
+            while (j + 4 <= n) {
+                memcpy(&quad, words + j, 8);
+                if (quad) break;
+                j += 4;
+            }
+            memset(&stage[i], 0, (j - i) * sizeof stage[0]);
+            i = j;
+            continue;
+        }
+        stage[i] = pio_word(words[i]);
+        stage[i + 1] = pio_word(words[i + 1]);
+        stage[i + 2] = pio_word(words[i + 2]);
+        stage[i + 3] = pio_word(words[i + 3]);
+        i += 4;
+    }
+    for (; i < n; i++) stage[i] = pio_word(words[i]);
     conv_cyc = m33_hw->dwt_cyccnt - t0;
     channel_config_set_transfer_data_size(&tc, DMA_SIZE_32);
     const void *src = stage;
@@ -191,7 +219,18 @@ int tt_rp_run(const uint16_t *words, uint32_t n, uint8_t *uo, uint8_t *aux) {
     dma_channel_configure((uint)dma_tx, &tc, &pio->txf[sm], src, n, true);
     // n clocks at clock_hz, with 4x margin plus 20 ms for the bus
     const absolute_time_t deadline = make_timeout_time_us((uint64_t)n * 4000000u / clock_hz + 20000);
+    uint32_t reported = 0;
     while (dma_channel_is_busy((uint)dma_rx)) {
+        if (run_progress && !wide) {
+            // samples stored so far (one less than counted, in case the last write is still on its way)
+            const uint32_t left = dma_hw->ch[dma_rx].transfer_count, done = n - left ? n - left - 1 : 0;
+            if (done >= reported + 64) {
+                __dmb();
+                run_progress(run_progress_ctx, done);
+                reported = done;
+                continue;
+            }
+        }
         if (time_reached(deadline)) {
             dma_channel_abort((uint)dma_tx);
             dma_channel_abort((uint)dma_rx);
@@ -202,9 +241,15 @@ int tt_rp_run(const uint16_t *words, uint32_t n, uint8_t *uo, uint8_t *aux) {
     }
     if (wide) {                                       // split the wide samples: uo_out, and the chip's uio[1:0]
         const uint sh = TT_PIN_UO_OUT0 - TT_PIN_IN_WIDE, ah = TT_PIN_UIO0 - TT_PIN_IN_WIDE;
-        for (uint32_t i = 0; i < n; i++) {
-            uo[i] = (uint8_t)(rx_wide[i] >> sh);
-            aux[i] = released ? (uint8_t)((rx_wide[i] >> ah) & 3u) : 0;   // not released: our own outputs
+        if (released) {
+            for (uint32_t i = 0; i < n; i++) {
+                const uint32_t v = rx_wide[i];
+                uo[i] = (uint8_t)(v >> sh);
+                aux[i] = (uint8_t)((v >> ah) & 3u);
+            }
+        } else {                                      // not released: uio[1:0] are our own outputs
+            for (uint32_t i = 0; i < n; i++) uo[i] = (uint8_t)(rx_wide[i] >> sh);
+            memset(aux, 0, n);
         }
     }
     return 0;
@@ -252,7 +297,10 @@ int tt_rp_select(int addr) {
 }
 
 static int io_run(tt_io_t *io, const uint16_t *w, uint32_t n, uint8_t *uo, uint8_t *aux) {
+    run_progress = aux ? NULL : io->progress;
+    run_progress_ctx = io->progress_ctx;
     int err = tt_rp_run(w, n, uo, aux);
+    run_progress = NULL;
     io->conv_cyc = conv_cyc;
     return err;
 }

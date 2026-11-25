@@ -86,25 +86,32 @@ static tt_io_t *real_io;
 static const bench_plat_t *cur_plat;
 static uint64_t run_cyc, conv_cyc;
 static int timed_run(tt_io_t *io, const uint16_t *words, uint32_t n, uint8_t *uo, uint8_t *aux) {
-    (void)io;
+    real_io->progress = io->progress;           // the driver set its hook on this wrapper: pass it on
+    real_io->progress_ctx = io->progress_ctx;
     const uint32_t t0 = cur_plat->cycles();
     const int r = real_io->run(real_io, words, n, uo, aux);
+    real_io->progress = NULL;
     run_cyc += cur_plat->cycles() - t0;
     conv_cyc += real_io->conv_cyc;          // reshuffling words for pins that aren't one window (the Pico rig only)
     return r;
 }
 
-int app_bench(hash_chip_t *c, const bench_plat_t *p) { return app_bench_style(c, p, BENCH_NEW); }
+#ifdef HASH_PROF
+extern uint32_t (*hash_prof_cycles)(void);
+extern uint64_t hash_prof[4];
+#endif
+
+int app_bench(hash_chip_t *c, const bench_plat_t *p) { return app_bench_style(c, p, BENCH_MODE0); }
 
 int app_bench_style(hash_chip_t *c, const bench_plat_t *p, int style) {
     static uint8_t msg[4096], got[1344], want[1344], fin[384];
     const uint32_t hz = p->clock_hz ? p->clock_hz() : 0;
     const int legacy = style == BENCH_LEGACY;
-    const char *sfx = style == BENCH_LEGACY ? "_legacy" : style == BENCH_MODE0 ? "_mode0" : "";
-    const char *name = style == BENCH_LEGACY ? " legacy" : style == BENCH_MODE0 ? " mode0" : "";
+    const char *sfx = style == BENCH_LEGACY ? "_legacy" : style == BENCH_MODE1 ? "_mode1" : "";
+    const char *name = style == BENCH_LEGACY ? " legacy" : style == BENCH_MODE1 ? " mode1" : "";
     const unsigned opts = legacy ? HASH_SKIP : FAST;
     int errors = 0;
-    const int mode1 = style == BENCH_NEW && hash_chip_has_mode1(c);
+    const int mode1 = style == BENCH_MODE1 && hash_chip_has_mode1(c);
     if (mode1 && hash_chip_set_mode(c, 1)) {
         printf("bench: the chip did not switch to framing mode 1\n");
         return 1;
@@ -125,6 +132,10 @@ int app_bench_style(hash_chip_t *c, const bench_plat_t *p, int style) {
     proxy.run = timed_run;
     c->io = &proxy;
     const uint32_t calls0 = c->calls;
+#ifdef HASH_PROF
+    hash_prof_cycles = p->cycles;
+    memset(hash_prof, 0, sizeof hash_prof);
+#endif
     struct { const char *what; uint32_t n, runs; uint64_t chip, run, clocks; } kinds[8] = {{0}};
     unsigned nk = 0;
     for (unsigned i = 0; i < NCALL; i++) {
@@ -163,6 +174,10 @@ int app_bench_style(hash_chip_t *c, const bench_plat_t *p, int style) {
     }
     c->io = real_io;
     const uint32_t tcalls = c->calls - calls0;
+#ifdef HASH_PROF
+    printf("  PROF transport runs %.1f us, check after the runs %.1f us, unpack %.1f us, clearing %.1f us\n",
+           us(p, hash_prof[0]), us(p, hash_prof[1]), us(p, hash_prof[2]), us(p, hash_prof[3]));
+#endif
     printf("  %-7s %5s %14s %14s %9s %12s %16s\n", "op", "calls", "software", "with the chip", "speed-up",
            "chip clocks", "clocks / f_chip");
     for (int o = 0; o < 3; o++) {

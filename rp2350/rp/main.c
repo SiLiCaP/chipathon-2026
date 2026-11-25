@@ -183,8 +183,8 @@ static void help(void) {
            "  ci                  CI emulator check: the compiled-in per-commit ML-KEM hash jobs (docs/ci-emulator.md)\n"
            "  cal                 find the sample skew at the current clock\n"
            "  sweep               known answers across clocks and skews (bring-up)\n"
-           "  bench [mode0|legacy] ML-KEM-512 hash calls + absorb / squeeze rates: chip vs software on this RP2350\n"
-           "                      (mode0: framing mode 0, SampleNTT in software; legacy: the October 2026 commands)\n"
+           "  bench [mode1|legacy] ML-KEM-512 hash calls + absorb / squeeze rates: chip vs software on this RP2350\n"
+           "                      (default: framing mode 0, the fastest; mode1: SampleNTT on chip; legacy: October 2026)\n"
            "  speedtest [mhz]     wire speed (every clock x skew, up to mhz) then bench at the best clock\n"
            "  all                 selftest, fuzz\n"
            "binary TTE1 commands are accepted on the same port (host/tt_emu.py --port /dev/ttyACM0)\n");
@@ -243,8 +243,8 @@ static void command(char *line) {
     else if (!strcmp(cmd, "bench")) {
         fresh_chip();
         bench_plat_t p = rp_plat();
-        app_bench_style(&chip, &p, !arg ? BENCH_NEW : !strcmp(arg, "legacy") ? BENCH_LEGACY
-                                   : !strcmp(arg, "mode0") ? BENCH_MODE0 : BENCH_NEW);
+        app_bench_style(&chip, &p, !arg ? BENCH_MODE0 : !strcmp(arg, "legacy") ? BENCH_LEGACY
+                                   : !strcmp(arg, "mode1") ? BENCH_MODE1 : BENCH_MODE0);
     }
     else if (!strcmp(cmd, "speedtest")) { fresh_chip(); bench_plat_t p = rp_plat(); app_speedtest(&chip, &p, n * 1000000u); }
     else if (!strcmp(cmd, "all")) {

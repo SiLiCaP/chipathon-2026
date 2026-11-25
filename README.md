@@ -21,27 +21,26 @@ logo is a 28 × 56 µm metal-4 block in the bottom right corner, too small to se
 Hashing is 57–76 % of ML-KEM-512's work on a microcontroller. The polynomial arithmetic (NTT) is fast in software and
 slow through 8 output pins, so the team put the hashing on the chip.
 
-The hashing of one ML-KEM-512 key exchange (32 calls), every result checked against the software one:
+The hashing of one ML-KEM-512 key exchange (32 calls), RP2350 at 150 MHz, every result checked against the software one:
+- **Whole time** is everything the RP2350 waits for: building the pin words, the transfers, the chip, unpacking.
+- **Accelerated part only** is the hashing computation itself: the C code against the chip's clocks.
 
-| | Time | vs C on the RP2350 |
-|---|---|---|
-| RP2350 alone, C (measured) | 39.9 ms | |
-| **FPGA, measured:** the chip's calculation time, gate netlist at 18.75 MHz | **2.51 ms** | 16× |
-| **FPGA, measured:** RP2350 + chip end to end (the real firmware over 26 wires) | **12.6 ms** | **3.16×** |
-| **Guesstimate for the real chip:** demo board, chip at 50 MHz, same firmware | **≈ 8.2 ms** | **≈ 4.9×** |
-| Guesstimate: the chip's calculation alone at 50 MHz | ≈ 0.94 ms | 42× |
+| | Whole time | | Accelerated part only | |
+|---|---|---|---|---|
+| RP2350 alone, C (measured) | 39.9 ms | | 39.9 ms | |
+| **FPGA, measured:** the chip's gate netlist at 18.75 MHz, the real firmware over 26 wires | **6.36 ms** | **6.3×** | **2.51 ms** | **16×** |
+| **Real chip, guesstimate:** demo board, chip at 50 MHz | **≈ 3.2 ms** | **≈ 12×** | **≈ 0.94 ms** | **≈ 42×** |
+| Real chip, guesstimate: chip at 66 MHz | ≈ 3.0 ms | ≈ 13× | ≈ 0.71 ms | ≈ 57× |
 
-- **The measurements** come from the chip's hardened gate netlist on an FPGA, driven by the same RP2350 firmware as
-  the demo board.
-- **The guesstimate** keeps the RP2350's measured work. It drops the part that exists only on the FPGA rig and
-  runs the chip at its 50 MHz target.
-- **The RP2350's own work** (building and checking a pin word per clock) is most of the time, so the next speed-up
-  is in the firmware, not the silicon.
-- **Against hand-optimized assembly SHA-3** (about 5.8 ms, cited), the firmware as written doesn't win yet; the
-  chip's own 0.94 ms does, by 6×.
+- **The FPGA row** is measured on the chip's hardened gate netlist with the same RP2350 firmware as the demo board.
+- **The guesstimate** keeps the RP2350's measured work, drops the word reshuffling that only the FPGA rig needs
+  (its pins aren't consecutive), and runs the chip's clocks at its own speed.
+- **Against hand-optimized assembly SHA-3** (about 5.8 ms, cited), the real chip should be about 1.8× faster
+  overall, and 6× in the computation.
 
-Details, the three ways to drive the chip, and the wire speed: [docs/speed_results.md](docs/speed_results.md).
-Measure it yourself on any board: `python3 rp2350/speedtest.py` ([getting started](docs/getting_started.md#the-speed-test)).
+Details, the firmware steps that got here, three ways to drive the chip, and the wire speed:
+[docs/speed_results.md](docs/speed_results.md). Measure it on any board: `python3 rp2350/speedtest.py`
+([getting started](docs/getting_started.md#the-speed-test)).
 
 ## The chip
 
@@ -61,7 +60,7 @@ Measure it yourself on any board: `python3 rp2350/speedtest.py` ([getting starte
 | RTL tests (cocotb, `test/`) | pass |
 | GDS, Tiny Tapeout precheck, gate-level test | pass (on the owner's CI server, `host-ci/gds`; GitHub builds when it's down) |
 | RP2350 firmware builds, its PC harness | pass (GitHub `rp2350`) |
-| The firmware driving the chip's gate netlist on the FPGA rig | pass, Nov 25, 2026: `selftest`, `fuzz 200`, the `ci` ML-KEM-512 hash sequence, `speedtest` ([results](docs/speed_results.md)) |
+| The firmware driving the chip's gate netlist on the FPGA rig | pass, Nov 25, 2026: `selftest`, `fuzz 200`, the `ci` ML-KEM-512 hash sequence, `speedtest`, 0 errors ([results](docs/speed_results.md)) |
 | Silicon | waiting for chips |
 
 Before silicon, the chip and the firmware were tested on an FPGA emulator (a Tang Nano 20K running the chip's gate

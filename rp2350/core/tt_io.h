@@ -29,6 +29,11 @@ struct tt_io {
     const char *name;
     void *ctx;
     uint32_t conv_cyc;          // set by run(): cycles spent reformatting words (0 if the pins take them as is)
+    // Optional, set by the caller before run(): while the chip is still being clocked, the transport may call
+    // progress(progress_ctx, done) with the number of uo_out samples already stored (runs without aux only), so the
+    // caller can check them in the meantime. Transports that can't simply never call it.
+    void (*progress)(void *ctx, uint32_t done);
+    void *progress_ctx;
 };
 
 #endif

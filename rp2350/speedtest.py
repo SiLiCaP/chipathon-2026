@@ -134,8 +134,8 @@ def markdown(meta, res):
                   f"{conv:.0f} µs reshuffling words onto the Pico rig's split pins (none on the demo board), "
                   f"{d['run_us'] - e['chip_only_us'] - conv:.0f} µs of other transport work (DMA setup, splitting the samples), "
                   f"{d['driver_us']:.0f} µs in the driver (building and checking the pin words).", ""]
-        styles = [("now: every newer command, framing mode 1 (SampleNTT on chip)", ""),
-                  ("newer commands in framing mode 0, SampleNTT on the RP2350", "_mode0"),
+        styles = [("newer commands, framing mode 0, SampleNTT on the RP2350 (the default)", ""),
+                  ("every newer command, framing mode 1 (SampleNTT on chip)", "_mode1"),
                   ("the October 2026 way: host padding, a word per byte, a burst word per block", "_legacy")]
         if any("mlkem512_exchange" + k in b for _, k in styles[1:]):
             m += ["### Three ways to drive the same chip", "",
@@ -165,7 +165,7 @@ def main():
     ap.add_argument("--sys", type=int, help="RP2350 system clock in MHz first (150 default; 200, 250 allow faster chip clocks)")
     ap.add_argument("--max-mhz", type=int, default=0, help="highest chip clock to try (default: all the RP2350 can make)")
     ap.add_argument("--no-overclock", action="store_true", help="don't raise the RP2350 above its clock when every clock passes")
-    ap.add_argument("--no-legacy", action="store_true", help="skip `bench mode0` and `bench legacy` (the same workload driven other ways)")
+    ap.add_argument("--no-legacy", action="store_true", help="skip `bench mode1` and `bench legacy` (the same workload driven other ways)")
     ap.add_argument("--bench-only", action="store_true", help="no wire-speed sweep, throughput at --clk only")
     ap.add_argument("--clk", type=int, help="chip clock in Hz for --bench-only (default: the board's current one)")
     ap.add_argument("--out", default=os.path.join(HERE, "results"), help="where the JSON and Markdown go")
@@ -196,7 +196,7 @@ def main():
             print(f"every clock passed at RP2350 {st['sys_hz'] / 1e6:.0f} MHz: raising it to {sys_mhz} MHz and sweeping again")
             text += board.cmd(f"sys {sys_mhz}") + board.cmd("status") + run()
     if not a.no_legacy:     # the same workload driven two other ways, at the same clock: what each choice costs
-        text += board.cmd("bench mode0", until=r"^bench mode0: (PASS|FAIL)", timeout=180)
+        text += board.cmd("bench mode1", until=r"^bench mode1: (PASS|FAIL)", timeout=180)
         text += board.cmd("bench legacy", until=r"^bench legacy: (PASS|FAIL)", timeout=180)
     print(text.strip())
     res = parse(text)
@@ -211,7 +211,7 @@ def main():
     print(f"\nsaved {stem}.json and {stem}.md")
     ex = {k: v for k, v in res["bench"].items() if k.startswith("mlkem512_exchange")}
     for k, e in sorted(ex.items(), key=lambda kv: kv[1]["chip_us"]):
-        style = {"": "every command, mode 1", "_mode0": "newer commands, mode 0",
+        style = {"": "newer commands, mode 0", "_mode1": "every command, mode 1",
                  "_legacy": "October way"}.get(k[len("mlkem512_exchange"):], k)
         print(f"ML-KEM-512 exchange hashing ({style}): software {e['sw_us']:.0f} us, with the chip {e['chip_us']:.0f} us "
               f"({e['speedup']:.2f}x) at {e['clock_hz'] / 1e6:.2f} MHz; errors {int(e['errors'])}")

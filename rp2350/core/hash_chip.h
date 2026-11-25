@@ -58,6 +58,7 @@ enum { HASH_OK = 0, HASH_ERR_ARG = -1, HASH_ERR_IO = -2, HASH_ERR_QUIET = -3, HA
 #define HASH_AUTO 16u           // one burst word for the whole squeeze: the chip permutes between the blocks
 
 #define HASH_WORDS_MAX 4096     // longest transport call (an absorb block, or a squeeze of several blocks)
+#define HASH_WIN_MAX 256        // output windows tracked per transport call
 
 typedef struct {
     tt_io_t *io;
@@ -69,6 +70,13 @@ typedef struct {
     uint8_t uo[HASH_WORDS_MAX];
     uint8_t aux[HASH_WORDS_MAX];    // mode 1: the chip's valid / busy pins per clock (TT_AUX_*)
     uint8_t due[HASH_WORDS_MAX];    // per clock: 0 nothing may come, 1 a byte is due, 2 a byte may come (valid says)
+    uint32_t due_hw;                // due[] is all zero from here on (so begin() clears only what was used)
+    // the clock windows that can carry a byte, in clock order, so unpacking skips the idle clocks
+    uint16_t win_at[HASH_WIN_MAX], win_len[HASH_WIN_MAX];
+    uint8_t win_what[HASH_WIN_MAX]; // the window's due value (1: a byte on every clock, 2: where valid says)
+    uint32_t nwin;                  // HASH_WIN_MAX + 1: too many or out of order, unpack scans every clock
+    uint32_t checked;               // clocks of the running call already checked (while the transport ran)
+    int check_err;
 } hash_chip_t;
 
 void hash_chip_init(hash_chip_t *c, tt_io_t *io);

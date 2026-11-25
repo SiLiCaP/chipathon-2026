@@ -213,7 +213,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(cmd, "ci")) fail = app_ci(&chip);
     else if (!strcmp(cmd, "bench"))
         fail = app_bench_style(&chip, &pc_plat, !strcmp(argv[argc - 1], "legacy") ? BENCH_LEGACY
-                                                 : !strcmp(argv[argc - 1], "mode0") ? BENCH_MODE0 : BENCH_NEW);
+                                                 : !strcmp(argv[argc - 1], "mode1") ? BENCH_MODE1 : BENCH_MODE0);
     else if (!strcmp(cmd, "speedtest")) fail = app_speedtest(&chip, &pc_plat, 0);
     else if (!strcmp(cmd, "all")) {
         fail |= app_selftest(&chip);

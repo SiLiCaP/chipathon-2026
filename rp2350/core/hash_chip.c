@@ -4,6 +4,14 @@
 
 #include <string.h>
 
+#ifdef HASH_PROF
+uint32_t (*hash_prof_cycles)(void);
+uint64_t hash_prof[4];          // 0 play: transport run, 1 play: check after the run, 2 unpack loop, 3 begin()
+#define PROF_T() (hash_prof_cycles ? hash_prof_cycles() : 0)
+#else
+#define PROF_T() 0
+#endif
+
 static const struct { unsigned rate; uint8_t dom; uint32_t fixed; uint8_t fn; const char *name; } KIND[HASH_NKIND] = {
     [HASH_SHA3_256] = {136, 0x06, 32, 0, "sha3-256"},
     [HASH_SHA3_512] = {72, 0x06, 64, 1, "sha3-512"},
@@ -69,7 +77,13 @@ static inline uint32_t nz8(uint32_t x) { return (((x & 0x7F7F7F7Fu) + 0x7F7F7F7F
 
 // 1 if clocks k..k+3 certainly pass check_clock (otherwise they are checked one by one)
 static int clean4(const hash_chip_t *c, uint32_t k) {
-    const uint32_t d = ld32(c->due + k), u = nz8(ld32(c->uo + k));
+    const uint32_t uw = ld32(c->uo + k);
+    if (!c->mode) {
+        if (!uw) return 1;                                      // the usual case: four quiet clocks
+    } else if (!uw && !(ld32(c->aux + k) & 0x01010101u) && !ld32(c->due + k)) {
+        return 1;                                               // quiet, not valid, nothing due
+    }
+    const uint32_t d = ld32(c->due + k), u = nz8(uw);
     const uint32_t is1 = ~nz8(d ^ 0x01010101u) & 0x80808080u;
     if (!c->mode) return (u & ~is1) == 0;                       // mode 0: only due clocks may carry a byte
     const uint32_t v = (ld32(c->aux + k) & 0x01010101u) << 7;    // valid pin, at bit 7 of each byte
@@ -77,17 +91,59 @@ static int clean4(const hash_chip_t *c, uint32_t k) {
     return !(is0 & (u | v)) && !(is1 & ~v) && !(is2 & u & ~v);
 }
 
-static int play(hash_chip_t *c, uint32_t n) {
-    if (n > HASH_WORDS_MAX) return HASH_ERR_ARG;
-    if (c->io->run(c->io, c->words, n, c->uo, c->mode ? c->aux : NULL)) return HASH_ERR_IO;
-    c->clocks_total += n;
-    c->calls++;
+// Clocks k..n-1 of a transport call against c->due (check_clock's rule), fast where the clocks are quiet.
+static int check_range(const hash_chip_t *c, uint32_t k, uint32_t n) {
     int err = HASH_OK;
-    uint32_t k = 0;
+    // 16 clocks at a time when all are quiet: mode 0 needs only uo_out = 0; mode 1 also no valid and nothing due
+    for (; k + 16 <= n && !err; k += 16) {
+        uint32_t q = ld32(c->uo + k) | ld32(c->uo + k + 4) | ld32(c->uo + k + 8) | ld32(c->uo + k + 12);
+        if (c->mode)
+            q |= ((ld32(c->aux + k) | ld32(c->aux + k + 4) | ld32(c->aux + k + 8) | ld32(c->aux + k + 12)) & 0x01010101u) |
+                 ld32(c->due + k) | ld32(c->due + k + 4) | ld32(c->due + k + 8) | ld32(c->due + k + 12);
+        if (!q) continue;
+        for (uint32_t j = k; j < k + 16 && !err; j += 4)
+            if (!clean4(c, j))
+                for (uint32_t i = j; i < j + 4 && !err; i++) err = check_clock(c, i);
+    }
     for (; k + 4 <= n && !err; k += 4)
         if (!clean4(c, k))
             for (uint32_t j = k; j < k + 4 && !err; j++) err = check_clock(c, j);
     for (; k < n && !err; k++) err = check_clock(c, k);
+    return err;
+}
+
+// called by the transport while the chip runs: check the samples that have arrived, 16 clocks at a time
+static void play_progress(void *ctx, uint32_t done) {
+    hash_chip_t *c = ctx;
+    const uint32_t upto = done & ~15u;
+    if (c->check_err || upto <= c->checked) return;
+    c->check_err = check_range(c, c->checked, upto);
+    c->checked = upto;
+}
+
+static int play(hash_chip_t *c, uint32_t n) {
+    if (n > HASH_WORDS_MAX) return HASH_ERR_ARG;
+    uint32_t pt0 = PROF_T();
+    c->checked = 0;
+    c->check_err = HASH_OK;
+    if (!c->mode) {                     // mode 0: the samples land in c->uo as they come, check them meanwhile
+        c->io->progress = play_progress;
+        c->io->progress_ctx = c;
+    }
+    const int ioerr = c->io->run(c->io, c->words, n, c->uo, c->mode ? c->aux : NULL);
+    c->io->progress = NULL;
+    if (ioerr) return HASH_ERR_IO;
+#ifdef HASH_PROF
+    hash_prof[0] += PROF_T() - pt0;
+    pt0 = PROF_T();
+#endif
+    c->clocks_total += n;
+    c->calls++;
+    int err = c->check_err ? c->check_err : check_range(c, c->checked, n);
+#ifdef HASH_PROF
+    hash_prof[1] += PROF_T() - pt0;
+#endif
+    (void)pt0;
     if (err) {
         c->faults++;
         hash_chip_reset(c);
@@ -97,7 +153,14 @@ static int play(hash_chip_t *c, uint32_t n) {
 
 // start the next transport call's words
 static uint32_t begin(hash_chip_t *c) {
-    memset(c->due, 0, sizeof c->due);
+    const uint32_t t0 = PROF_T();
+    memset(c->due, 0, c->due_hw);
+    c->due_hw = 0;
+    c->nwin = 0;
+#ifdef HASH_PROF
+    hash_prof[3] += PROF_T() - t0;
+#endif
+    (void)t0;
     return 0;
 }
 
@@ -150,10 +213,29 @@ static uint32_t put_idle(hash_chip_t *c, uint32_t n, uint32_t cnt) {
     return n + cnt;
 }
 
+// remember [d0, d0 + cnt) as a window that can carry bytes (merged with the last one when they touch)
+static void add_window(hash_chip_t *c, uint32_t d0, uint32_t cnt, uint8_t what) {
+    if (c->nwin > HASH_WIN_MAX || !cnt) return;
+    if (c->nwin) {
+        const uint32_t last = c->nwin - 1, end = (uint32_t)c->win_at[last] + c->win_len[last];
+        if (d0 < end) { c->nwin = HASH_WIN_MAX + 1; return; }  // out of order: fall back to a full scan
+        if (d0 == end && c->win_what[last] == what) { c->win_len[last] = (uint16_t)(c->win_len[last] + cnt); return; }
+    }
+    if (c->nwin == HASH_WIN_MAX) { c->nwin = HASH_WIN_MAX + 1; return; }
+    c->win_at[c->nwin] = (uint16_t)d0;
+    c->win_len[c->nwin] = (uint16_t)cnt;
+    c->win_what[c->nwin] = what;
+    c->nwin++;
+}
+
 // mark the clocks of `cnt` bytes asked for from word `at` on (one per clock): due at + delay
 static void mark(hash_chip_t *c, uint32_t at, uint32_t cnt, uint8_t what) {
     const uint32_t d0 = at + HC_SQ_DELAY + (uint32_t)c->skew;
-    for (uint32_t i = 0; i < cnt && d0 + i < HASH_WORDS_MAX; i++) c->due[d0 + i] = what;
+    if (d0 >= HASH_WORDS_MAX) return;
+    if (cnt > HASH_WORDS_MAX - d0) cnt = HASH_WORDS_MAX - d0;
+    memset(c->due + d0, what, cnt);
+    if (d0 + cnt > c->due_hw) c->due_hw = d0 + cnt;
+    add_window(c, d0, cnt, what);
 }
 
 // One transport call is one block, so the clock budget of the longest block must fit the buffers:
@@ -268,32 +350,54 @@ int hash_chip_job(hash_chip_t *c, hash_kind_t kind, const uint8_t *msg, uint32_t
             for (uint32_t b = 0; b < nblk + (second ? 1 : 0); b++) {
                 const uint32_t cnt = b && second ? second : take;
                 if (b) n = put_idle(c, n, at + b * period + cnt - n);
-                for (uint32_t i = 0; i < cnt; i++, idx3++)
-                    if (!packed || idx3 % 3) mark(c, at + b * period + i, 1, 1);
+                if (!packed) {                              // every clock of the block: one window
+                    mark(c, at + b * period, cnt, 1);
+                    idx3 += cnt;
+                } else {                                    // packed eta = 3: two of every three clocks
+                    for (uint32_t i = 0; i < cnt; i++, idx3++)
+                        if (idx3 % 3) mark(c, at + b * period + i, 1, 1);
+                }
             }
             take = nblk * take + second;
         }
         n = put_idle(c, n, delay);                          // the last byte's sample
         if ((err = play(c, n))) return err;
         for (;;) {
-            for (uint32_t k = 0; k < n; k++) {
-                if (!(k & 3) && k + 4 <= n && !ld32(c->due + k)) {   // four clocks with nothing due
-                    k += 3;
+            const uint32_t pu0 = PROF_T();
+            (void)pu0;
+            // the windows that can carry bytes, or every clock if they weren't tracked
+            const uint32_t nw = c->nwin <= HASH_WIN_MAX ? c->nwin : 1;
+            for (uint32_t w = 0; w < nw; w++) {
+                const uint32_t k0 = c->nwin <= HASH_WIN_MAX ? c->win_at[w] : 0;
+                uint32_t k1 = c->nwin <= HASH_WIN_MAX ? k0 + c->win_len[w] : n;
+                if (k1 > n) k1 = n;
+                if (c->nwin <= HASH_WIN_MAX && c->win_what[w] == 1 && !packed) {   // a byte on every clock: copy
+                    uint32_t m = k1 > k0 ? k1 - k0 : 0;
+                    if (m > outlen - got) m = outlen - got;
+                    memcpy(out + got, c->uo + k0, m);
+                    got += m;
                     continue;
                 }
-                if (c->due[k] == 1) {
-                    if (packed) { if (npk < sizeof pk) pk[npk++] = c->uo[k]; }
-                    else if (got < outlen) out[got++] = c->uo[k];
-                } else if (c->due[k] == 2 && (c->aux[k] & TT_AUX_VALID)) {
-                    if (got >= outlen) return HASH_ERR_NTT;
-                    out[got++] = c->uo[k];
+                for (uint32_t k = k0; k < k1; k++) {
+                    if (c->due[k] == 1) {
+                        if (packed) { if (npk < sizeof pk) pk[npk++] = c->uo[k]; }
+                        else if (got < outlen) out[got++] = c->uo[k];
+                    } else if (c->due[k] == 2 && (c->aux[k] & TT_AUX_VALID)) {
+                        if (got >= outlen) return HASH_ERR_NTT;
+                        out[got++] = c->uo[k];
+                    }
                 }
             }
+#ifdef HASH_PROF
+            hash_prof[2] += PROF_T() - pu0;
+#endif
             // the automatic SampleNTT is still going while busy is high: keep the clock running
             if (!(ntt && (opts & HASH_AUTO)) || !(c->aux[n - 1] & TT_AUX_BUSY)) break;
             if (++calls > 40) return HASH_ERR_NTT;
             n = put_idle(c, begin(c), 512);
             memset(c->due, 2, n);
+            if (n > c->due_hw) c->due_hw = n;
+            add_window(c, 0, n, 2);
             if ((err = play(c, n))) return err;
         }
         req += take;

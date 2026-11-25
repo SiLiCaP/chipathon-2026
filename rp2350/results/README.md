@@ -14,5 +14,7 @@ Summary and what the numbers mean: [docs/speed_results.md](../../docs/speed_resu
 | `20261125_194054` | gate netlist | same | 250 MHz | same | mode 1: 12.8 ms (1.87×); October way: 9.6 ms (2.51×) |
 | `20261125_194154` | gate netlist | + `bench mode0` | 150 MHz | sweep, all three ways | **mode 0: 39.9 → 12.6 ms (3.16×)**; mode 1 19.7; October 14.3 |
 | `20261125_194159` | gate netlist | same | 250 MHz | same | mode 0: 24.0 → 8.5 ms (2.82×); mode 1 12.8; October 9.5 |
+| `20261125_200715` | gate netlist | **final driver**: windows, quiet check 16 clocks at a time, checked while the chip runs; mode 0 the default | 150 MHz | sweep, all three ways | **mode 0: 39.9 → 6.36 ms (6.27×)**; October 7.79 (5.12×); mode 1 15.3 (2.61×) |
+| `20261125_200720` | gate netlist | final driver | 250 MHz | same | mode 0: 23.9 → 4.71 ms (5.08×); October 5.59; mode 1 10.2 |
 
 Add your own: run the script on any board with the firmware, and commit the two files it writes here.
