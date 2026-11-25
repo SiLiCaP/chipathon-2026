@@ -20,5 +20,7 @@ Summary and what the numbers mean: [docs/speed_results.md](../../docs/speed_resu
 | `20261125_203334` | gate netlist | same | 250 MHz | same | compute only 28×; whole 4.97 ms (4.86×) |
 | `20261125_203446` | gate netlist | **final: running from SRAM** | 150 MHz | sweep, compute only, all three ways | **compute only: one exchange 39.76 ms in C, 43,736 chip clocks (2.33 ms here, 0.87 ms at 50 MHz, 46×); whole: 5.97 ms (6.67×)** |
 | `20261125_203452` | gate netlist | final | 250 MHz | same | compute only 27×; whole 23.9 → 4.50 ms (5.30×) |
+| `20261125_213448` | gate netlist | **software baseline now XKCP assembly + Kyber-reference CBD** (all rows above: portable C) | 150 MHz | sweep, compute only, all three ways | **compute only: one exchange 8.17 ms in software, 43,736 chip clocks (2.33 ms here, 3.5×; 0.87 ms at 50 MHz, 9.3×); whole: 5.95 ms (1.37×)** |
+| `20261125_213454` | gate netlist | same | 250 MHz | same | compute only at 50 MHz 5.6×; whole 4.90 → 4.50 ms (1.09×) |
 
 Add your own: run the script on any board with the firmware, and commit the two files it writes here.

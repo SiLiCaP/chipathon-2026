@@ -28,7 +28,8 @@ rp2350/
     hash_app.c     selftest, fuzz, calibrate
     hash_bench.c   bench and speedtest (wire speed, ML-KEM-512 hash throughput: chip vs software)
     ci_app.c       app_ci: the compiled-in ML-KEM hash jobs of ci/ci_vectors.h
-    sha3_sw.c      FIPS 202 + SamplePolyCBD + SampleNTT in software: the reference every chip result is checked against
+    sha3_sw.c      FIPS 202 + SamplePolyCBD + SampleNTT in software: the reference every chip result is checked against;
+                   on the RP2350 its Keccak is XKCP's ARMv7-M assembly (rp/keccak_armv7m.s, SHA3_XKCP), on a PC portable C
   ci/            ci_vectors.h = the stub (CI_NJOB 0); golden/ = committed fixed-seed vectors; check_contract.py
   rp/            RP2350 only
     tt_lockstep.pio  one loop = one chip clock: input word out, uo_out sampled (in mode 1 with uio[1:0]), clk via side-set
@@ -163,4 +164,4 @@ typed commands. The PC tools written for the FPGA in
 | C driver's pin stream through the RTL (`make -C test rp2350`, iverilog + cocotb) | uo_out and the chip's uio[1:0] identical to the software chip on every clock |
 | Firmware build (pico-sdk 2.1.1, Arm GCC) for `pico2w_tang` with the golden vectors | builds without warnings |
 | **On the Pico 2 W + Tang Nano rig** | by the host CI (`host-ci/rig`) |
-| The gate netlist of `main` on the rig (Nov 25, 2026): `selftest`, `fuzz 200`, `ci` (golden vectors), `speedtest` | PASS, 0 errors; wire speed 18.75-19.23 MHz (jumper wires); ML-KEM-512 hashing: compute only 46× faster than the same C code, whole system 6.67× ([docs/speed_results.md](../docs/speed_results.md)) |
+| The gate netlist of `main` on the rig (Nov 25, 2026): `selftest`, `fuzz 200`, `ci` (golden vectors), `speedtest` | PASS, 0 errors; wire speed 18.75-19.23 MHz (jumper wires); ML-KEM-512 hashing against XKCP's assembly Keccak: compute only 9.3× at 50 MHz, whole system 1.37× on the rig, ≈ 2.9× expected on the real chip ([docs/speed_results.md](../docs/speed_results.md)) |

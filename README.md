@@ -19,40 +19,47 @@ the bottom right corner). [Close-up of the chip art](docs/img/chip_art.png), 28 
 ## Why hashing, and how fast
 
 Hashing is 57–76 % of ML-KEM-512's work on a microcontroller. The polynomial arithmetic (NTT) is fast in software and
-slow through 8 output pins, so the team put the hashing on the chip. Measured on the chip's hardened gate netlist
-(in an FPGA, driven by the same RP2350 firmware as the demo board), RP2350 at 150 MHz, every result checked.
+slow through 8 output pins, so the team put the hashing on the chip.
 
-### Compute only: the chip against the code that does the same work
+**The comparison is against the fastest software for this CPU.** The software side runs on the RP2350 (150 MHz):
+- Keccak in XKCP's ARMv7-M assembly, the implementation pqm4 uses on Cortex-M;
+- CBD the way the Kyber reference code does it.
 
-The C code alone on the RP2350, against the chip's clocks for the same work. CBD and SampleNTT run on the chip too.
+The chip side is its hardened gate netlist, measured on an FPGA and driven by the same RP2350 firmware as the demo
+board. Every result is checked against the software one. Speed-ups against the software are in brackets.
+
+### Compute only: the chip against the software that does the same work
+
+Each piece of software alone, against the chip's clocks for the same work (CBD and SampleNTT on the chip too).
 No transfers on either side.
 
-| Work | C on the RP2350 | Chip, measured on the FPGA (18.75 MHz) | Chip at 50 MHz | Speed-up |
-|---|---|---|---|---|
-| One Keccak-f[1600] permutation | 411 µs | 19.6 µs (368 clocks) | 7.4 µs | **56×** |
-| H = SHA3-256 of 800 B | 2,614 µs | 165 µs (3,091 clocks) | 61.8 µs | **42×** |
-| PRF + SamplePolyCBD, one polynomial (η = 3) | 972 µs | 53.5 µs (1,004 clocks) | 20.1 µs | **48×** |
-| XOF + SampleNTT, one polynomial | 1,346 µs | 90.7 µs (1,700 clocks) | 34.0 µs | **40×** |
-| SamplePolyCBD alone / SampleNTT alone | 119 µs / 43 µs | no clocks of its own: it runs on the output stream | | |
-| **One ML-KEM-512 exchange (32 hash calls)** | **39.8 ms** | **2.33 ms** (43,736 clocks) | **0.87 ms** | **46×** |
+| Work | RP2350 software | Chip on the FPGA, measured (18.75 MHz) | Real chip (50 MHz) |
+|---|---|---|---|
+| One Keccak-f[1600] permutation | 73.0 µs | 19.6 µs (3.7×) | 7.4 µs (9.9×) |
+| G = SHA3-512 of 64 B | 81.8 µs | 27.6 µs (3.0×) | 10.4 µs (7.9×) |
+| H = SHA3-256 of 800 B | 480 µs | 165 µs (2.9×) | 61.8 µs (7.8×) |
+| PRF + SamplePolyCBD, one polynomial (η = 3) | 196 µs | 53.5 µs (3.7×) | 20.1 µs (9.7×) |
+| XOF + SampleNTT, one polynomial | 290 µs | 90.7 µs (3.2×) | 34.0 µs (8.5×) |
+| SamplePolyCBD alone / SampleNTT alone | 36 µs / 43 µs | no clocks of its own: it runs on the output stream | |
+| **One ML-KEM-512 exchange (32 hash calls)** | **8.17 ms** | **2.33 ms (3.5×)** | **0.87 ms (9.3×)** |
 
-The C code is portable FIPS 202 / 203 code. Hand-optimized assembly does the exchange's hashing in about 5.8 ms
-(cited); the chip's 0.87 ms is still **6.6× faster** than that.
+The chip's figures are its exact clock counts (43,736 for the exchange), taken from the gate netlist. At 50 MHz they
+are just divided by 50 MHz.
 
 ### The whole system: everything the RP2350 waits for
 
 Building the pin words, the transfers, the chip, unpacking: the hashing of one ML-KEM-512 exchange.
 
-| | Time | vs C |
-|---|---|---|
-| RP2350 alone, C (measured) | 39.8 ms | |
-| **FPGA, measured:** RP2350 + the chip's gate netlist over 26 wires (18.75 MHz) | **5.97 ms** | **6.7×** |
-| **Real chip, guesstimate:** demo board, chip at 50 MHz | **≈ 2.8 ms** | **≈ 14×** |
-| Real chip, guesstimate: chip at 66 MHz | ≈ 2.6 ms | ≈ 15× |
+| | Time |
+|---|---|
+| RP2350 software alone | 8.17 ms |
+| **FPGA, measured:** RP2350 + the chip's gate netlist over 26 wires (18.75 MHz) | **5.95 ms (1.37×)** |
+| **Real chip, guesstimate:** demo board, chip at 50 MHz | **≈ 2.8 ms (≈ 2.9×)** |
+| Real chip, guesstimate: chip at 66 MHz | ≈ 2.6 ms (≈ 3.1×) |
 
-- **The guesstimate** keeps the RP2350's measured work. It drops the word reshuffling that only the FPGA rig needs
-  (its pins aren't consecutive) and runs the chip's clocks at its own speed.
-- **Against hand-optimized assembly** (about 5.8 ms), that's still about 2× faster for the whole system.
+- **The guesstimate** keeps the RP2350's measured work (1.9 ms). It drops the word reshuffling that only the FPGA
+  rig needs (its pins aren't consecutive), and runs the chip's clocks at its own speed.
+- **Most of the whole time is the RP2350 feeding the chip,** not the chip. The chip's own share at 50 MHz is 0.94 ms.
 
 Details, the firmware work that got here, and the wire speed: [docs/speed_results.md](docs/speed_results.md).
 Measure it on any board: `python3 rp2350/speedtest.py` ([getting started](docs/getting_started.md#the-speed-test)).

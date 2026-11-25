@@ -34,6 +34,7 @@ add_executable(${APP}
     core/ci_app.c
     core/hash_bench.c
     core/sha3_sw.c
+    rp/keccak_armv7m.s
 )
 pico_generate_pio_header(${APP} ${CMAKE_CURRENT_LIST_DIR}/rp/tt_lockstep.pio)
 # CI emulator check: -DCI_VECTORS_DIR=<dir with a generated ci_vectors.h> wins over the committed stub in ci/
@@ -45,6 +46,7 @@ endif ()
 target_compile_options(${APP} PRIVATE -O2 -Wall -Wextra)
 target_compile_definitions(${APP} PRIVATE
     ${TT_TARGET_DEFINE}
+    SHA3_XKCP=1
     TT_PROJECT_ADDR=${TT_PROJECT_ADDR}
     PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=0
 )

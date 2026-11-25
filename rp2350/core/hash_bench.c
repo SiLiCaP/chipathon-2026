@@ -250,9 +250,10 @@ int app_bench_compute(hash_chip_t *c, const bench_plat_t *p) {
     int errors = 0;
     const int mode1 = hash_chip_has_mode1(c) && !hash_chip_set_mode(c, 1);
     if (!mode1) printf("bench compute: no framing mode 1 on this transport: SampleNTT rows skipped\n");
-    printf("bench compute: the chip's computation against the C code that does the same work, on the %s\n"
-           "  software: the code alone, averaged; chip: its clocks for the same work (no transfers on either side)\n"
-           "  %-40s %12s %10s %12s %12s %9s\n", p->host, "work", "software", "clocks", "chip now", "chip 50 MHz",
+    printf("bench compute: the chip's computation against the software that does the same work, on the %s\n"
+           "  software: %s Keccak, Kyber-reference CBD, alone and averaged; chip: its clocks for the same work\n"
+           "  (no transfers on either side)\n"
+           "  %-40s %12s %10s %12s %12s %9s\n", p->host, sha3_sw_impl(), "work", "software", "clocks", "chip now", "chip 50 MHz",
            "speed-up*");
     const double f50 = 50e6;
 #define ROW(name, sw_cyc, clocks)                                                                                      \
@@ -273,7 +274,7 @@ int app_bench_compute(hash_chip_t *c, const bench_plat_t *p) {
     memcpy(st, msg, sizeof st);
     enum { R = 200 };
     uint32_t t0 = p->cycles();
-    for (int r = 0; r < R; r++) keccak_f1600(st);
+    for (int r = 0; r < R; r++) sha3_sw_permute(st);
     const uint64_t perm = (uint64_t)(p->cycles() - t0) / R;
     ROW("Keccak-f[1600], one permutation", perm, (uint32_t)HC_PERM_BUSY);   // COMPUTE work=perm
     // SamplePolyCBD eta = 3 on 192 bytes: cbd_pack() against the chip (on the squeeze stream: no extra clocks)
