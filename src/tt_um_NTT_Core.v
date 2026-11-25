@@ -86,9 +86,21 @@ module tt_um_NTT_Core #(
       .busy     (c_busy)
   );
 
+  // The logo: a block of metal 4 art with no pins (scripts/gen_logo.py, placed by src/config.json). Only the
+  // ASIC flow defines TT_LOGO_MACRO; simulation and the FPGA builds of the RTL never see it.
+`ifdef TT_LOGO_MACRO
+  (* keep *) tt_um_NTT_Core_logo u_logo ();
+`endif
+
   assign uio_out = {6'h00, io_busy, dvalid};
   assign uio_oe  = {6'h00, mode, mode};
 
   wire _unused = &{ena, valid_q, coeff_q[11:8], 1'b0};
 
 endmodule
+
+`ifdef TT_LOGO_MACRO
+(* blackbox *)
+module tt_um_NTT_Core_logo ();
+endmodule
+`endif

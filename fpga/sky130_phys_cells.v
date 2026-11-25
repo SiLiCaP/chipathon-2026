@@ -5,6 +5,7 @@ module sky130_fd_sc_hd__fill_2 (); endmodule
 module sky130_fd_sc_hd__fill_4 (); endmodule
 module sky130_fd_sc_hd__fill_8 (); endmodule
 module sky130_fd_sc_hd__tapvpwrvgnd_1 (); endmodule
+module tt_um_NTT_Core_logo (); endmodule          // the logo block (scripts/gen_logo.py): metal art, no pins
 
 // Integrated clock gate (the hash chip's ring Keccak gates its clocks with it). The liberty file models it
 // as a statetable, which yosys's read_liberty skips, so it is spelled out here: a latch that is transparent

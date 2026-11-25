@@ -53,3 +53,9 @@ module tb ();
 `endif
 
 endmodule
+
+`ifdef GL_TEST
+// the logo block in the gate-level netlist: metal art, no pins, no logic
+module tt_um_NTT_Core_logo ();
+endmodule
+`endif
