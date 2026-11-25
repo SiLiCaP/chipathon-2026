@@ -22,7 +22,15 @@ typedef struct {
     const char *host;                   // "RP2350 150 MHz", "PC"
 } bench_plat_t;
 
-int app_bench(hash_chip_t *c, const bench_plat_t *p);
+// How the bench drives the chip (same workload, same checks):
+//   BENCH_NEW     every newer command: packets + on-chip padding + one burst word, CBD and SampleNTT on chip
+//                 (framing mode 1, which samples 16 bits per clock for the valid / busy pins)
+//   BENCH_MODE0   the same commands in framing mode 0 (8-bit samples), SampleNTT on the RP2350
+//   BENCH_LEGACY  the October 2026 way: host padding, a word per byte (+ SKIP), a burst word per block, CBD on chip,
+//                 SampleNTT on the RP2350
+enum { BENCH_NEW = 0, BENCH_LEGACY = 1, BENCH_MODE0 = 2 };
+int app_bench(hash_chip_t *c, const bench_plat_t *p);       // BENCH_NEW
+int app_bench_style(hash_chip_t *c, const bench_plat_t *p, int style);
 // max_hz: the fastest clock to try (0: up to what the host can make, 75 MHz at a 150 MHz RP2350)
 int app_speedtest(hash_chip_t *c, const bench_plat_t *p, uint32_t max_hz);
 

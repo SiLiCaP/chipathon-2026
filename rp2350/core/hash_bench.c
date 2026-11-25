@@ -84,33 +84,44 @@ typedef struct { uint64_t chip, sw, clocks; uint32_t calls; } tally_t;
 // picking the bytes out, checking the quiet clocks).
 static tt_io_t *real_io;
 static const bench_plat_t *cur_plat;
-static uint64_t run_cyc;
+static uint64_t run_cyc, conv_cyc;
 static int timed_run(tt_io_t *io, const uint16_t *words, uint32_t n, uint8_t *uo, uint8_t *aux) {
     (void)io;
     const uint32_t t0 = cur_plat->cycles();
     const int r = real_io->run(real_io, words, n, uo, aux);
     run_cyc += cur_plat->cycles() - t0;
+    conv_cyc += real_io->conv_cyc;          // reshuffling words for pins that aren't one window (the Pico rig only)
     return r;
 }
 
-int app_bench(hash_chip_t *c, const bench_plat_t *p) {
-    static uint8_t msg[4096], got[1344], want[1344];
+int app_bench(hash_chip_t *c, const bench_plat_t *p) { return app_bench_style(c, p, BENCH_NEW); }
+
+int app_bench_style(hash_chip_t *c, const bench_plat_t *p, int style) {
+    static uint8_t msg[4096], got[1344], want[1344], fin[384];
     const uint32_t hz = p->clock_hz ? p->clock_hz() : 0;
+    const int legacy = style == BENCH_LEGACY;
+    const char *sfx = style == BENCH_LEGACY ? "_legacy" : style == BENCH_MODE0 ? "_mode0" : "";
+    const char *name = style == BENCH_LEGACY ? " legacy" : style == BENCH_MODE0 ? " mode0" : "";
+    const unsigned opts = legacy ? HASH_SKIP : FAST;
     int errors = 0;
-    const int mode1 = hash_chip_has_mode1(c);
+    const int mode1 = style == BENCH_NEW && hash_chip_has_mode1(c);
     if (mode1 && hash_chip_set_mode(c, 1)) {
         printf("bench: the chip did not switch to framing mode 1\n");
         return 1;
     }
-    printf("bench: ML-KEM-512, the 32 hash calls of one key exchange, on the chip and in software on the %s\n"
-           "  chip clock %.2f MHz, sample skew %d, framing mode %d, chip path: packets + on-chip padding + one burst word\n",
-           p->host, hz / 1e6, c->skew, c->mode);
+    printf("bench%s: ML-KEM-512, the 32 hash calls of one key exchange, on the chip and in software on the %s\n"
+           "  chip clock %.2f MHz, sample skew %d, framing mode %d, chip path: %s\n",
+           name, p->host, hz / 1e6, c->skew, c->mode,
+           legacy ? "the October 2026 way: host padding, a word per byte (+ SKIP), a burst word per block, CBD on chip, "
+                    "SampleNTT in software"
+           : mode1 ? "packets + on-chip padding + one burst word, CBD and SampleNTT on chip (framing mode 1)"
+                   : "packets + on-chip padding + one burst word, CBD on chip, SampleNTT in software (framing mode 0)");
     tally_t op[3] = {{0}}, all = {0};
     rnd_state = 0x2545F491u;
     tt_io_t proxy = *c->io;
     real_io = c->io;
     cur_plat = p;
-    run_cyc = 0;
+    run_cyc = conv_cyc = 0;
     proxy.run = timed_run;
     c->io = &proxy;
     const uint32_t calls0 = c->calls;
@@ -119,13 +130,17 @@ int app_bench(hash_chip_t *c, const bench_plat_t *p) {
     for (unsigned i = 0; i < NCALL; i++) {
         const call_t *k = &MLKEM512[i];
         hash_kind_t kind = k->kind;
-        if (kind == HASH_XOF_NTT && !mode1) kind = HASH_SHAKE128;   // no valid pin on this transport: raw XOF bytes
-        const uint32_t outlen = kind == HASH_SHAKE128 && k->kind == HASH_XOF_NTT ? 504 : k->outlen;
+        // legacy, or no valid pin on this transport: raw XOF bytes, SampleNTT by the RP2350 (part of the chip path)
+        const int raw_xof = kind == HASH_XOF_NTT && !mode1;
+        if (raw_xof) kind = HASH_SHAKE128;
+        uint32_t outlen = raw_xof ? 504 : k->outlen;
         for (unsigned j = 0; j < k->inlen; j++) msg[j] = (uint8_t)rnd();
         const uint64_t clk0 = c->clocks_total, run0 = run_cyc;
         const uint32_t ncall0 = c->calls;
         uint32_t t0 = p->cycles();
-        int err = hash_chip_job(c, kind, msg, k->inlen, got, outlen, FAST);
+        int err = hash_chip_job(c, kind, msg, k->inlen, got, outlen, opts);
+        while (raw_xof && !err && !sample_ntt_pack(got, outlen, fin) && outlen + 168 <= sizeof got)
+            err = hash_chip_job(c, kind, msg, k->inlen, got, outlen += 168, opts);   // rare: one more block
         const uint32_t tc = p->cycles() - t0;
         unsigned w = 0;
         while (w < nk && strcmp(kinds[w].what, k->what)) w++;
@@ -139,7 +154,7 @@ int app_bench(hash_chip_t *c, const bench_plat_t *p) {
         const uint32_t ts = p->cycles() - t0;
         uint8_t ref[1344];
         hash_ref(kind, msg, k->inlen, ref, outlen);
-        if (err || memcmp(got, ref, outlen)) {
+        if (err || (raw_xof ? memcmp(fin, want, 384) : memcmp(got, ref, outlen))) {
             printf("  FAIL %s %s: %s\n", k->op, k->what, err ? hash_err_str(err) : "result differs from the reference");
             errors++;
         }
@@ -159,9 +174,9 @@ int app_bench(hash_chip_t *c, const bench_plat_t *p) {
     printf("  %-7s %5lu %11.1f us %11.1f us %8.2fx %12llu %13.1f us\n", "total", (unsigned long)all.calls, us(p, all.sw),
            us(p, all.chip), (double)all.sw / (double)all.chip, (unsigned long long)all.clocks,
            hz ? all.clocks * 1e6 / hz : 0.0);
-    printf("BENCH workload=mlkem512_exchange clock_hz=%lu skew=%d mode=%d calls=%lu sw_us=%.1f chip_us=%.1f "
+    printf("BENCH workload=mlkem512_exchange%s clock_hz=%lu skew=%d mode=%d calls=%lu sw_us=%.1f chip_us=%.1f "
            "speedup=%.3f chip_clocks=%llu chip_only_us=%.1f errors=%d\n",
-           (unsigned long)hz, c->skew, c->mode, (unsigned long)all.calls, us(p, all.sw), us(p, all.chip),
+           sfx, (unsigned long)hz, c->skew, c->mode, (unsigned long)all.calls, us(p, all.sw), us(p, all.chip),
            (double)all.sw / (double)all.chip, (unsigned long long)all.clocks, hz ? all.clocks * 1e6 / hz : 0.0,
            errors);
     printf("  where the chip path's %.1f us go: %.1f us in %lu transport runs (PIO + DMA at the chip clock, incl. word\n"
@@ -173,10 +188,12 @@ int app_bench(hash_chip_t *c, const bench_plat_t *p) {
                (unsigned long long)(kinds[w].clocks / kinds[w].n), (unsigned long)(kinds[w].runs / kinds[w].n),
                us(p, kinds[w].chip) / kinds[w].n, us(p, kinds[w].run) / kinds[w].n,
                us(p, kinds[w].chip - kinds[w].run) / kinds[w].n);
-    printf("BENCH workload=breakdown clock_hz=%lu run_us=%.1f driver_us=%.1f transport_calls=%lu\n", (unsigned long)hz,
-           us(p, run_cyc), us(p, all.chip - run_cyc), (unsigned long)tcalls);
+    printf("  of the runs, %.1f us reshuffle words onto pins that are not one GPIO window (the Pico rig only; the demo\n"
+           "  board's 16 input pins are consecutive)\n", us(p, conv_cyc));
+    printf("BENCH workload=breakdown%s clock_hz=%lu run_us=%.1f driver_us=%.1f conv_us=%.1f transport_calls=%lu\n", sfx,
+           (unsigned long)hz, us(p, run_cyc), us(p, all.chip - run_cyc), us(p, conv_cyc), (unsigned long)tcalls);
     for (int o = 0; o < 3; o++)
-        printf("BENCH workload=%s clock_hz=%lu sw_us=%.1f chip_us=%.1f chip_clocks=%llu\n", OPS[o], (unsigned long)hz,
+        printf("BENCH workload=%s%s clock_hz=%lu sw_us=%.1f chip_us=%.1f chip_clocks=%llu\n", OPS[o], sfx, (unsigned long)hz,
                us(p, op[o].sw), us(p, op[o].chip), (unsigned long long)op[o].clocks);
 
     // raw rates: absorb (SHA3-256 of 4 KiB) and squeeze (SHAKE128, 8 blocks = 1344 bytes)
@@ -186,7 +203,7 @@ int app_bench(hash_chip_t *c, const bench_plat_t *p) {
     for (unsigned r = 0; r < 2; r++) {
         const uint64_t clk0 = c->clocks_total;
         uint32_t t0 = p->cycles();
-        int err = hash_chip_job(c, RAW[r].kind, msg, RAW[r].inlen, got, RAW[r].outlen, FAST);
+        int err = hash_chip_job(c, RAW[r].kind, msg, RAW[r].inlen, got, RAW[r].outlen, opts);
         const uint32_t tc = p->cycles() - t0;
         t0 = p->cycles();
         sha3_sponge(SW[RAW[r].kind].rate, SW[RAW[r].kind].dom, msg, RAW[r].inlen, want, RAW[r].outlen);
@@ -200,11 +217,11 @@ int app_bench(hash_chip_t *c, const bench_plat_t *p) {
         printf("  %-7s %5lu B   software %7.3f MB/s   with the chip %7.3f MB/s   chip alone %7.3f MB/s (%llu clocks)\n",
                RAW[r].name, (unsigned long)bytes, bytes / us(p, ts), bytes / us(p, tc),
                hz ? bytes * (hz / 1e6) / (double)clocks : 0.0, (unsigned long long)clocks);
-        printf("BENCH workload=%s clock_hz=%lu bytes=%lu sw_us=%.1f chip_us=%.1f chip_clocks=%llu\n", RAW[r].name,
+        printf("BENCH workload=%s%s clock_hz=%lu bytes=%lu sw_us=%.1f chip_us=%.1f chip_clocks=%llu\n", RAW[r].name, sfx,
                (unsigned long)hz, (unsigned long)bytes, us(p, ts), us(p, tc), (unsigned long long)clocks);
     }
     if (mode1) hash_chip_set_mode(c, 0);
-    printf("bench: %s\n", errors ? "FAIL" : "PASS (every chip result equals the software one)");
+    printf("bench%s: %s\n", name, errors ? "FAIL" : "PASS (every chip result equals the software one)");
     return errors != 0;
 }
 

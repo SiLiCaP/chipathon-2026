@@ -84,7 +84,7 @@ Open the USB serial port, for example `python3 -m serial.tools.miniterm /dev/tty
 | `ci` | the CI emulator check: the compiled-in per-commit ML-KEM hash jobs (docs/ci-emulator.md); `ci: NOVECTORS` on the stub |
 | `cal` | find the sample skew (see bring-up) |
 | `sweep` | SHA3-256(abc) from 1 MHz up to half the system clock (75 MHz at 150, 125 MHz at `sys 250`), sample skews 0-3 |
-| `bench` | ML-KEM-512's hash work (the 32 calls of one exchange) plus absorb / squeeze rates, timed by the cycle counter: on the chip and in software on this RP2350; every chip result checked |
+| `bench [mode0\|legacy]` | ML-KEM-512's hash work (the 32 calls of one exchange) plus absorb / squeeze rates, timed by the cycle counter: on the chip and in software on this RP2350; every chip result checked. Default: every newer command in framing mode 1; `mode0`: the same commands in mode 0 with SampleNTT on the RP2350 (fastest with today's firmware); `legacy`: the October 2026 commands |
 | `speedtest [mhz]` | wire speed: six known-answer jobs (every pin and output path) at every clock up to `mhz` (default: half the system clock) and skews 0-3; then `bench` at the fastest clock that passes with margin. `rp2350/speedtest.py` runs it from a PC and saves JSON + Markdown |
 | `sw` / `hw` | software chip / real chip. With `sw`, any RP2350 board runs everything without a TT chip |
 | `all` | selftest, fuzz |
@@ -161,4 +161,4 @@ typed commands. The PC tools written for the FPGA in
 | C driver's pin stream through the RTL (`make -C test rp2350`, iverilog + cocotb) | uo_out and the chip's uio[1:0] identical to the software chip on every clock |
 | Firmware build (pico-sdk 2.1.1, Arm GCC) for `pico2w_tang` with the golden vectors | builds without warnings |
 | **On the Pico 2 W + Tang Nano rig** | by the host CI (`host-ci/rig`) |
-| `selftest`, `speedtest` on the rig (Nov 25, 2026) | PASS; wire speed 18.75-19.23 MHz (jumper wires); ML-KEM-512 hashing 2.02× faster than C on the RP2350, 0 errors ([docs/speed_results.md](../docs/speed_results.md)) |
+| The gate netlist of `main` on the rig (Nov 25, 2026): `selftest`, `fuzz 200`, `ci` (golden vectors), `speedtest` | PASS, 0 errors; wire speed 18.75-19.23 MHz (jumper wires); ML-KEM-512 hashing 3.16× faster than C on the RP2350 ([docs/speed_results.md](../docs/speed_results.md)) |

@@ -16,22 +16,32 @@ SHA3-512, SHAKE128 and SHAKE256 call to the chip. On the way out the chip can al
 logo is a 28 × 56 µm metal-4 block in the bottom right corner, too small to see here:
 [close-up](docs/img/logo_chip_met4.png). The 3D button opens whatever the last GitHub `gds` run published.*
 
-## Why hashing
+## Why hashing, and how fast
 
-Hashing is 57–76 % of ML-KEM-512's work on a microcontroller. The polynomial arithmetic (NTT) is fast in software
-and slow through 8 output pins, so the team moved the hashing on-chip instead:
+Hashing is 57–76 % of ML-KEM-512's work on a microcontroller. The polynomial arithmetic (NTT) is fast in software and
+slow through 8 output pins, so the team put the hashing on the chip.
 
-| One ML-KEM-512 key exchange | Time | |
+The hashing of one ML-KEM-512 key exchange (32 calls), every result checked against the software one:
+
+| | Time | vs C on the RP2350 |
 |---|---|---|
-| RP2350 alone (pqm4's optimized code, cited) | 8.08 ms | |
-| RP2350 + this chip at 50 MHz | **3.18 ms** | **2.54× faster** (model: the chip's exact clock counts + the RP2350's feed) |
-| of which hashing | 5.81 ms → 1.09 ms | 5.3× |
+| RP2350 alone, C (measured) | 39.9 ms | |
+| **FPGA, measured:** the chip's calculation time, gate netlist at 18.75 MHz | **2.51 ms** | 16× |
+| **FPGA, measured:** RP2350 + chip end to end (the real firmware over 26 wires) | **12.6 ms** | **3.16×** |
+| **Guesstimate for the real chip:** demo board, chip at 50 MHz, same firmware | **≈ 8.2 ms** | **≈ 4.9×** |
+| Guesstimate: the chip's calculation alone at 50 MHz | ≈ 0.94 ms | 42× |
 
-Measured so far, before silicon (the chip's RTL in an FPGA, the real RP2350 firmware, [speed_results.md](docs/speed_results.md)):
-the hashing of one exchange takes **19.7 ms through the chip against 39.9 ms in C on the RP2350 (2.02×)**, every
-result checked. The chip's own share is 2.6 ms at 18.75 MHz and 0.96 ms at 50 MHz; the rest is the RP2350 firmware
-feeding it, which is where the next speed-up is. `rp2350/speedtest.py` measures it on any board
-([getting started](docs/getting_started.md#the-speed-test)).
+- **The measurements** come from the chip's hardened gate netlist on an FPGA, driven by the same RP2350 firmware as
+  the demo board.
+- **The guesstimate** keeps the RP2350's measured work. It drops the part that exists only on the FPGA rig and
+  runs the chip at its 50 MHz target.
+- **The RP2350's own work** (building and checking a pin word per clock) is most of the time, so the next speed-up
+  is in the firmware, not the silicon.
+- **Against hand-optimized assembly SHA-3** (about 5.8 ms, cited), the firmware as written doesn't win yet; the
+  chip's own 0.94 ms does, by 6×.
+
+Details, the three ways to drive the chip, and the wire speed: [docs/speed_results.md](docs/speed_results.md).
+Measure it yourself on any board: `python3 rp2350/speedtest.py` ([getting started](docs/getting_started.md#the-speed-test)).
 
 ## The chip
 
@@ -51,7 +61,7 @@ feeding it, which is where the next speed-up is. `rp2350/speedtest.py` measures 
 | RTL tests (cocotb, `test/`) | pass |
 | GDS, Tiny Tapeout precheck, gate-level test | pass (on the owner's CI server, `host-ci/gds`; GitHub builds when it's down) |
 | RP2350 firmware builds, its PC harness | pass (GitHub `rp2350`) |
-| The firmware driving the chip's gate netlist, every push | pass (`host-ci/rig`) |
+| The firmware driving the chip's gate netlist on the FPGA rig | pass, Nov 25, 2026: `selftest`, `fuzz 200`, the `ci` ML-KEM-512 hash sequence, `speedtest` ([results](docs/speed_results.md)) |
 | Silicon | waiting for chips |
 
 Before silicon, the chip and the firmware were tested on an FPGA emulator (a Tang Nano 20K running the chip's gate
