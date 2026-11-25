@@ -8,6 +8,9 @@
 #     (pending, success, failure, error) of the context `host-ci/gds` appears, the host owns this commit and
 #     every job here is skipped. If nothing appears (host down or offline), the jobs build on GitHub as before.
 #   - on `workflow_dispatch` (a manual run) `wait-host` answers "no" at once: a manual run always builds on GitHub.
+#   - on `main`, `gds` and `viewer` always run on GitHub too, in parallel with the host: the viewer publishes the
+#     render and the 3D view (GitHub Pages, the README's "Open the chip in 3D" button) for the latest main.
+#     precheck and gl_test stay with the host.
 #
 # local-ci reads the `pdk:` line of the gds job below: keep it.
 name: gds
@@ -52,7 +55,7 @@ jobs:
 
   gds:
     needs: [wait-host]
-    if: needs.wait-host.outputs.host != 'yes'
+    if: needs.wait-host.outputs.host != 'yes' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     steps:
       - name: checkout repo
@@ -88,7 +91,7 @@ jobs:
 
   viewer:
     needs: [wait-host, gds]
-    if: needs.wait-host.outputs.host != 'yes'
+    if: needs.wait-host.outputs.host != 'yes' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:
       pages: write      # to deploy to Pages
