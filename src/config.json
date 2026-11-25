@@ -36,6 +36,31 @@
   "SYNTH_EXCLUDED_CELL_FILE": "dir::no_synth.cells",
   "EXTRA_EXCLUDED_CELLS": ["sky130_fd_sc_hd__clkdlybuf4s*"],
 
+  "//": "The logo (scripts/gen_logo.py): a pin-less met4 block, 28 x 56 um, in the bottom right corner between",
+  "//": "the met4 power strap pairs at x = 446.65 / 449.95 and 485.52 / 488.82 (1.6 um wide). The halos are",
+  "//": "small so that neither the PDN nor the placer keeps those straps or their cells away from it.",
+  "VERILOG_DEFINES": ["TT_LOGO_MACRO"],
+  "MACROS": {
+    "tt_um_NTT_Core_logo": {
+      "gds": ["dir::logo/tt_um_NTT_Core_logo.gds"],
+      "lef": ["dir::logo/tt_um_NTT_Core_logo.lef"],
+      "instances": {
+        "u_logo": {"location": [454.02, 10.88], "orientation": "N"}
+      }
+    }
+  },
+  "PDN_HORIZONTAL_HALO": 1,
+  "PDN_VERTICAL_HALO": 1,
+  "FP_MACRO_HORIZONTAL_HALO": 1,
+  "FP_MACRO_VERTICAL_HALO": 1,
+
+  "//": "Antenna repair with more margin (default 10 % and 3 iterations): with the logo one clock net ended",
+  "//": "1 % over the met1 side-area limit after detailed routing.",
+  "GRT_ANTENNA_REPAIR_MARGIN": 20,
+  "GRT_ANTENNA_REPAIR_ITERS": 10,
+  "DRT_ANTENNA_REPAIR_MARGIN": 20,
+  "DRT_ANTENNA_REPAIR_ITERS": 10,
+
   "//": "Configuration docs: https://librelane.readthedocs.io/en/latest/reference/configuration.html",
 
   "//": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",

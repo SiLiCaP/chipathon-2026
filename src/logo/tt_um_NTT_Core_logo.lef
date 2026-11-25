@@ -1,0 +1,15 @@
+VERSION 5.7 ;
+  NOWIREEXTENSIONATPIN ON ;
+  DIVIDERCHAR "/" ;
+  BUSBITCHARS "[]" ;
+MACRO tt_um_NTT_Core_logo
+  CLASS COVER ;
+  FOREIGN tt_um_NTT_Core_logo ;
+  ORIGIN 0.000 0.000 ;
+  SIZE 28.000 BY 56.000 ;
+  OBS
+      LAYER met4 ;
+        RECT 0.000 0.000 28.000 56.000 ;
+  END
+END tt_um_NTT_Core_logo
+END LIBRARY
