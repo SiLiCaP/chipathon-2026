@@ -5,6 +5,7 @@
 //                  in tt-viktor-chiptor), so the C harness is proven on real logic before silicon exists.
 //
 //   make -C rp2350/pc && rp2350/pc/hash_host [--sw | --port /dev/ttyUSB1] all | selftest | fuzz [n] | ci | cal
+//                  | misuse (the software chip flags each command rule of docs/info.md)
 //   --dump-words FILE   write every pin word played and every uo_out and uio[1:0] sampled (HWD2 file,
 //                       test/test_driver_stream.py replays it through the RTL and compares the samples clock for clock)
 #define _DEFAULT_SOURCE
@@ -164,6 +165,48 @@ static void dump_finish(void) {
     fclose(dump);
 }
 
+// ---------------- misuse: the software chip flags each command rule of docs/info.md ----------------
+// The chip does not guard against these (a word during Permute / Clear still moves the byte pointer and the
+// samplers, Burst n = 0 streams 256 bytes, the word after Mode is read in the old framing). The driver never sends
+// them; the software chip must flag them, or `make test` would not notice a driver that does.
+static uint16_t mw[600];
+static uint32_t mn;
+static void mput(uint16_t w) { mw[mn++] = w; }
+static void midle(uint32_t k) { while (k--) mput(0); }
+
+static int misuse_case(const char *what, int expect) {
+    static hash_swchip_t s;
+    static uint8_t uo[600];
+    hash_swchip_init(&s);
+    tt_io_t io = hash_swchip_io(&s);
+    io.run(&io, mw, mn, uo, NULL);
+    const int ok = expect ? s.violations != 0 : s.violations == 0;
+    printf("  %-44s %s%s%s\n", what, ok ? "ok" : "FAIL", s.violations ? ": " : "", s.violations ? s.last_violation : "");
+    mn = 0;
+    return !ok;
+}
+
+static int app_misuse(void) {
+    int fail = 0;
+    printf("misuse: the software chip flags every command rule\n");
+    mput(HC_WORD(HC_CLEAR, 0)); midle(HC_CLEAR_BUSY);                  // legal: no violation
+    mput(HC_WORD(HC_ABSORB, 0x41)); mput(HC_WORD(HC_PERMUTE, 0)); midle(HC_PERM_BUSY);
+    mput(HC_WORD(HC_BURST, 1)); midle(7 + HC_SQ_DELAY + 4);
+    fail |= misuse_case("legal: clear, absorb, permute, burst", 0);
+    mput(HC_WORD(HC_PERMUTE, 0)); midle(10); mput(HC_WORD(HC_ABSORB, 0x41)); midle(HC_PERM_BUSY);
+    fail |= misuse_case("absorb during permute", 1);
+    mput(HC_WORD(HC_PERMUTE, 0)); midle(10); mput(HC_WORD(HC_CLEAR, 0)); midle(HC_PERM_BUSY);
+    fail |= misuse_case("clear during permute", 1);
+    mput(HC_WORD(HC_BURST, 0)); midle(300);
+    fail |= misuse_case("burst n = 0", 1);
+    mput(HC_WORD(HC_BURST, 2)); midle(4); mput(HC_WORD(HC_SQUEEZE, 0)); midle(20);
+    fail |= misuse_case("squeeze during a burst", 1);
+    mput(HC_WORD(HC_EXT, HC_EXT_MODE | 1)); mput(HC_WORD1(HC_ABSORB, 0x41)); midle(4);
+    fail |= misuse_case("a word right after mode", 1);
+    printf("misuse: %s\n", fail ? "FAIL" : "PASS");
+    return fail;
+}
+
 // ---------------- main ----------------
 // the PC's clock for the benchmark: nanoseconds, low 32 bits (deltas only); the chip clock is the transport's
 static uint32_t pc_cycles(void) {
@@ -216,6 +259,7 @@ int main(int argc, char **argv) {
         fail = app_bench_style(&chip, &pc_plat, !strcmp(argv[argc - 1], "legacy") ? BENCH_LEGACY
                                                  : !strcmp(argv[argc - 1], "mode1") ? BENCH_MODE1 : BENCH_MODE0);
     else if (!strcmp(cmd, "speedtest")) fail = app_speedtest(&chip, &pc_plat, 0);
+    else if (!strcmp(cmd, "misuse")) fail = app_misuse();
     else if (!strcmp(cmd, "all")) {
         fail |= app_selftest(&chip);
         fail |= app_fuzz(&chip, 10, 1);

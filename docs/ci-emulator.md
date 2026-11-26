@@ -102,7 +102,7 @@ files, this file); a rig mismatch fails `host-ci/rig`.
 ## Run it locally
 
 ```
-make -C rp2350/pc test                 # selftest + fuzz against the software chip
+make -C rp2350/pc test                 # selftest + fuzz against the software chip; each command rule is flagged
 make -C rp2350/pc ci-golden            # committed golden vectors (rp2350/ci/golden) on the software chip
 python3 rp2350/ci/check_contract.py
 make -C test rp2350                    # the C driver's pin stream through the RTL (iverilog + cocotb), vs the software chip

@@ -45,7 +45,7 @@ rp2350/
 **PC harness**, any C compiler, no SDK:
 
 ```bash
-make -C rp2350/pc test                               # selftest + fuzz against the software chip
+make -C rp2350/pc test                               # selftest + fuzz against the software chip; each command rule is flagged
 make -C rp2350/pc ci-golden                          # the committed ML-KEM hash jobs on the software chip
 rp2350/pc/hash_host --sw bench                       # the speed test's logic (PC times mean nothing)
 rp2350/pc/hash_host --port /dev/ttyUSB1 all           # against a Tang Nano running the chip (see below)

@@ -25,7 +25,7 @@ Everything needs no root except the udev rule. Paths below are relative to the r
 
 ```bash
 cd test && make                       # the chip's RTL: every SHA-3 / SHAKE, bursts, CBD, SampleNTT, padding, busy pin
-cd .. && make -C rp2350/pc test       # the RP2350 driver (C) against its software chip: selftest + fuzz
+cd .. && make -C rp2350/pc test       # the RP2350 driver (C) against its software chip: selftest + fuzz + misuse flags
 make -C rp2350/pc ci-golden           # the committed ML-KEM-512 hash jobs through the same driver
 ./rp2350/pc/hash_host --sw bench      # the speed test's logic (times are meaningless on a PC)
 ```

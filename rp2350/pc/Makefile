@@ -1,6 +1,6 @@
 # PC build of the RP2350 harness core (any C compiler):
 #   make -C rp2350/pc            build hash_host
-#   make -C rp2350/pc test       self test + fuzz against the software chip
+#   make -C rp2350/pc test       self test + fuzz against the software chip; the command rules are flagged
 #   make -C rp2350/pc ci-golden  the committed golden ML-KEM hash jobs (docs/ci-emulator.md) on the software chip
 CC ?= cc
 CFLAGS ?= -O2 -std=c11 -Wall -Wextra -Werror
@@ -13,6 +13,7 @@ hash_host: $(SRCS) $(wildcard $(CORE)/*.h) $(wildcard ../ci/*.h)
 
 test: hash_host
 	./hash_host --sw all
+	./hash_host --sw misuse
 
 # the committed golden vectors through the software chip
 ci-golden: $(SRCS) $(wildcard $(CORE)/*.h) $(wildcard ../ci/golden/*.h)
