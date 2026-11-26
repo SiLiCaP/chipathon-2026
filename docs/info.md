@@ -59,9 +59,9 @@ a byte. `uio[1]` = `busy`: high while the chip takes no command (Permute, Clear,
 blocks that follow by themselves), from 2 clocks after the command word. Mode 1 itself is sent as a normal
 mode 0 word, with the 0xF marker. The chip drives `uio[1:0]` from 2 clocks after it, both low; the host drives
 them low on the idle words after Mode 1 and then stops driving them. Send at least one idle word after
-every Mode word: the word right after it is still read in the old framing. In mode 1 the eta = 3 CBD output is packed like eta = 2: of every three
-clocks the first has no byte (`valid` low), the next two carry `{f[4j+1], f[4j]}` and `{f[4j+3], f[4j+2]}`,
-128 bytes for PRF_3.
+every Mode word: the word right after it is still read in the old framing. In mode 1 the eta = 3 CBD
+output is packed like eta = 2: of every three clocks the first has no byte (`valid` low), the next two
+carry `{f[4j+1], f[4j]}` and `{f[4j+3], f[4j+2]}`, 128 bytes for PRF_3.
 
 Burst NTT output: every pair of accepted coefficients (x, y), each below 3329, leaves as the three bytes
 `x[7:0]`, `{y[3:0], x[11:8]}`, `y[11:4]`, on clocks marked by `valid`, the last ones up to 3 clocks after

@@ -83,7 +83,7 @@ Measure it on any board: `python3 rp2350/speedtest.py` ([getting started](docs/g
 | RTL tests (cocotb, `test/`) | pass |
 | GDS, Tiny Tapeout precheck, gate-level test | pass (on the owner's CI server, `host-ci/gds`; GitHub builds when it's down) |
 | RP2350 firmware builds (both boards), its PC harness | pass (GitHub `rp2350`) |
-| The firmware driving the chip's gate netlist on the FPGA rig | pass, Nov 25, 2026: `selftest`, `fuzz 200`, the `ci` ML-KEM-512 hash sequence, `speedtest`, 0 errors ([results](docs/speed_results.md)) |
+| The firmware driving the chip's gate netlist on the FPGA rig | pass, Nov 26, 2026: `selftest`, `fuzz 200`, the `ci` ML-KEM-512 hash sequence, `speedtest`, 0 errors ([results](docs/speed_results.md)) |
 | Silicon | waiting for chips |
 
 Before silicon, the chip and the firmware were tested on an FPGA emulator (a Tang Nano 20K running the chip's gate

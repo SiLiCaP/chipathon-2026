@@ -80,13 +80,13 @@ skew also passes one step lower (margin), and measures throughput there.
 **2. Throughput at that clock.** The 32 hash calls of one ML-KEM-512 key exchange (3 × G, 2 × H, J, 12 × XOF through
 SampleNTT, 14 × PRF through CBD), timed with the RP2350's cycle counter:
 - **with the chip:** the firmware as written, from building the pin words through PIO + DMA to unpacking;
-- **software:** the same work in portable C on the same RP2350 (SHA-3, SamplePolyCBD, SampleNTT);
+- **software:** the same work on the same RP2350 (SHA-3 with XKCP's assembly Keccak, SamplePolyCBD, SampleNTT);
 - **chip alone:** the chip's clocks at that clock, so the result can be projected to other clocks;
 - plus absorb and squeeze rates in MB/s.
 
 Every chip result is compared with the software one, so a "fast" result is always a correct one.
 
-`bench compute` compares the computation only: each piece of C code against the chip's clocks for the same work.
+`bench compute` compares the computation only: each piece of software against the chip's clocks for the same work.
 `bench` alone drives the chip the fastest way known (framing mode 0, packets, on-chip padding, one burst word per
 squeeze) and times the whole system. `bench mode1` and `bench legacy` drive the same workload two other ways for
 comparison. `speedtest.py` runs all of them. Results so far: [speed_results.md](speed_results.md).

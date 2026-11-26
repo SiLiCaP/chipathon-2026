@@ -16,7 +16,7 @@ the **measured** RP2350 costs behind the real-chip estimates in [speed_results.m
 USB setup in [FPGA_DEMO.md](https://github.com/SiLiCaP/tt-viktor-chiptor/blob/main/docs/FPGA_DEMO.md) in tt-viktor-chiptor) checks every result byte, but its timing is USB. The Pico alone
 (`sw` mode) has no chip.
 
-> Status (Nov 25, 2026): the rig is built and in use. The gate netlist of `main` passes `selftest`, `fuzz 200`,
+> Status (Nov 26, 2026): the rig is built and in use. The gate netlist of `main` passes `selftest`, `fuzz 200`,
 > `ci` and `speedtest` on it at up to 18.75 MHz (19.23 MHz with the RP2350 at 250 MHz); the jumper wires set that
 > limit. Results: [speed_results.md](speed_results.md).
 

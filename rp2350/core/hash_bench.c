@@ -2,7 +2,8 @@
 // Speed tests for the hash chip (hash_bench.h). Timing is the host's: on the RP2350 the cycle counter at the
 // system clock, so "chip" times include everything the firmware does (building the pin words, the PIO + DMA run
 // at the chip clock, picking the bytes out and checking the quiet clocks), as the firmware is written today.
-// "software" is the same work in portable C on the same CPU (sha3_sw.c: FIPS 202, SamplePolyCBD, SampleNTT).
+// "software" is the same work on the same CPU (sha3_sw.c: FIPS 202, SamplePolyCBD, SampleNTT), with XKCP's
+// assembly Keccak on the RP2350 and portable C on a PC.
 #include "hash_bench.h"
 
 #include <stdio.h>

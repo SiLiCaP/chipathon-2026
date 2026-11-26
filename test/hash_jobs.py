@@ -1,16 +1,15 @@
-"""Hash jobs at the pins for the team's Keccak chips (chipathon-2026 branches sha3-4x2, sha3-latch, sha3-only),
-emitting raw 16-bit pin words, so the same jobs run in cocotb, on the Tang Nano (USB) and through the Pico 2 W
-rig. The K-general version of the team's test/test_hash.py HashJob, plus the hash-only chip's bursts and CBD.
+"""Hash jobs at the pins of the hash chip (src/, docs/info.md), emitting raw 16-bit pin words, so the same jobs
+run in cocotb, on the Tang Nano (USB) and through the Pico 2 W rig.
 
-Pin protocol: a hash word has valid = 1 and coeff[11:8] = 0xF; {sof, op} is the command, coeff[7:0] the data.
+Pin protocol: a hash word has uio[4] = 1 and uio[3:0] = 0xF; {uio[5], uio[7:6]} is the command, ui[7:0] the data.
 The host waits the fixed busy times; the byte asked for by word k appears on uo_out at sample k + 2.
   0 ABSORB, 1 SQUEEZE, 2 PERMUTE, 3 CLEAR, 4 SKIP (a lane)
-  5 BURST n       (sha3-only) 8n bytes on consecutive clocks from one word
-  6 BURST_CBD     (sha3-only) data {eta3, 2'b0, n}: the same bytes as SamplePolyCBD coefficients, 4-bit two's
+  5 BURST n       8n bytes on consecutive clocks from one word
+  6 BURST_CBD     data {eta3, 2'b0, n}: the same bytes as SamplePolyCBD coefficients, 4-bit two's
                   complement; eta = 2: {f[2i+1], f[2i]} per byte; eta = 3: {0, f0}, {0, f1}, {f3, f2} per 3 bytes
-  6 BURST_CBD, data bit 6 set (sha3-only): SampleNTT instead of CBD: the accepted 12-bit coefficients, packed
+  6 BURST_CBD, data bit 6 set: SampleNTT instead of CBD: the accepted 12-bit coefficients, packed
                   like ByteEncode_12, on the clocks where the valid pin (uio[0], framing mode 1) is high
-  7 EXT           (sha3-only) data[7:6]: 01 ABSORB_N (data[5:0] = n - 1: the next n clocks' ui bytes are absorbed
+  7 EXT           data[7:6]: 01 ABSORB_N (data[5:0] = n - 1: the next n clocks' ui bytes are absorbed
                   as they are), 10 FINISH (data[1:0] = function: the chip pads and permutes), 11 MODE (data[0])
 Framing mode 1 (after MODE 1): a hash word needs no 0xF marker, uio[0] is the chip's valid output and uio[1] its
 busy output; eta = 3 CBD output is packed like eta = 2 (two bytes per three, marked by valid).
