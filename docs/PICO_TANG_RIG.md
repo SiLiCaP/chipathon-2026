@@ -10,18 +10,15 @@ Raspberry Pi Pico 2 W. Both are connected by jumper wires, pin for pin:
 
 So the whole system runs as it will on silicon, on the same microcontroller, with real wires and a real clock
 between the two. Only the chip itself is replaced by its gate-level copy. That makes this rig the source of
-the **measured** RP2350 costs behind the silicon predictions. See [ESTIMATES.md](ESTIMATES.md).
+the **measured** RP2350 costs behind the real-chip estimates in [speed_results.md](speed_results.md).
 
 **The precise timing simulation only works with both boards connected and wired.** The Tang Nano alone (the
-USB setup in [FPGA_DEMO.md](FPGA_DEMO.md)) checks every result byte, but its timing is USB. The Pico alone
+USB setup in [FPGA_DEMO.md](https://github.com/SiLiCaP/tt-viktor-chiptor/blob/main/docs/FPGA_DEMO.md) in tt-viktor-chiptor) checks every result byte, but its timing is USB. The Pico alone
 (`sw` mode) has no chip.
 
-> Status (Oct 18, 2026): the code is ready but **untested on hardware**. Neither board was connected while
-> it was written. Checked so far:
-> - the rig's FPGA top level, in a cocotb simulation driven exactly like the PIO, with every byte correct;
-> - both bitstreams build (gate netlist and RTL);
-> - the firmware builds for both targets without warnings;
-> - the timing-log fitter, against a synthetic log.
+> Status (Nov 25, 2026): the rig is built and in use. The gate netlist of `main` passes `selftest`, `fuzz 200`,
+> `ci` and `speedtest` on it at up to 18.75 MHz (19.23 MHz with the RP2350 at 250 MHz); the jumper wires set that
+> limit. Results: [speed_results.md](speed_results.md).
 
 ## What you need
 
@@ -63,11 +60,11 @@ Read the Tang Nano from the top, USB-C connector up:
 | `ui_in[5]` | GP5 | 7 | → | L9 | 28 |  |
 | `ui_in[6]` | GP6 | 9 | → | L10 | 25 |  |
 | `ui_in[7]` | GP7 | 10 | → | L11 | 26 |  |
-| `uio[0]` | GP8 | 11 | → | L12 | 29 | coefficient bit 8 |
-| `uio[1]` | GP9 | 12 | → | L13 | 30 | coefficient bit 9 |
-| `uio[2]` | GP10 | 14 | → | L14 | 31 | coefficient bit 10 |
-| `uio[3]` | GP11 | 15 | → | R3 | 76 | coefficient bit 11 |
-| `uio[4]` | GP12 | 16 | → | R4 | 80 | valid; SDIO_D2 |
+| `uio[0]` | GP8 | 11 | → | L12 | 29 | marker bit 0; in mode 1 the chip's valid output |
+| `uio[1]` | GP9 | 12 | → | L13 | 30 | marker bit 1; in mode 1 the chip's busy output |
+| `uio[2]` | GP10 | 14 | → | L14 | 31 | marker bit 2 |
+| `uio[3]` | GP11 | 15 | → | R3 | 76 | marker bit 3 |
+| `uio[4]` | GP12 | 16 | → | R4 | 80 | valid: a command this clock; SDIO_D2 |
 | `uo_out[0]` | GP13 | 17 | ← | R8 | 54 | I2S_DIN of the unused amplifier |
 | `uo_out[1]` | GP14 | 19 | ← | R10 | 48 |  |
 | `uo_out[2]` | GP15 | 20 | ← | R11 | 55 | I2S_LRCK of the unused amplifier |
@@ -78,9 +75,9 @@ Read the Tang Nano from the top, USB-C connector up:
 | `uo_out[7]` | GP20 | 26 | ← | R19 | 53 | EDID_CLK (no HDMI cable) |
 | `clk` | GP21 | 27 | → | L5 | 77 | GCLKT_1: global clock input |
 | `rst_n` | GP22 | 29 | → | R20 | 52 | EDID_DAT (no HDMI cable) |
-| `uio[5]` | GP26 | 31 | → | R5 | 42 | sof |
-| `uio[6]` | GP27 | 32 | → | R6 | 41 | op bit 0 |
-| `uio[7]` | GP28 | 34 | → | R7 | 56 | op bit 1; I2S_BCLK of the unused amplifier |
+| `uio[5]` | GP26 | 31 | → | R5 | 42 | command bit 2 |
+| `uio[6]` | GP27 | 32 | → | R6 | 41 | command bit 0 |
+| `uio[7]` | GP28 | 34 | → | R7 | 56 | command bit 1; I2S_BCLK of the unused amplifier |
 | GND | GND | 3 | – | L20 | GND | |
 | GND | GND | 18 | – | R15 | GND | |
 | GND | GND | 28 | – | R2 | GND | |
@@ -124,7 +121,7 @@ The wires are 2–4× longer than the demo board's traces. That's fine at the ri
 ### FPGA (Tang Nano 20K)
 
 ```bash
-cd ~/Documents/Projects/Chipathon2026/tt-viktor-chiptor
+cd chipathon-2026                     # this repo
 source ~/tools/oss-cad-suite/environment
 make -C fpga netlist                 # once per design change: harden the team chip with the TT flow (~15 min)
 make -C fpga prog TARGET=pico        # its gate netlist, wired to the headers (GL=0: the RTL instead)
@@ -171,7 +168,6 @@ python3 tools/rig_pincheck.py --port /dev/ttyACM0 --mhz 1 5 13.5
 
 Expect `all 26 wires OK` at every clock, then PASS. A line like
 `BAD uio[5] Pico GP26 (pin 31) <-> Tang R5 (FPGA pin 42)` names the jumper to fix.
-Measured on Oct 18, 2026: all 26 wires OK at 0.96, 4.5 and 13.5 MHz.
 
 ## The chip on the rig
 
@@ -187,10 +183,6 @@ the same RP2350, saved to `rp2350/results/`. [getting_started.md](getting_starte
 ML-KEM-512 with every hash call on the chip, live, with a block diagram of which step runs where. It drives the
 chip through this firmware's TTE1 bridge in framing mode 0, which the current chip still speaks.
 
-Measured on Oct 18, 2026 (the chip of that day, RTL): all 26 wires OK at 0.96, 4.5 and 13.5 MHz; 42/42 hash jobs
-bit-exact at 1.04 to 13.5 MHz; one ML-KEM-512 exchange (32 hash calls, about 42,900 chip clocks) with keys
-identical to pure-software FIPS 203.
-
 ## Bring-up
 
 Open the console with `python3 -m serial.tools.miniterm /dev/ttyACM0` and type:
@@ -199,7 +191,7 @@ Open the console with `python3 -m serial.tools.miniterm /dev/ttyACM0` and type:
 |---|---|---|
 | 1 | `status` | "Pico 2 W + Tang Nano 20K rig", chip clock 1 MHz. FPGA LED0 blinks, LED2 goes off after the reset |
 | 2 | `selftest` | every line ok, at 1 MHz |
-| 3 | `sweep` | the known answers at 1–75 MHz, skew 0–2. Expect skew 0 at low clocks; the wires set the top end |
+| 3 | `sweep` | the known answers at 1–75 MHz, skew 0–3. Expect skew 0 at low clocks; the wires set the top end |
 | 4 | `clk <hz>` | a clock that passes `sweep` with margin on both sides, then `cal` |
 | 5 | `all` | selftest, fuzz: PASS |
 | 6 | `ci` | `ci: NOVECTORS` on a plain build; the host CI builds the firmware with the commit's ML-KEM hash jobs and checks the `CI-OUT` lines (docs/ci-emulator.md) |

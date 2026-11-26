@@ -10,7 +10,7 @@ Inputs and how sure they are:
   cited    pqm4 m4fspeed totals and hashing share per op; NTT 5,992 / iNTT 5,491 / basemul 1,613 cycles
            (ePrint 2022/112); same cycle counts assumed on the M33 at 150 MHz (as in Viktor's model)
   measured chip clocks: Keccak 368 per permutation (RTL); NTT 2,751, iNTT 2,765, basemul 655, scale 394
-           per job (docs/host_timing.md, pin-level test)
+           per job (docs/archive/host_timing.md, pin-level test)
   ASSUMED  split of the remaining CPU work (sampling, CBD, add, encode, compress) by the weights in REST_W,
            scaled so that each op's software-only total matches pqm4;
            CPU packing cost per chip NTT unit: "today" = Viktor's PIO+DMA numbers (12 cycles per butterfly,

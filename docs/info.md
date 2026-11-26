@@ -13,7 +13,8 @@ The chip is a Keccak-f[1600] sponge engine for the hash calls of ML-KEM (FIPS 20
 SHA3-512 (G), SHAKE128 (XOF, matrix A) and SHAKE256 (PRF, J). On a microcontroller these calls are
 about 57 % of ML-KEM-512's work; the polynomial arithmetic stays in software. The 1600-bit state
 lives in clock-gated shift rings (`keccak_ring`) and moves 8 slices per clock: one permutation takes
-368 clocks, 7.4 us at 50 MHz. The host pads the message and absorbs and squeezes whole 8-byte lanes.
+368 clocks, 7.4 us at 50 MHz. The host absorbs bytes and squeezes bytes or whole 8-byte lanes; it pads the
+message itself or lets Finish do it.
 
 On the way out the chip can also run SamplePolyCBD (FIPS 203 Algorithm 8), so a PRF call returns
 ML-KEM's secret and noise coefficients directly instead of raw bytes, and SampleNTT (Algorithm 7), so
@@ -55,8 +56,10 @@ Hash words in between are ignored.
 **Framing mode 1** (after Mode 1; reset returns to mode 0): a command is `uio[4]` = 1 alone, without the
 0xF marker, and `uio[1:0]` become outputs. `uio[0]` = `valid`: high on every clock where `uo_out` carries
 a byte. `uio[1]` = `busy`: high while the chip takes no command (Permute, Clear, a burst, Absorb N, Finish,
-blocks that follow by themselves), from 2 clocks after the command word. The host must stop driving
-`uio[1:0]` before it sends Mode 1. In mode 1 the eta = 3 CBD output is packed like eta = 2: of every three
+blocks that follow by themselves), from 2 clocks after the command word. Mode 1 itself is sent as a normal
+mode 0 word, with the 0xF marker. The chip drives `uio[1:0]` from 2 clocks after it, both low; the host drives
+them low on the idle words after Mode 1 and then stops driving them. Send at least one idle word after
+every Mode word: the word right after it is still read in the old framing. In mode 1 the eta = 3 CBD output is packed like eta = 2: of every three
 clocks the first has no byte (`valid` low), the next two carry `{f[4j+1], f[4j]}` and `{f[4j+3], f[4j+2]}`,
 128 bytes for PRF_3.
 
@@ -82,8 +85,12 @@ PRF_3 (192 bytes, more than SHAKE256's 136-byte rate) is two bursts with a Permu
 | `uo[7:0]` | out | Squeezed bytes (or CBD coefficients) 2 clocks after the word that asked for them, 0x00 otherwise |
 
 After reset every `uio` pin is an input. The host drives `clk`, sets the input pins once per clock and
-samples `uo_out` every clock. It has no busy flag: it waits the busy clocks before the next
-command, and sends idle words (valid low) during a burst. Every command has a fixed length; only the
+samples `uo_out` every clock. In mode 0 it has no busy flag: it waits the busy clocks before the next
+command, and sends idle words (valid low) during a burst. A command sent during Permute, Clear or the
+permute of Finish is not ignored cleanly: the state does not take it, but the byte pointer and the
+samplers do, so later results are wrong until the next Clear. Burst and Burst CBD need n = 1..21: n = 0
+streams 256 bytes. In the up to 3 clocks after a Burst NTT, while its last bytes leave, `busy` is still
+high but Permute is taken; Squeeze and Clear must wait. Every command has a fixed length; only the
 number of Burst NTT output bytes depends on the data.
 
 The cocotb tests in `test/` check SHA3-256/512 and SHAKE128/256 against Python's `hashlib`

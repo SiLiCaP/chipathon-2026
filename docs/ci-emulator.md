@@ -84,8 +84,9 @@ Mode 1 needs a transport that samples `uio[1:0]` next to `uo_out` and can stop d
 - **RP2350** (`rp/tt_rp.c`): in mode 1 the PIO's IN window is widened to take `uio[1:0]` with `uo_out` (16-bit
   samples) and the two pins become inputs. In mode 0 the transport is exactly as before (8-bit samples).
 - **Tang Nano over USB** (`pc/pc_main.c`): the emulator's capture already holds `uio_out` and `uio_oe`.
-- **No fight on the wires:** `hash_chip_set_mode` plays the Mode word and two idle clocks while the host still
-  drives `uio[1:0]` low, which is what the chip drives there once it takes over; only then does the host let go.
+- **No fight on the wires:** `hash_chip_set_mode` plays the Mode word (with the 0xF marker, so `uio[1:0]` high) and
+  three idle words that drive `uio[1:0]` low, which is what the chip drives there once it takes over, 2 clocks
+  after the word; only then does the host let go.
   Back to mode 0 the chip lets go first. `fpga/tangnano20k_pico_top.v` drives `uio[1:0]` back in mode 1.
 
 `selftest` and `fuzz` run their mode-1 part wherever the transport has it, so on the rig they exercise the real
@@ -109,6 +110,7 @@ make -C test rp2350                    # the C driver's pin stream through the R
 
 The PC build is plain C11 and also builds on macOS.
 For a commit's own vectors: `services/chipci/rig/ci_vectors.py gen <sha> --viktor <dir> --out <dir>`, then
-`make -C rp2350/pc CI_INC=-I<dir> && rp2350/pc/hash_host --sw ci`.
+`make -B -C rp2350/pc CI_INC=-I<dir> && rp2350/pc/hash_host --sw ci` (`-B`: an existing `hash_host` built with
+the stub would otherwise count as up to date).
 
 The golden header is `ci_vectors.py gen golden-fixture-v1` (fixed seed); regenerate it only if the contract changes.

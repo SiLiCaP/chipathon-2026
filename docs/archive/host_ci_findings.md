@@ -3,7 +3,7 @@
 For the team, as a head start. Everything here was measured on the d0b0 host (Ryzen 7 255, 16 threads)
 with this repo's own `local-ci` and the Tiny Tapeout flow (LibreLane 3.0.14, sky130A), on the hash-only
 chip that is `main` since Oct 30 (K = 8 ring Keccak + `hash_io` + on-chip CBD, `tt_um_NTT_Core`, 3x2).
-How the host CI works and how to ask it for extra runs: [host-ci.md](host-ci.md).
+How the host CI works and how to ask it for extra runs: [host-ci.md](../host-ci.md).
 
 > **Scope (owner, Oct 31):** 3x2 (6 tiles) is the size we have. 4x2 (8 tiles) is the next plausible step
 > and the one worth exploring further (it needs hold tuning first, section 2). Anything larger (3x4 and up,
@@ -76,7 +76,7 @@ wires of every other block. The stock template is the right choice.
 ## 4. The FPGA rig (Pico 2 W + Tang Nano 20K)
 
 The host CI runs every passing GDS on a real rig: the gate-level netlist on the Tang Nano 20K, driven by the
-Pico 2 W running `rp2350/` (contract and vectors: [ci-emulator.md](ci-emulator.md)). What it took:
+Pico 2 W running `rp2350/` (contract and vectors: [ci-emulator.md](../ci-emulator.md)). What it took:
 
 - **sky130 clock-gate cell:** the hash chip uses `sky130_fd_sc_hd__dlclkp_1` (47 instances). Its liberty
   entry is a statetable that yosys skips, so the GL bitstream needs an explicit model

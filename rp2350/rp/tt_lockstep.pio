@@ -3,7 +3,7 @@
 ;
 ;   OUT  {uio_in, ui_in} (16 pins, GPIO 17-32 on demo board v3) while clk (side-set, GPIO 16) falls
 ;   IN   uo_out (8 pins, GPIO 33-40) at the moment clk rises, i.e. just before the chip captures the
-;        word: the docs/host_timing.md convention, so D and the result positions apply unchanged.
+;        word: the docs/archive/host_timing.md convention, so D and the result positions apply unchanged.
 ;
 ; Autopull every 16 bits (one word per TX FIFO entry, written by 16-bit DMA) and autopush every 8 bits
 ; (one sample per RX FIFO entry, read by 8-bit DMA), so no padding clocks are needed.

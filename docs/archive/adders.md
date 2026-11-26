@@ -1,7 +1,7 @@
 # Adders (Spec 4)
 
 `src/modq_addsub.v` and `src/modq_acc.v`, with the ports and behavior of
-[Spec 4](../specs/Spec%204%20Adders.md). Every result is in 0..3328.
+[Spec 4](ntt_chip/specs/Spec%204%20Adders.md). Every result is in 0..3328.
 
 ## Report for the Control owner
 

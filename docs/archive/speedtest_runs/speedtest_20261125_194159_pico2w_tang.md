@@ -1,4 +1,4 @@
-# Hash chip speed test: pico2w_tang (2026-11-25T20:07:20)
+# Hash chip speed test: pico2w_tang (2026-11-25T19:41:59)
 
 Port `/dev/ttyACM0`. Firmware status at the start:
 
@@ -7,7 +7,7 @@ status
 Hash chip harness on the Pico 2 W + Tang Nano 20K rig, RP2350 at 150 MHz
   transport : chip via PIO + DMA (Pico 2 W + Tang Nano 20K rig)
   chip clock: 18750000 Hz (PIO div 1, low 4 + high 4 cycles)
-  skew 0, calls 1776, faults 23, clocks 1036685, uo_out now 0x00
+  skew 0, calls 602, faults 23, clocks 379895, uo_out now 0x00
 >
 ```
 
@@ -39,14 +39,14 @@ ML-KEM-512, the 32 hash calls of one key exchange, chip clock 19.23 MHz. Times f
 
 | | RP2350 software | RP2350 + chip | speed-up | chip clocks | chip alone |
 |---|---|---|---|---|---|
-| keygen | 7455 µs | 1513 µs | 4.93× | 14,368 | 747 µs |
-| encaps | 8243 µs | 1599 µs | 5.15× | 16,318 | 849 µs |
-| decaps | 8240 µs | 1596 µs | 5.16× | 16,318 | 849 µs |
-| **exchange** | **23938 µs** | **4708 µs** | **5.08×** | 47,004 | 2444 µs |
+| keygen | 7455 µs | 4284 µs | 1.74× | 15,896 | 827 µs |
+| encaps | 8254 µs | 4253 µs | 1.94× | 16,128 | 839 µs |
+| decaps | 8253 µs | 4252 µs | 1.94× | 16,128 | 839 µs |
+| **exchange** | **23962 µs** | **12789 µs** | **1.87×** | 48,152 | 2504 µs |
 
 Errors: 0 (every chip result is compared with the software one).
 
-Where the 4708 µs with the chip go: 2444 µs of chip clocks, 927 µs reshuffling words onto the Pico rig's split pins (none on the demo board), 86 µs of other transport work (DMA setup, splitting the samples), 1251 µs in the driver (building and checking the pin words).
+Where the 12789 µs with the chip go: 2504 µs of chip clocks, 1753 µs reshuffling words onto the Pico rig's split pins (none on the demo board), 2774 µs of other transport work (DMA setup, splitting the samples), 5757 µs in the driver (building and checking the pin words).
 
 ### Three ways to drive the same chip
 
@@ -54,11 +54,11 @@ Same chip, same workload, same clock, every result checked. Framing mode 1 adds 
 
 | Driven | chip clocks | driver | transport | RP2350 + chip | vs software |
 |---|---|---|---|---|---|
-| newer commands, framing mode 0, SampleNTT on the RP2350 (the default) | 47,004 | 1251 µs | 3457 µs | 4708 µs | 5.08× |
-| every newer command, framing mode 1 (SampleNTT on chip) | 48,152 | 4839 µs | 5312 µs | 10151 µs | 2.36× |
-| the October 2026 way: host padding, a word per byte, a burst word per block | 46,888 | 1980 µs | 3611 µs | 5592 µs | 4.28× |
+| now: every newer command, framing mode 1 (SampleNTT on chip) | 48,152 | 5757 µs | 7031 µs | 12789 µs | 1.87× |
+| newer commands in framing mode 0, SampleNTT on the RP2350 | 47,004 | 4300 µs | 4193 µs | 8494 µs | 2.82× |
+| the October 2026 way: host padding, a word per byte, a burst word per block | 46,888 | 5338 µs | 4190 µs | 9529 µs | 2.51× |
 
 | Rate | bytes | software | with the chip | chip alone |
 |---|---|---|---|---|
-| absorb | 4096 | 0.51 MB/s | 2.80 MB/s | 5.02 MB/s |
-| squeeze | 1344 | 0.64 MB/s | 3.15 MB/s | 5.89 MB/s |
+| absorb | 4096 | 0.50 MB/s | 1.18 MB/s | 5.02 MB/s |
+| squeeze | 1344 | 0.64 MB/s | 1.15 MB/s | 5.89 MB/s |

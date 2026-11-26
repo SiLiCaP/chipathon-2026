@@ -21,8 +21,9 @@ the bottom right corner). [Close-up of the chip art](docs/img/chip_art.png), 28 
 Hashing is 57–76 % of ML-KEM-512's work on a microcontroller. The polynomial arithmetic (NTT) is fast in software and
 slow through 8 output pins, so the team put the hashing on the chip.
 
-**The comparison is against the fastest software for this CPU.** The software side runs on the RP2350 (150 MHz):
-- Keccak in XKCP's ARMv7-M assembly, the implementation pqm4 uses on Cortex-M;
+**The comparison is against optimized assembly, not portable C.** The software side runs on the RP2350 (150 MHz):
+- Keccak in XKCP's ARMv7-M assembly (a newer variant of it is up to 21 % faster on a Cortex-M4 and has not been
+  tried here, see [speed_results.md](docs/speed_results.md));
 - CBD the way the Kyber reference code does it.
 
 The chip side is its hardened gate netlist, measured on an FPGA and driven by the same RP2350 firmware as the demo
@@ -81,7 +82,7 @@ Measure it on any board: `python3 rp2350/speedtest.py` ([getting started](docs/g
 |---|---|
 | RTL tests (cocotb, `test/`) | pass |
 | GDS, Tiny Tapeout precheck, gate-level test | pass (on the owner's CI server, `host-ci/gds`; GitHub builds when it's down) |
-| RP2350 firmware builds, its PC harness | pass (GitHub `rp2350`) |
+| RP2350 firmware builds (both boards), its PC harness | pass (GitHub `rp2350`) |
 | The firmware driving the chip's gate netlist on the FPGA rig | pass, Nov 25, 2026: `selftest`, `fuzz 200`, the `ci` ML-KEM-512 hash sequence, `speedtest`, 0 errors ([results](docs/speed_results.md)) |
 | Silicon | waiting for chips |
 
@@ -109,13 +110,17 @@ chip through PIO, one pin word per clock.
 | `src/` | the chip: `tt_um_NTT_Core.v` (top), `hash_io.v` (commands, bursts, CBD), `sample_ntt.v`, `keccak_ring.v`, `logo/` |
 | `test/` | cocotb tests; `hash_jobs.py` builds the pin words for any job |
 | `rp2350/` | firmware for the TT demo board (PIO + DMA), its PC build, `speedtest.py` |
-| `docs/` | the datasheet ([info.md](docs/info.md)), [getting started](docs/getting_started.md), design notes |
+| `docs/` | the datasheet ([info.md](docs/info.md)), [getting started](docs/getting_started.md), the rig and CI; `archive/` holds the historical notes |
 
-Design history: [tile_routes.md](docs/tile_routes.md) (why a hash chip and why 3×2),
-[sha3_only_3x2.md](docs/sha3_only_3x2.md) (signoff), [onchip_offload.md](docs/onchip_offload.md),
-[host_ci_findings.md](docs/host_ci_findings.md), [handoff_sha3_only.md](docs/handoff_sha3_only.md). The repo also
-keeps the earlier NTT chip's specs (`specs/`, `schematics/`, `tables/`, `research/`) and the pre-silicon test
-tools (`fpga/`, `host/`, `local-ci/`).
+Design history, in [docs/archive/](docs/archive/README.md): [tile_routes.md](docs/archive/tile_routes.md) (why a
+hash chip and why 3×2), [sha3_only_3x2.md](docs/archive/sha3_only_3x2.md) (the first 3×2 harden, Oct 18),
+[onchip_offload.md](docs/archive/onchip_offload.md), [host_ci_findings.md](docs/archive/host_ci_findings.md),
+[handoff_sha3_only.md](docs/archive/handoff_sha3_only.md). These pages describe the design as it was on their date,
+not the chip on `main`. The archive also holds the earlier NTT chip's specs, schematics and tables, the research
+models, and the speed test runs of earlier firmware. Everything outside `docs/archive/` describes the chip on `main`.
+
+The pre-silicon test tools are in `fpga/` (the FPGA emulator), `host/` and `tools/` (its PC side) and `local-ci/`
+(the GDS flow on your own machine).
 
 ## The layout images
 

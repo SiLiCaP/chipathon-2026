@@ -77,8 +77,8 @@ and sweeps again, up to 125 MHz chip clock (`--no-overclock` turns that off):
 The highest clock that passes at any skew is the board's wire speed. The test then picks the highest clock whose
 skew also passes one step lower (margin), and measures throughput there.
 
-**2. Throughput at that clock.** The 32 hash calls of one ML-KEM-512 key exchange (G, H, J, 12 × XOF through
-SampleNTT, 16 × PRF through CBD), timed with the RP2350's cycle counter:
+**2. Throughput at that clock.** The 32 hash calls of one ML-KEM-512 key exchange (3 × G, 2 × H, J, 12 × XOF through
+SampleNTT, 14 × PRF through CBD), timed with the RP2350's cycle counter:
 - **with the chip:** the firmware as written, from building the pin words through PIO + DMA to unpacking;
 - **software:** the same work in portable C on the same RP2350 (SHA-3, SamplePolyCBD, SampleNTT);
 - **chip alone:** the chip's clocks at that clock, so the result can be projected to other clocks;
@@ -97,7 +97,7 @@ No extra silicon is needed for any of this: the chip has no speed-test logic. Th
 
 Until the chips arrive, the same firmware was run against an FPGA copy of the chip: a Tang Nano 20K running the
 chip's hardened gate netlist, wired pin for pin to a Pico 2 W, the same RP2350 as on the demo board. The owner's CI
-server ran it on every push (`host-ci/rig`). The rig, its wiring and results: [PICO_TANG_RIG.md](PICO_TANG_RIG.md),
+server runs it on every push (`host-ci/rig`). The rig, its wiring and results: [PICO_TANG_RIG.md](PICO_TANG_RIG.md),
 [ci-emulator.md](ci-emulator.md), [fpga/README.md](../fpga/README.md). Every command above (`selftest`, `speedtest`, ...)
 works on it too, with `tt_hash_pico2w_tang.uf2`.
 
@@ -108,4 +108,4 @@ works on it too, with `tt_hash_pico2w_tang.uf2`.
 | Pins, commands, timing (the datasheet) | [info.md](info.md) |
 | CI: the owner's server | [host-ci.md](host-ci.md) |
 | Measured speed so far | [speed_results.md](speed_results.md) |
-| Why a hash chip, tile sizes, speed model | [tile_routes.md](tile_routes.md), [sha3_only_3x2.md](sha3_only_3x2.md), [onchip_offload.md](onchip_offload.md) |
+| Why a hash chip, tile sizes, speed model | [tile_routes.md](archive/tile_routes.md), [sha3_only_3x2.md](archive/sha3_only_3x2.md), [onchip_offload.md](archive/onchip_offload.md) |

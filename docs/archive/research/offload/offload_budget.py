@@ -1,5 +1,5 @@
 """Pin/clock budget of one ML-KEM-512 exchange (32 hash calls) on the hash-only chip: run from anywhere."""
-import sys; import os; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'test'))
+import sys; import os; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', '..', 'test'))
 from hash_jobs import HashJob
 import collections
 # (kind, name, msg_len, outlen, cbd) ; ML-KEM-512 counts

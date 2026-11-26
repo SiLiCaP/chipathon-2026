@@ -13,18 +13,22 @@ Speed-ups against the software are in brackets.
 - **Checks on this rig:** the gate netlist passes `selftest`, `fuzz 200` and the `ci` check (the ML-KEM-512 hash
   sequence, 32 jobs, 0 failures).
 
-**The software baseline is the fastest available for this CPU:**
-- Keccak-f[1600] in XKCP's ARMv7-M assembly (`rp/keccak_armv7m.s`, public domain, the implementation pqm4 uses on
-  Cortex-M): 73 µs, about 11,000 cycles, per permutation;
+**The software baseline is optimized assembly:**
+- Keccak-f[1600] in XKCP's ARMv7-M assembly (`rp/keccak_armv7m.s`, public domain, unchanged from XKCP): 73 µs, about
+  11,000 cycles, per permutation. It is not the fastest known: Adomnicăi's 2023 rework of this code
+  ([ePrint 2023/773](https://eprint.iacr.org/2023/773)) is up to 21 % faster on a Cortex-M4. It has not been tried
+  here; if it gained the same on the RP2350's Cortex-M33, the software side would take about 6.8 ms instead of
+  8.17 ms and the speed-ups below would shrink by up to a sixth;
 - the sponge on top of it absorbs and squeezes whole blocks;
 - SamplePolyCBD the way the Kyber reference code does it (bits added 32 / 24 at a time);
 - SampleNTT as in FIPS 203.
 
-The PC build uses the same code in portable C. The first measurements of the day (section 3) used portable C on the
-RP2350 too, which is about 5.6× slower.
+The PC build uses the same code in portable C. Earlier measurements used portable C on the RP2350 too, which is
+about 5.6× slower; those runs and the firmware steps that led here are in
+[archive/speed_history.md](archive/speed_history.md).
 
-**Workload:** the 32 hash calls of one ML-KEM-512 key exchange: G, H, J, 12 × XOF with SampleNTT, 16 × PRF with
-SamplePolyCBD.
+**Workload:** the 32 hash calls of one ML-KEM-512 key exchange: 3 × G, 2 × H, J, 12 × XOF with SampleNTT,
+14 × PRF with SamplePolyCBD (8 with η = 3, 6 with η = 2).
 
 ## 1. Compute only: the chip against the software that does the same work
 
@@ -67,7 +71,10 @@ padding, one burst word per squeeze, SampleNTT on the RP2350.
 
 **The guesstimate** keeps the RP2350's measured work: 1.77 ms of driver and 0.12 ms of transfer set-up. It drops what
 exists only on the FPGA rig: 1.55 ms of reshuffling every word onto the Pico's split GPIOs, since the demo board's 16
-input pins are consecutive. And it runs the chip's 47,004 clocks at its own speed.
+input pins are consecutive. And it runs the chip's 47,004 clocks at its own speed. One assumption is not measured:
+the driver checks the samples while the chip runs, and on the rig that work is hidden under 2.5 ms of chip clocks
+(it is counted in the transfer time, not in the 1.77 ms). At 50 MHz it has to fit under 0.94 ms; if it does not,
+the difference adds to the 2.83 ms.
 
 **Raw rates** (FPGA, 18.75 MHz): absorb 1.66 MB/s in software against 2.27 MB/s with the chip; squeeze 2.03 against
 2.75 MB/s. The chip alone does 4.9 / 5.7 MB/s at this clock, and 13 / 15 MB/s at 50 MHz.
@@ -77,29 +84,7 @@ next speed-up is in the firmware:
 - build the next call's pin words while the DMA plays the current call, so the driver hides under the chip's clocks;
 - read the `valid` / `busy` pins only where output can come, so framing mode 1 (SampleNTT on chip) pays off.
 
-## 3. What changed in the firmware (all on the rig, chip at 18.75 MHz)
-
-The chip is the same gate netlist throughout. The driver's work per chip clock dropped from about 47 to about 6
-RP2350 cycles. Until the last row, the software side was portable C (39.8 ms for the exchange's hashing); the last
-row compares with the assembly baseline.
-
-| Step | RP2350 + chip | vs portable C |
-|---|---|---|
-| First measurement (framing mode 1, every newer command) | 25.2 ms | 1.58× |
-| Idle runs written with `memset`, the quiet check four clocks at a time | 19.7 ms | 2.02× |
-| Framing mode 0 with packets, on-chip padding and self-continuing bursts | 12.6 ms | 3.16× |
-| Unpacking only the clocks that carry bytes, clearing only what was used, idle words fast-pathed on the rig | 7.2 ms | 5.55× |
-| Checking the samples while the chip is still running | 6.36 ms | 6.27× |
-| The firmware running from SRAM instead of flash (`TT_COPY_TO_RAM`, now the default) | **5.95 ms** | 6.7× (1.37× vs the assembly baseline) |
-
-Every step kept the checks exact:
-- the fast quiet / valid check was fuzzed against the exact per-clock rule: 200,000 runs with injected faults, none
-  missed, no false alarms;
-- the PC selftest, fuzz and golden vectors pass;
-- the driver's pin stream replays clock for clock through the RTL (`make -C test rp2350`);
-- `selftest`, `fuzz 200` and `ci` pass on the rig.
-
-### Three ways to drive the chip (final firmware, against the assembly baseline)
+## 3. Three ways to drive the chip (against the assembly baseline)
 
 | Driven | chip clocks | RP2350 + chip |
 |---|---|---|

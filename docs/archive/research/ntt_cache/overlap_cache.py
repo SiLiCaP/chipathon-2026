@@ -1,4 +1,4 @@
-"""ML-KEM-512 exchange time per NTT-cache candidate (docs/ntt_cache_study.md).
+"""ML-KEM-512 exchange time per NTT-cache candidate (docs/archive/ntt_cache_study.md).
 
     python3 research/ntt_cache/overlap_cache.py
 
@@ -7,7 +7,7 @@ swaps in each candidate's chip clocks and CPU packing cost. NTT, inverse NTT and
 always run on the chip (arith policy "chip"); hashing runs on the Keccak core.
 
 Chip clocks per job (pin I/O included):
-  streaming (today)  NTT 2,751, inverse 2,765 + scale 394, basemul 655 (docs/host_timing.md)
+  streaming (today)  NTT 2,751, inverse 2,765 + scale 394, basemul 655 (docs/archive/host_timing.md)
   block engines      2 passes x 16 blocks, measured at the pins in RTL simulation (test_blk.py on
                      branch sha3-4x2-cache, one NTT with the host turnaround between the passes)
   half polynomial    layer 0 streamed (2 clocks / butterfly, one half stays on chip), 6 layers

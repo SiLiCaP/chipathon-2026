@@ -1,4 +1,4 @@
-# Hash chip speed test: pico2w_tang (2026-11-25T19:16:01)
+# Hash chip speed test: pico2w_tang (2026-11-25T19:40:54)
 
 Port `/dev/ttyACM0`. Firmware status at the start:
 
@@ -6,8 +6,8 @@ Port `/dev/ttyACM0`. Firmware status at the start:
 status
 Hash chip harness on the Pico 2 W + Tang Nano 20K rig, RP2350 at 150 MHz
   transport : chip via PIO + DMA (Pico 2 W + Tang Nano 20K rig)
-  chip clock: 1000000 Hz (PIO div 5, low 15 + high 15 cycles)
-  skew 0, calls 569, faults 0, clocks 312417, uo_out now 0x00
+  chip clock: 18750000 Hz (PIO div 1, low 4 + high 4 cycles)
+  skew 0, calls 1688, faults 23, clocks 965069, uo_out now 0x00
 >
 ```
 
@@ -39,14 +39,25 @@ ML-KEM-512, the 32 hash calls of one key exchange, chip clock 19.23 MHz. Times f
 
 | | RP2350 software | RP2350 + chip | speed-up | chip clocks | chip alone |
 |---|---|---|---|---|---|
-| keygen | 7454 µs | 4253 µs | 1.75× | 15,896 | 827 µs |
-| encaps | 8235 µs | 4255 µs | 1.94× | 16,128 | 839 µs |
-| decaps | 8232 µs | 4251 µs | 1.94× | 16,128 | 839 µs |
-| **exchange** | **23922 µs** | **12759 µs** | **1.88×** | 48,152 | 2504 µs |
+| keygen | 7459 µs | 4281 µs | 1.74× | 15,896 | 827 µs |
+| encaps | 8250 µs | 4264 µs | 1.93× | 16,128 | 839 µs |
+| decaps | 8249 µs | 4260 µs | 1.94× | 16,128 | 839 µs |
+| **exchange** | **23958 µs** | **12806 µs** | **1.87×** | 48,152 | 2504 µs |
 
 Errors: 0 (every chip result is compared with the software one).
 
+Where the 12806 µs with the chip go: 2504 µs of chip clocks, 1743 µs reshuffling words onto the Pico rig's split pins (none on the demo board), 2795 µs of other transport work (DMA setup, splitting the samples), 5763 µs in the driver (building and checking the pin words).
+
+### The chip's newer commands vs the October 2026 way
+
+Same chip, same workload, same clock. *October way*: host padding, a word per byte, a burst word per block, SampleNTT on the RP2350. *Now*: packets with on-chip padding, one burst word per squeeze, SampleNTT on the chip.
+
+| | chip clocks | RP2350 + chip | vs software |
+|---|---|---|---|
+| October way | 46,888 | 9554 µs | 2.51× |
+| now | 48,152 | 12806 µs | 1.87× |
+
 | Rate | bytes | software | with the chip | chip alone |
 |---|---|---|---|---|
-| absorb | 4096 | 0.51 MB/s | 1.18 MB/s | 5.02 MB/s |
-| squeeze | 1344 | 0.64 MB/s | 1.14 MB/s | 5.89 MB/s |
+| absorb | 4096 | 0.50 MB/s | 1.19 MB/s | 5.02 MB/s |
+| squeeze | 1344 | 0.64 MB/s | 1.16 MB/s | 5.89 MB/s |

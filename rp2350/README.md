@@ -61,7 +61,7 @@ cmake -S rp2350 -B rp2350/build_pico2w_tang -G Ninja -DPICO_SDK_PATH=/path/to/pi
 cmake --build rp2350/build_pico2w_tang               # -> tt_hash_pico2w_tang.uf2  (Pico 2 W + Tang Nano rig)
 ```
 
-Every push builds both on GitHub (workflow `rp2350`); the UF2 files are attached to the run as `tt_hash-firmware`.
+Every push builds both on GitHub (workflow `rp2350`); both UF2 files are attached to the run as `tt_hash-firmware`.
 Each firmware checks the RP2350 package at boot (QFN80 for the demo board, QFN60 for the Pico 2 W). On the wrong
 board it leaves every pin alone, says so in `status`, and only offers the software chip.
 `TT_PROJECT_ADDR` is our project's address on the shuttle's mux. Without it, select the project at run time
@@ -87,7 +87,7 @@ Open the USB serial port, for example `python3 -m serial.tools.miniterm /dev/tty
 | `cal` | find the sample skew (see bring-up) |
 | `sweep` | SHA3-256(abc) from 1 MHz up to half the system clock (75 MHz at 150, 125 MHz at `sys 250`), sample skews 0-3 |
 | `bench [mode1\|legacy]` | ML-KEM-512's hash work (the 32 calls of one exchange) plus absorb / squeeze rates, timed by the cycle counter: on the chip and in software on this RP2350; every chip result checked. Default: packets + on-chip padding + one burst word in framing mode 0, SampleNTT on the RP2350, samples checked while the chip runs (the fastest); `mode1`: SampleNTT on chip in framing mode 1; `legacy`: the October 2026 commands |
-| `bench compute` | compute only: each piece of C code (one permutation, CBD, SampleNTT, each ML-KEM hash call, one exchange) against the chip's clocks for the same work, CBD and SampleNTT on the chip; no transfers on either side |
+| `bench compute` | compute only: each piece of software (one permutation, CBD, SampleNTT, each ML-KEM hash call, one exchange) against the chip's clocks for the same work, CBD and SampleNTT on the chip; no transfers on either side |
 | `speedtest [mhz]` | wire speed: six known-answer jobs (every pin and output path) at every clock up to `mhz` (default: half the system clock) and skews 0-3; then `bench` at the fastest clock that passes with margin. `rp2350/speedtest.py` runs it from a PC and saves JSON + Markdown |
 | `sw` / `hw` | software chip / real chip. With `sw`, any RP2350 board runs everything without a TT chip |
 | `all` | selftest, fuzz |
@@ -105,7 +105,7 @@ typed commands. The PC tools written for the FPGA in
 3. `cal` finds the **sample skew** (0-3). At high clocks, the pad and clock-insertion delays (up to about 10 ns
    on TT) can make results appear a clock or more later than at the pins of the design. The skew shifts where the
    driver reads them. It is 0 at low clocks and on the FPGA.
-4. `sweep` runs a known answer from 1 to 75 MHz at skews 0-2. Pick a clock that passes with margin on
+4. `sweep` runs a known answer from 1 to 75 MHz at skews 0-3. Pick a clock that passes with margin on
    both sides, set it with `clk`, then run `all`.
 5. `speedtest` does steps 3-4 with a stronger known-answer set (every pin and output path) and then measures the
    throughput. From a PC: `python3 rp2350/speedtest.py --select <n>` (add `--sys 250` to try chip clocks up to
@@ -145,7 +145,7 @@ typed commands. The PC tools written for the FPGA in
   - `out pins, 16 side 0`: clk falls and the next input word goes on the pins.
   - `in pins, 8 side 1`: `uo_out` is sampled as clk rises, just before the chip captures the word. This is
     exactly the `docs/info.md` convention, so the 2-clock output delay of a squeezed byte applies unchanged.
-- **DMA.** TX writes 16-bit words (32-bit on the rig), one per FIFO entry; RX reads 8-bit samples, one per entry. Clock counts are exact, with no padding.
+- **DMA.** TX writes 16-bit words (32-bit on the rig), one per FIFO entry; RX reads 8-bit samples (16-bit in framing mode 1), one per entry. Clock counts are exact, with no padding.
 - **Stalls are harmless.** If DMA ever falls behind, the PIO stalls with the clock held, low or high. A
   synchronous chip can't tell that from a slower clock, so no word is ever lost or repeated.
 - **Clock.** The chip clock is `sys / (div × (low + high))`, with an integer divider (no jitter).

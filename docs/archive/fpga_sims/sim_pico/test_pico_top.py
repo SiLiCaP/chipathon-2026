@@ -1,5 +1,5 @@
 """The rig top as the Pico drives it: inputs change while clk is low, uo_out is sampled just before the
-rising edge (the PIO program tt_lockstep.pio and docs/host_timing.md). A polynomial multiply recorded on
+rising edge (the PIO program tt_lockstep.pio and docs/archive/host_timing.md). A polynomial multiply recorded on
 the cycle model (sim/chip_a.py, team timing) must come back byte for byte."""
 import os
 import random

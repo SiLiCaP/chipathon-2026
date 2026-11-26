@@ -1,7 +1,7 @@
 @ Taken unchanged from XKCP (https://github.com/XKCP/XKCP), lib/low/KeccakP-1600/ARM/KeccakP-1600-inplace-32bi-armv7m-le-gcc.s,
-@ public domain (CC0, see below). The fastest Keccak-f[1600] for this class of core (the one pqm4 uses on the
-@ Cortex-M4): the RP2350-alone baseline of the speed test (core/sha3_sw.c, SHA3_XKCP), so the chip is compared
-@ with the best software, not just with portable C.
+@ public domain (CC0, see below). Optimized assembly for this class of core: the RP2350-alone baseline of the speed
+@ test (core/sha3_sw.c, SHA3_XKCP), so the chip is compared with assembly, not just with portable C. A faster rework
+@ of this code exists (Adomnicai, ePrint 2023/773, up to 21 % on a Cortex-M4); it is not used here.
 @
 @
 @ The eXtended Keccak Code Package (XKCP)

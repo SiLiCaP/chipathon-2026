@@ -84,8 +84,9 @@ int hash_chip_reset(hash_chip_t *c);              // also returns the chip (and 
 
 // 1 if this transport can run framing mode 1 (it samples uio[1:0] and can stop driving them).
 int hash_chip_has_mode1(const hash_chip_t *c);
-// Switch the chip's framing mode (0 or 1). The MODE word and the two idle clocks after it are played with the
-// host still driving uio[1:0] low, which is what the chip drives there too, so the two never fight.
+// Switch the chip's framing mode (0 or 1). To mode 1: the MODE word (with the marker) and three idle words are
+// played with the host still driving uio[1:0]; the idle words drive them low, which is what the chip drives there
+// from 2 clocks after the word, so the two never fight. Then the host lets go.
 int hash_chip_set_mode(hash_chip_t *c, int mode);
 
 // Output length of a kind with a fixed output (SHA3: the digest, PRF kinds: 64 * eta, XOF_NTT: 384), else 0.
