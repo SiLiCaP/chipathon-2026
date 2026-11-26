@@ -327,8 +327,15 @@ int app_bench_compute(hash_chip_t *c, const bench_plat_t *p) {
         for (unsigned j = 0; j < k->inlen; j++) msg[j] = (uint8_t)rnd();
         const unsigned opts = k->kind == HASH_XOF_NTT ? HASH_RAW | HASH_FINISH : FAST;
         const uint64_t c0 = c->clocks_total;
-        if (hash_chip_job(c, k->kind, msg, k->inlen, got, k->outlen, opts)) errors++;
+        const int err = hash_chip_job(c, k->kind, msg, k->inlen, got, k->outlen, opts);
         clk_ex += c->clocks_total - c0;
+        uint8_t ref[1344];
+        hash_ref(k->kind, msg, k->inlen, ref, k->outlen);
+        if (err || memcmp(got, ref, k->outlen)) {
+            printf("  FAIL exchange call %u (%s): %s\n", i, hash_kind_name(k->kind),
+                   err ? hash_err_str(err) : "differs from the reference");
+            errors++;
+        }
         t0 = p->cycles();
         sw_call(k->kind, msg, k->inlen, out, k->outlen);
         sw_ex += p->cycles() - t0;
@@ -417,13 +424,14 @@ int app_speedtest(hash_chip_t *c, const bench_plat_t *p, uint32_t max_hz) {
         n++;
     }
     // highest clock passing at any skew; recommended = the highest clock whose skew also passes one step lower
-    int best = -1, best_k = 0, top = -1;
+    int best = -1, best_k = 0, top = -1, top_k = 0;
     for (unsigned i = 0; i < n; i++)
         for (int k = 0; k < NSKEW; k++) {
-            if (pass[i][k]) top = (int)i;
+            if (pass[i][k] && (int)i > top) { top = (int)i; top_k = k; }
             if (pass[i][k] && i > 0 && pass[i - 1][k] && (int)i > best) { best = (int)i; best_k = k; }
         }
-    if (best < 0 && n && pass[0][0]) { best = 0; best_k = 0; }
+    // nothing passes with a passing step below it: take the highest clock that passes at all
+    if (best < 0 && top >= 0) { best = top; best_k = top_k; }
     if (best < 0) {
         printf("SPEEDTEST result=fail reason=no_clock_passes\nspeedtest: no clock passes. Check the board, `select`, and the reset.\n");
         p->set_clock(keep_hz);

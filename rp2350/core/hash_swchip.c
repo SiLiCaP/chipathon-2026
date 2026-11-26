@@ -237,6 +237,8 @@ static void step(hash_swchip_t *s, uint16_t w, uint8_t *uo, uint8_t *aux) {
         *aux = (fl & 1) ? (uint8_t)((byte ? TT_AUX_VALID : 0) | (busy ? TT_AUX_BUSY : 0)) : 0;
     }
     const int framing = s->mode_prev;
+    // the word right after MODE is still read in the old framing (docs/info.md: an idle word follows every MODE)
+    if (framing != s->mode && ((w >> 12) & 1)) violation(s, "a word right after MODE (still read in the old framing)");
     s->mode_prev = s->mode;
     act(s, t, w, framing);
     // the pins two clocks on: the chip drives uio[1:0] in mode 1; busy while it takes no command

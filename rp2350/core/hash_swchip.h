@@ -2,8 +2,8 @@
 // Software chip: a pin-level stand-in for tt_um_NTT_Core (the hash-only chip, K = 8). It follows the same
 // protocol and output timing as src/hash_io.v + sample_ntt.v (docs/info.md), clock for clock, including the
 // valid and busy pins of framing mode 1. It uses sha3_sw.c's Keccak-f[1600] for the permutation, and records
-// protocol violations (a command while the chip is busy, SKIP off a lane boundary, a read past the state)
-// instead of hiding them.
+// protocol violations (a command while the chip is busy, a burst length outside 1..21, a word right after MODE,
+// SKIP off a lane boundary, a read past the state) instead of hiding them.
 #ifndef HASH_SWCHIP_H
 #define HASH_SWCHIP_H
 

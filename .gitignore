@@ -25,10 +25,6 @@ datasheet.pdf
 docs/doc.typ
 gds_render*.png
 gds_render*.svg
-test/core/sim_build
-test/core/results*.xml
-test/mul/mul.vvp
-test/adders/adders.vvp
 test/*.log
 # RP2350 firmware and PC harness builds
 rp2350/build*

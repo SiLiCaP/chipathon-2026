@@ -146,22 +146,9 @@ test_run() {
     python -m cocotb_tools.check_results results.xml
 }
 
-core_test_run() {
-    [ -d test/core ] || { echo "No test/core in this repo, nothing to run"; return 0; }
-    export PATH="$PY_TEST:$PATH"
-    make -C test/core all-variants
-}
-
-adder_test_run() {
-    [ -d test/adders ] || { echo "No test/adders in this repo, nothing to run"; return 0; }
-    make -C test/adders exhaustive
-}
-
 workflow_test() {
     job_begin test test test
     step "Run tests" test_run
-    step "Run core tests" core_test_run
-    step "Run adder tests" adder_test_run
     step --always "Test Summary" junit_summary test/results.xml
     step --always "upload waveform and test results" upload_artifact test-results test/tb.fst test/results.xml 'test/output/*'
     job_end

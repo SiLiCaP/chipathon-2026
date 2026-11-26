@@ -10,7 +10,7 @@
 
 Needs the firmware from rp2350/ on the board (tt_hash_dbv3.uf2 on the demo board, tt_hash_pico2w_tang.uf2 on the
 Pico 2 W + Tang Nano rig) and pyserial. What the firmware does (core/hash_bench.c):
-  1. wire speed: at every chip clock it can make (1 MHz up to max) and every sample skew (0-2), six known-answer
+  1. wire speed: at every chip clock it can make (1 MHz up to max) and every sample skew (0-3), six known-answer
      jobs that use every pin and output path (bursts, packets + on-chip padding, CBD; SampleNTT and the valid / busy
      pins in framing mode 1), three rounds. The highest clock that passes, and the highest whose skew also passes
      one step lower (the one it uses), are the board's wire speed. If even the fastest clock the RP2350 can make
@@ -18,7 +18,7 @@ Pico 2 W + Tang Nano rig) and pyserial. What the firmware does (core/hash_bench.
      250 MHz (half of it is the fastest chip clock) and sweeps again, so a fast board shows its real limit.
   2. throughput at that clock: the 32 hash calls of one ML-KEM-512 key exchange, timed with the RP2350's cycle
      counter, once on the chip (the firmware as written: building the pin words, PIO + DMA, picking the bytes out)
-     and once in software on the same RP2350 (portable C SHA-3 + CBD + SampleNTT); plus absorb and squeeze rates.
+     and once in software on the same RP2350 (SHA-3 on XKCP's assembly Keccak + CBD + SampleNTT); plus absorb and squeeze rates.
      Every chip result is compared with the software one.
 Results: rp2350/results/speedtest_<date>_<board>.json and .md (the directory is made if needed).
 """
@@ -75,10 +75,12 @@ def kv(line):
 
 
 def parse(text):
-    res = {"sweep": [], "bench": {}, "speedtest": {}, "compute": []}
+    res = {"sweep": [], "bench": {}, "speedtest": {}, "compute": [], "failed": []}
     for line in text.splitlines():
         line = line.strip()
-        if line.startswith("SWEEP "):
+        if re.match(r"bench[ a-z0-9]*: FAIL", line):   # bench, bench compute, bench mode1, bench legacy
+            res["failed"].append(line.split(":")[0])
+        elif line.startswith("SWEEP "):
             res["sweep"].append(kv(line))
         elif line.startswith("COMPUTE "):
             res["compute"].append(kv(line))
@@ -96,6 +98,9 @@ def parse(text):
 def markdown(meta, res):
     m = [f"# Hash chip speed test: {meta['board']} ({meta['date']})", "",
          f"Port `{meta['port']}`. Firmware status at the start:", "", "```", meta["status"].strip(), "```", ""]
+    if res.get("failed"):
+        m += ["**FAILED: " + ", ".join(f"`{f}`" for f in res["failed"]) + "** (a chip result differed from the software "
+              "one, or the chip reported an error; see the log in the JSON).", ""]
     if res["sweep"]:
         m += ["## Wire speed", "",
               "Six known-answer jobs (bursts, packets + on-chip padding, CBD; SampleNTT and the valid / busy pins in "
@@ -150,17 +155,17 @@ def markdown(meta, res):
                     m.append(f"| {name} | {int(x['chip_clocks']):,} | {d.get('driver_us', 0):.0f} µs | "
                              f"{d.get('run_us', 0):.0f} µs | {x['chip_us']:.0f} µs | {x['speedup']:.2f}× |")
             m.append("")
-        if res["compute"]:
+        if res.get("compute"):
             names = {"perm": "Keccak-f[1600], one permutation", "cbd": "SamplePolyCBD eta = 3 (192 B)",
                      "ntt": "SampleNTT, one polynomial", "exchange": "**one ML-KEM-512 exchange (32 calls)**"}
             calls = {"sha3-512": "G = SHA3-512 (64 B)", "sha3-256": "H = SHA3-256 (800 B)", "shake256": "J = SHAKE256 (800 B)",
                      "prf-cbd3": "PRF_3 + CBD, one polynomial", "prf-cbd2": "PRF_2 + CBD, one polynomial",
                      "xof-ntt": "XOF + SampleNTT, one polynomial"}
-            m += ["### Compute only: the chip against the C code doing the same work", "",
-                  "Software: each piece of C code alone on the RP2350. Chip: its clocks for the same work, with CBD and "
+            m += ["### Compute only: the chip against the software doing the same work", "",
+                  "Software: each piece of software alone on the RP2350. Chip: its clocks for the same work, with CBD and "
                   "SampleNTT on the chip (they run on the output stream and cost no clocks of their own). No transfers on "
                   "either side.", "",
-                  "| Work | C on the RP2350 | chip clocks | chip at this clock | chip at 50 MHz | speed-up at 50 MHz |",
+                  "| Work | RP2350 software | chip clocks | chip at this clock | chip at 50 MHz | speed-up at 50 MHz |",
                   "|---|---|---|---|---|---|"]
             for x in res["compute"]:
                 w = x["work"]
@@ -189,7 +194,7 @@ def main():
     ap.add_argument("--sys", type=int, help="RP2350 system clock in MHz first (150 default; 200, 250 allow faster chip clocks)")
     ap.add_argument("--max-mhz", type=int, default=0, help="highest chip clock to try (default: all the RP2350 can make)")
     ap.add_argument("--no-overclock", action="store_true", help="don't raise the RP2350 above its clock when every clock passes")
-    ap.add_argument("--no-compute", action="store_true", help="skip `bench compute` (compute only, chip vs the same C code)")
+    ap.add_argument("--no-compute", action="store_true", help="skip `bench compute` (compute only, chip vs the same software)")
     ap.add_argument("--no-legacy", action="store_true", help="skip `bench mode1` and `bench legacy` (the same workload driven other ways)")
     ap.add_argument("--bench-only", action="store_true", help="no wire-speed sweep, throughput at --clk only")
     ap.add_argument("--clk", type=int, help="chip clock in Hz for --bench-only (default: the board's current one)")
@@ -203,6 +208,7 @@ def main():
     print(status.strip())
     if a.sys:
         print(board.cmd(f"sys {a.sys}").strip())
+        status = board.cmd("status")              # the saved status shows the clock the run was made at
     if a.select is not None:
         print(board.cmd(f"select {a.select}").strip())
     if a.bench_only:
@@ -220,7 +226,7 @@ def main():
                 break
             print(f"every clock passed at RP2350 {st['sys_hz'] / 1e6:.0f} MHz: raising it to {sys_mhz} MHz and sweeping again")
             text += board.cmd(f"sys {sys_mhz}") + board.cmd("status") + run()
-    if not a.no_compute:    # compute only: each piece of C code against the chip's clocks for the same work
+    if not a.no_compute:    # compute only: each piece of software against the chip's clocks for the same work
         text += board.cmd("bench compute", until=r"^bench compute: (PASS|FAIL)", timeout=600)
     if not a.no_legacy:     # the same workload driven two other ways, at the same clock: what each choice costs
         text += board.cmd("bench mode1", until=r"^bench mode1: (PASS|FAIL)", timeout=180)
@@ -242,7 +248,10 @@ def main():
                  "_legacy": "October way"}.get(k[len("mlkem512_exchange"):], k)
         print(f"ML-KEM-512 exchange hashing ({style}): software {e['sw_us']:.0f} us, with the chip {e['chip_us']:.0f} us "
               f"({e['speedup']:.2f}x) at {e['clock_hz'] / 1e6:.2f} MHz; errors {int(e['errors'])}")
-    ok = res["speedtest"].get("result", "pass") == "pass" and ex and not any(e["errors"] for e in ex.values())
+    for f in res["failed"]:
+        print(f"FAILED: {f}")
+    ok = (res["speedtest"].get("result", "pass") == "pass" and ex and not any(e["errors"] for e in ex.values())
+          and not res["failed"])
     sys.exit(0 if ok else 1)
 
 
