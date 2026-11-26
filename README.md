@@ -7,8 +7,8 @@ taped out on Tiny Tapeout (sky130, 3×2 tiles). A microcontroller runs ML-KEM-51
 SHA3-512, SHAKE128 and SHAKE256 call to the chip. On the way out the chip can also sample ML-KEM's secret noise
 (SamplePolyCBD) and its public matrix (SampleNTT), so the host gets polynomials back instead of raw bytes.
 
-[![Open the chip in 3D](https://img.shields.io/badge/Open_the_chip_in_3D-one_click-e21a1a?style=for-the-badge&logo=googleearth&logoColor=white)](https://gds-viewer.tinytapeout.com/?pdk=sky130A&model=https%3A%2F%2Fsilicap.github.io%2Fchipathon-2026%2Ftinytapeout.oas)
-[![2D render](https://img.shields.io/badge/2D_render-PNG-555?style=for-the-badge)](https://silicap.github.io/chipathon-2026/gds_render.png)
+[![Open the chip in 3D](https://img.shields.io/badge/Open_the_chip_in_3D-one_click-e21a1a?style=for-the-badge&logo=googleearth&logoColor=white)](https://gds-viewer.tinytapeout.com/?pdk=sky130A&model=https%3A%2F%2Fsilicap.github.io%2Ftt-sha3-mlkem%2Ftinytapeout.oas)
+[![2D render](https://img.shields.io/badge/2D_render-PNG-555?style=for-the-badge)](https://silicap.github.io/tt-sha3-mlkem/gds_render.png)
 
 ![The chip's layout: 3x2 tiles of Keccak rings and routing; the team's chip art in gold, bottom right](docs/img/chip_render.jpg)
 

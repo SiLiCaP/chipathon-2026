@@ -121,7 +121,7 @@ The wires are 2–4× longer than the demo board's traces. That's fine at the ri
 ### FPGA (Tang Nano 20K)
 
 ```bash
-cd chipathon-2026                     # this repo
+cd tt-sha3-mlkem                      # this repo
 source ~/tools/oss-cad-suite/environment
 make -C fpga netlist                 # once per design change: harden the team chip with the TT flow (~15 min)
 make -C fpga prog TARGET=pico        # its gate netlist, wired to the headers (GL=0: the RTL instead)
